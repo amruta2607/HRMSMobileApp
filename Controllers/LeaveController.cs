@@ -1,0 +1,182 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using MobileWebApi.Interfaces;
+using MobileWebApi.Models;
+using MobileWebApi.Constants;
+
+namespace MobileWebApi.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class LeaveController : TenantBaseController
+    {
+        private readonly ILeaveService _leaveService;
+
+        public LeaveController(
+            ILeaveService leaveService, 
+            ITenantContext tenantContext,
+            ILogger<LeaveController> logger)
+            : base(tenantContext, logger)
+        {
+            _leaveService = leaveService;
+        }
+
+        /// <summary>
+        /// Submit a new leave request
+        /// POST: api/leave/request
+        /// </summary>
+        [HttpPost("request")]
+        public async Task<IActionResult> CreateLeaveRequest([FromBody] LeaveRequestCreateRequest request)
+        {
+            Logger.LogInformation(LogMessages.Leave.CreatingLeaveRequest, request.user);
+            var result = await _leaveService.CreateLeaveRequestAsync(request);
+
+            if (result.Success)
+            {
+                return Ok(result);
+            }
+
+            return BadRequest(result);
+        }
+
+        /// <summary>
+        /// Get leave requests with filters
+        /// GET: apipunch/leave/request/get/?user_id=10&organization_id=1&status=PENDING&branch=1
+        /// Note: Regular users can only see their own leave requests. HR/TenantAdmin can see all.
+        /// </summary>
+        [HttpGet("/apipunch/leave/request/get")]
+        public async Task<IActionResult> GetLeaveRequests(
+            [FromQuery] int? user_id = null,
+            [FromQuery] int? organization_id = null,
+            [FromQuery] string? status = null,
+            [FromQuery] int? branch = null)
+        {
+            // Validate tenant access - use user's org if not specified
+            var validatedOrgId = GetValidatedOrganisationId(organization_id);
+            
+            // Validate user access - regular users can only see their own leave requests
+            int? validatedUserId;
+            try
+            {
+                validatedUserId = GetValidatedUserId(user_id);
+            }
+            catch (Services.TenantAccessException)
+            {
+                return UserAccessDenied();
+            }
+            
+            Logger.LogInformation(LogMessages.Leave.FetchingLeaveRequestsByFilter, validatedUserId, validatedOrgId, status);
+            
+            var request = new LeaveRequestGetRequest
+            {
+                organization = validatedOrgId,
+                status = status,
+                user = validatedUserId,
+                branch = branch
+            };
+
+            var result = await _leaveService.GetLeaveRequestsAsync(request);
+
+            if (result.Success)
+            {
+                return Ok(result);
+            }
+
+            return BadRequest(result);
+        }
+
+        /// <summary>
+        /// Approve a leave request
+        /// PUT: api/leave/approve
+        /// </summary>
+        [HttpPut("approve")]
+        public async Task<IActionResult> ApproveLeaveRequest([FromBody] ApproveLeaveRequest request)
+        {
+            if (request == null)
+            {
+                Logger.LogWarning(GeneralMessages.RequestBodyCannotBeNull);
+                return BadRequest(new { Success = false, Message = GeneralMessages.RequestBodyCannotBeNull });
+            }
+
+            if (request.Id <= 0)
+            {
+                Logger.LogWarning("Invalid leave request ID");
+                return BadRequest(new { Success = false, Message = "Leave request ID is required and must be greater than 0" });
+            }
+
+            Logger.LogInformation(LogMessages.Leave.ApprovingLeaveRequest, request.Id);
+            var result = await _leaveService.ApproveLeaveRequestAsync(request.Id, request.ApproverUserId);
+
+            if (result.Success)
+            {
+                return Ok(result);
+            }
+
+            return BadRequest(result);
+        }
+
+        /// <summary>
+        /// Reject a leave request
+        /// PUT: api/leave/reject
+        /// </summary>
+        [HttpPut("reject")]
+        public async Task<IActionResult> RejectLeaveRequest([FromBody] RejectLeaveRequest request)
+        {
+            if (request == null)
+            {
+                Logger.LogWarning(GeneralMessages.RequestBodyCannotBeNull);
+                return BadRequest(new { Success = false, Message = GeneralMessages.RequestBodyCannotBeNull });
+            }
+
+            if (request.Id <= 0)
+            {
+                Logger.LogWarning("Invalid leave request ID");
+                return BadRequest(new { Success = false, Message = "Leave request ID is required and must be greater than 0" });
+            }
+
+            Logger.LogInformation(LogMessages.Leave.RejectingLeaveRequest, request.Id);
+            var result = await _leaveService.RejectLeaveRequestAsync(request.Id, request.RejecterUserId, request.Reason);
+
+            if (result.Success)
+            {
+                return Ok(result);
+            }
+
+            return BadRequest(result);
+        }
+
+        /// <summary>
+        /// Get leave balance for an employee
+        /// GET: api/leave/balance/?user=10
+        /// Note: Regular users can only see their own leave balance. HR/TenantAdmin can see all.
+        /// </summary>
+        [HttpGet("balance")]
+        public async Task<IActionResult> GetLeaveBalance([FromQuery] int user, [FromQuery] int? organization = null)
+        {
+            // Validate tenant access - use user's org if not specified
+            var validatedOrgId = GetValidatedOrganisationId(organization);
+            
+            // Validate user access - regular users can only see their own data
+            int validatedUserId;
+            try
+            {
+                validatedUserId = GetValidatedUserId(user);
+            }
+            catch (Services.TenantAccessException)
+            {
+                return UserAccessDenied();
+            }
+            
+            Logger.LogInformation(LogMessages.Leave.FetchingLeaveBalance, validatedUserId);
+            var result = await _leaveService.GetLeaveBalanceAsync(validatedUserId, validatedOrgId);
+
+            if (result.Success)
+            {
+                return Ok(result);
+            }
+
+            return BadRequest(result);
+        }
+    }
+}
