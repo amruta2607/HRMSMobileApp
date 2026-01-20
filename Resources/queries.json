@@ -1,0 +1,242 @@
+{
+  "SQLQueries": {
+    "GetUserById": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(u.WorkRoleId, ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.UserId = @UserId",
+
+    "GetUserByUsernameOrMobile": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(u.WorkRoleId, ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.Username = @Login OR u.MobileNumber = @Login",
+
+    "GetUserByEmail": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(u.WorkRoleId, ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.Email = @Email",
+
+    "GetUserByMobile": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PinNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(u.WorkRoleId, ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.MobileNumber = @MobileNumber",
+
+    "GetUsersByOrganisationId": "SELECT UserId,Username,Email,IsActive,MobileNumber,PinNumber,department AS Designation,IsHrUser,IsTenantAdmin,TenantId AS OrganisationId,BranchId,WorkRoleId FROM Users WHERE TenantId = @OrganisationId",
+    "GetEmployeeByUserId": "SELECT Id,Name,Description,EmployeeNumber,Street,City,State,ZipCode,Phone,Email,Picture,DateOfBirth,PlaceOfBirth,BiometricNumber,TaxNumber,LatestEducationDegree,GenderId,GradeId,ESINo,PFNo,SalarySlab,BasicSalary,IsPerDayWagesEmployee,PerDayOverTimeWages,DesignationId,DepartmentId,BranchId,SupervisorId,LeaveQuota,LeaveTaken,DateOfJoining,BankAccountForPayroll,IFSCCode,BankNameForPayroll,BankBranchName,SpouseName,SpouseDateOfBirth,SpouseProfession,SpouseStreet,SpouseCity,SpouseState,SpouseZipCode,SpousePhone,SpouseEmail,SystemUserId,TenantId AS OrganisationId,CostToCompany,CtcFrequencyType,IsEmployeeActive,CategoryId,BloodGroup,MaritalStatus,PermanentStreet,PermanentCity,PermanentState,PermanentZipCode,PermanentPhone,PermanentEmail,PersonalEmail,CountryId,StateId,PermanentCountryId,GroupName,NotificationGroupName,UANNo,IsPayrollOnHold,FirstName,MiddleName,LastName,CompensationTemplateId FROM Employee WHERE SystemUserId = @SystemUserId",
+
+    "GetPunchByEmployeeAndDate": "SELECT Id,EmployeeId,PunchDate,PunchIn,PunchOut,Duration,InsertDate,InsertUserId,UpdateDate,UpdateUserId,TenantId AS OrganisationId FROM Punch WHERE EmployeeId = @EmployeeId AND PunchDate = @PunchDate",
+
+    "GetPunchByEmployeeAndDateWithTenant": "SELECT Id,EmployeeId,PunchDate,PunchIn,PunchOut,Duration,InsertDate,InsertUserId,UpdateDate,UpdateUserId,TenantId AS OrganisationId FROM Punch WHERE EmployeeId = @EmployeeId AND PunchDate = @PunchDate AND TenantId = @TenantId",
+
+    "GetPunchById": "SELECT Id,EmployeeId,PunchDate,PunchIn,PunchOut,Duration,InsertDate,InsertUserId,UpdateDate,UpdateUserId,TenantId AS OrganisationId FROM Punch WHERE Id = @Id AND TenantId = @TenantId",
+
+    "DeletePunch": "DELETE FROM Punch WHERE Id = @Id AND TenantId = @TenantId",
+    "AddEmployee": "INSERT INTO Employee (Name, PersonalEmail, Email, Phone, GenderId, TenantId, DateOfJoining, DateOfBirth, DesignationId, BranchId, DepartmentId, EmployeeNumber, BiometricNumber, Street, City, StateId, CountryId, ZipCode, PermanentStreet, PermanentCity, PermanentState, PermanentCountryId, PermanentZipCode, SalarySlab, BasicSalary, IsPerDayWagesEmployee, LeaveQuota, LeaveTaken, BankAccountForPayroll, IFSCCode, BankNameForPayroll, BankBranchName, IsEmployeeActive, IsPayrollOnHold, FirstName, LastName, SystemUserId) VALUES (@Name, @PersonalEmail, @Email, @Phone, @GenderId, @OrganisationId, @DateOfJoining, @DateOfBirth, @DesignationId, @BranchId, @DepartmentId, @EmployeeNumber, @BiometricNumber, @Street, @City, @StateId, @CountryId, @ZipCode, @PermanentStreet, @PermanentCity, @PermanentState, @PermanentCountryId, @PermanentZipCode, @SalarySlab, @BasicSalary, @IsPerDayWagesEmployee, @LeaveQuota, @LeaveTaken, @BankAccountForPayroll, @IFSCCode, @BankNameForPayroll, @BankBranchName, @IsEmployeeActive, @IsPayrollOnHold, @FirstName, @LastName, @SystemUserId); SELECT CAST(SCOPE_IDENTITY() AS INT);",
+
+
+    "InsertPunchIn": "INSERT INTO Punch (EmployeeId, PunchDate, PunchIn, TenantId, InsertDate) SELECT @EmployeeId, @PunchDate, @PunchIn, e.TenantId, GETDATE() FROM Employee e WHERE e.Id = @EmployeeId; SELECT CAST(SCOPE_IDENTITY() AS INT);",
+    "UpdatePunchOut": "UPDATE Punch SET PunchOut = @PunchOut, Duration = @Duration,UpdateDate = GETDATE() WHERE EmployeeId = @EmployeeId AND PunchDate = @PunchDate",
+
+
+
+    "GetOrganisationIdByName": "SELECT TenantId FROM Tenant WHERE TenantName = @TenantName",
+
+    "GetDesignationIdByName": "SELECT Id FROM Designation WHERE Name = @Name",
+
+    "GetBranchIdByName": "SELECT Id FROM Branch WHERE Name = @Name",
+
+    "GetDepartmentIdByName": "SELECT Id FROM Department WHERE Name = @Name",
+
+    "GetGenderIdByName": "SELECT Id FROM Gender WHERE Name = @Name",
+    "GetBloodgroupIdByName": "SELECT Id FROM Bloodgroup WHERE BloodgroupName = @BloodgroupName",
+    "GetMaritalStatusIdByName": "SELECT Id FROM MaritalStatus WHERE MaritalStatusName = @MaritalStatusName",
+    "GetEmployeesByBranchId": "SELECT Id,Name,Description,EmployeeNumber,Street,City,State,ZipCode,Phone,Email,Picture,DateOfBirth,PlaceOfBirth,BiometricNumber,TaxNumber,LatestEducationDegree,GenderId,GradeId,ESINo,PFNo,SalarySlab,BasicSalary,IsPerDayWagesEmployee,PerDayOverTimeWages,DesignationId,DepartmentId,BranchId,SupervisorId,LeaveQuota,LeaveTaken,DateOfJoining,BankAccountForPayroll,IFSCCode,BankNameForPayroll,BankBranchName,SpouseName,SpouseDateOfBirth,SpouseProfession,SpouseStreet,SpouseCity,SpouseState,SpouseZipCode,SpousePhone,SpouseEmail,SystemUserId,TenantId AS OrganisationId,CostToCompany,CtcFrequencyType,IsEmployeeActive,CategoryId,BloodGroup,MaritalStatus,PermanentStreet,PermanentCity,PermanentState,PermanentZipCode,PermanentPhone,PermanentEmail,PersonalEmail,CountryId,StateId,PermanentCountryId,GroupName,NotificationGroupName,UANNo,IsPayrollOnHold,FirstName,MiddleName,LastName,CompensationTemplateId FROM Employee WHERE BranchId = @BranchId",
+    "GetStateIdByName": "SELECT Id FROM State WHERE Name = @Name",
+    "GetCountryIdByName": "SELECT Id FROM Country WHERE Name = @Name",
+    "GetEmployeeNumber": "SELECT TOP 1 EmployeeNumber FROM Employee ORDER BY Id DESC",
+
+    "GetTenantConfiguration": "SELECT EmployeeNoPrefix, EmployeeNoStartWith FROM TenantConfiguration WHERE TenantId = @OrganisationId",
+    "CheckEmployeeNumberExists": "SELECT COUNT(1) FROM Employee WHERE EmployeeNumber = @EmpNo AND TenantId = @OrganisationId",
+    "GetAllEmployeeNumbersForTenant": "SELECT EmployeeNumber FROM Employee WHERE TenantId = @OrganisationId",
+    "GetEmployeesByOrganisationId": "SELECT Id,Name,Description,EmployeeNumber,Street,City,State,ZipCode,Phone,Email,Picture,DateOfBirth,PlaceOfBirth,BiometricNumber,TaxNumber,LatestEducationDegree,GenderId,GradeId,ESINo,PFNo,SalarySlab,BasicSalary,IsPerDayWagesEmployee,PerDayOverTimeWages,DesignationId,DepartmentId,BranchId,SupervisorId,LeaveQuota,LeaveTaken,DateOfJoining,BankAccountForPayroll,IFSCCode,BankNameForPayroll,BankBranchName,SpouseName,SpouseDateOfBirth,SpouseProfession,SpouseStreet,SpouseCity,SpouseState,SpouseZipCode,SpousePhone,SpouseEmail,SystemUserId,TenantId AS OrganisationId,CostToCompany,CtcFrequencyType,IsEmployeeActive,CategoryId,BloodGroup,MaritalStatus,PermanentStreet,PermanentCity,PermanentState,PermanentZipCode,PermanentPhone,PermanentEmail,PersonalEmail,CountryId,StateId,PermanentCountryId,GroupName,NotificationGroupName,UANNo,IsPayrollOnHold,FirstName,MiddleName,LastName,CompensationTemplateId FROM Employee WHERE TenantId = @OrganisationId",
+    "GetEmployeesByBranchExceptUser": "SELECT Id,Name,Description,EmployeeNumber,Street,City,State,ZipCode,Phone,Email,Picture,DateOfBirth,PlaceOfBirth,BiometricNumber,TaxNumber,LatestEducationDegree,GenderId,GradeId,ESINo,PFNo,SalarySlab,BasicSalary,IsPerDayWagesEmployee,PerDayOverTimeWages,DesignationId,DepartmentId,BranchId,SupervisorId,LeaveQuota,LeaveTaken,DateOfJoining,BankAccountForPayroll,IFSCCode,BankNameForPayroll,BankBranchName,SpouseName,SpouseDateOfBirth,SpouseProfession,SpouseStreet,SpouseCity,SpouseState,SpouseZipCode,SpousePhone,SpouseEmail,SystemUserId,TenantId AS OrganisationId,CostToCompany,CtcFrequencyType,IsEmployeeActive,CategoryId,BloodGroup,MaritalStatus,PermanentStreet,PermanentCity,PermanentState,PermanentZipCode,PermanentPhone,PermanentEmail,PersonalEmail,CountryId,StateId,PermanentCountryId,GroupName,NotificationGroupName,UANNo,IsPayrollOnHold,FirstName,MiddleName,LastName,CompensationTemplateId FROM Employee WHERE BranchId = @BranchId AND SystemUserId <> @UserId",
+    "GetWorkRoleIdByName": "SELECT WorkRoleId FROM WorkRole WHERE WorkRoleName = @WorkRoleName",
+
+    "UpdateUser": "UPDATE Users SET DisplayName = @DisplayName, Email = @EmailId, MobileNumber = @MobileNumber, PinNumber = @PinNumber, WorkRoleId = @WorkRoleId, IsActive = @IsActive WHERE UserId = @UserId",
+
+    "GetDailyAttendanceReport": "SELECT v.Id, v.EmployeeNumber, v.EmployeeName, v.CalendarDate, v.PunchIn, v.PunchOut, v.WorkingDuration, v.Month, v.Source, v.TenantId AS OrganisationId, v.SystemUserId FROM [dbo].[VwTimsheetPageData] v INNER JOIN Employee e ON v.EmployeeNumber = e.EmployeeNumber WHERE v.CalendarDate = @CalendarDate AND (@BranchId IS NULL OR e.BranchId = @BranchId) AND (@OrganisationId IS NULL OR v.TenantId = @OrganisationId) AND (@EmployeeId IS NULL OR e.Id = @EmployeeId) AND (@DepartmentId IS NULL OR e.DepartmentId = @DepartmentId) AND v.Source='Punch'",
+
+    "GetMonthlyAttendanceReport": "SELECT v.Id, v.EmployeeNumber, v.EmployeeName, v.CalendarDate, v.PunchIn, v.PunchOut, v.WorkingDuration, v.Month, v.Source, v.TenantId AS OrganisationId, v.SystemUserId FROM [dbo].[VwTimsheetPageData] v INNER JOIN Employee e ON v.EmployeeNumber = e.EmployeeNumber WHERE v.CalendarDate >= @DateFrom AND v.CalendarDate <= @DateTo AND (@BranchId IS NULL OR e.BranchId = @BranchId) AND (@OrganisationId IS NULL OR v.TenantId = @OrganisationId) AND (@EmployeeId IS NULL OR e.Id = @EmployeeId) AND (@DepartmentId IS NULL OR e.DepartmentId = @DepartmentId) AND v.Source='Punch' ORDER BY v.CalendarDate, v.EmployeeNumber",
+
+    "GetEmployeeAttendanceReport": "SELECT v.Id, v.EmployeeNumber, v.EmployeeName, v.CalendarDate, v.PunchIn, v.PunchOut, v.WorkingDuration, v.Month, v.Source, v.TenantId AS OrganisationId, v.SystemUserId FROM [dbo].[VwTimsheetPageData] v INNER JOIN Employee e ON v.EmployeeNumber = e.EmployeeNumber WHERE e.Id = @EmployeeId AND v.CalendarDate >= @DateFrom AND v.CalendarDate <= @DateTo AND v.Source='Punch' ORDER BY v.CalendarDate",
+
+    "GetRealTimeAttendanceStatus": "SELECT p.EmployeeId, e.Name AS EmployeeName, e.EmployeeNumber, d.Name AS DepartmentName, b.Name AS BranchName, p.PunchDate, p.PunchIn, p.PunchOut, p.TenantId AS OrganisationId FROM Punch p INNER JOIN Employee e ON p.EmployeeId = e.Id LEFT JOIN Department d ON e.DepartmentId = d.Id LEFT JOIN Branch b ON e.BranchId = b.Id WHERE p.PunchDate = @PunchDate AND (@OrganisationId IS NULL OR p.TenantId = @OrganisationId) AND (@BranchId IS NULL OR e.BranchId = @BranchId) AND (@DepartmentId IS NULL OR e.DepartmentId = @DepartmentId) AND v.Source='Punch'",
+
+    "GetCurrentlyPunchedIn": "SELECT p.EmployeeId, e.Name AS EmployeeName, e.EmployeeNumber, d.Name AS DepartmentName, b.Name AS BranchName, p.PunchDate, p.PunchIn, p.PunchOut, p.TenantId AS OrganisationId FROM Punch p INNER JOIN Employee e ON p.EmployeeId = e.Id LEFT JOIN Department d ON e.DepartmentId = d.Id LEFT JOIN Branch b ON e.BranchId = b.Id WHERE p.PunchDate = @PunchDate AND p.PunchIn IS NOT NULL AND p.PunchOut IS NULL AND (@OrganisationId IS NULL OR p.TenantId = @OrganisationId) AND (@BranchId IS NULL OR e.BranchId = @BranchId) AND (@DepartmentId IS NULL OR e.DepartmentId = @DepartmentId) AND v.Source='Punch'",
+
+    "GetAlertById": "SELECT Id, TenantId AS OrganisationId, UserId, EventId, Title, Message, IsRead, IsActive, Status, InsertDate, InsertUserId, UpdateDate, UpdateUserId FROM ScreenNotification WHERE Id = @Id",
+
+    "GetAlertsByUserId": "SELECT Id, TenantId AS OrganisationId, UserId, EventId, Title, Message, IsRead, IsActive, Status, InsertDate, InsertUserId, UpdateDate, UpdateUserId FROM ScreenNotification WHERE UserId = @UserId AND (@IsRead IS NULL OR IsRead = @IsRead) AND (@IsActive IS NULL OR IsActive = @IsActive) ORDER BY InsertDate DESC",
+
+    "GetAlertsByOrganisationId": "SELECT Id, TenantId AS OrganisationId, UserId, EventId, Title, Message, IsRead, IsActive, Status, InsertDate, InsertUserId, UpdateDate, UpdateUserId FROM ScreenNotification WHERE TenantId = @OrganisationId AND (@IsRead IS NULL OR IsRead = @IsRead) AND (@IsActive IS NULL OR IsActive = @IsActive) ORDER BY InsertDate DESC",
+
+    "GetAlerts": "SELECT Id, TenantId AS OrganisationId, UserId, EventId, Title, Message, IsRead, IsActive, Status, InsertDate, InsertUserId, UpdateDate, UpdateUserId FROM ScreenNotification WHERE (@OrganisationId IS NULL OR TenantId = @OrganisationId) AND (@UserId IS NULL OR UserId = @UserId) AND (@IsRead IS NULL OR IsRead = @IsRead) AND (@IsActive IS NULL OR IsActive = @IsActive) AND (@Status IS NULL OR Status = @Status) ORDER BY InsertDate DESC",
+
+    "GetUnreadAlertCount": "SELECT COUNT(1) FROM ScreenNotification WHERE UserId = @UserId AND IsRead = 0 AND status='Unread' AND IsActive = 1",
+
+    "CreateAlert": "INSERT INTO ScreenNotification (TenantId, UserId, EventId, Title, Message, IsRead, IsActive, Status, InsertDate, InsertUserId) VALUES (@OrganisationId, @UserId, @EventId, @Title, @Message, 0, 1, @Status, GETDATE(), @InsertUserId); SELECT CAST(SCOPE_IDENTITY() AS INT);",
+
+    "UpdateAlert": "UPDATE ScreenNotification SET Title = COALESCE(@Title, Title), Message = COALESCE(@Message, Message), IsRead = COALESCE(@IsRead, IsRead), IsActive = COALESCE(@IsActive, IsActive), Status = COALESCE(@Status, Status), UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE Id = @Id",
+
+    "MarkAlertAsRead": "UPDATE ScreenNotification SET status='Read', UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE Id = @Id",
+
+    "MarkAllAlertsAsRead": "UPDATE ScreenNotification SET status = 'Read', UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE UserId = @UserId AND IsRead = 0",
+
+    "DeleteAlert": "DELETE FROM ScreenNotification WHERE Id = @Id",
+
+    "DeactivateAlert": "UPDATE ScreenNotification SET IsActive = 0, UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE Id = @Id",
+
+    "CreateLeaveRequest": "INSERT INTO LeaveRequest (Number, EmployeeId, LeaveTypeId, FromDate, ToDate, Duration, Description, CurrentAction, LeaveRequestStatus, DelegatedEmployeeId, TenantId, InsertDate, InsertUserId) VALUES (@Number, @EmployeeId, @LeaveTypeId, @FromDate, @ToDate, @Duration, @Description, @CurrentAction, @LeaveRequestStatus, @DelegatedEmployeeId, @OrganisationId, GETDATE(), @InsertUserId); SELECT CAST(SCOPE_IDENTITY() AS INT);",
+
+    "GetLeaveRequestById": "SELECT lr.Id, lr.Number, lr.EmployeeId, lr.LeaveTypeId, lr.FromDate, lr.ToDate, lr.Duration, lr.Description, lr.CancellationReason, lr.CurrentAction, lr.LeaveRequestStatus, lr.DelegatedEmployeeId, lr.TenantId AS OrganisationId, lr.InsertDate, lr.InsertUserId, lr.UpdateDate, lr.UpdateUserId, e.Name AS EmployeeName, lt.DisplayName AS LeaveTypeName FROM LeaveRequest lr LEFT JOIN Employee e ON lr.EmployeeId = e.Id LEFT JOIN LeaveTypes lt ON lr.LeaveTypeId = lt.Id WHERE lr.Id = @Id",
+
+    "GetLeaveRequests": "SELECT lr.Id, lr.Number, lr.EmployeeId, lr.LeaveTypeId, lr.FromDate, lr.ToDate, lr.Duration, lr.Description, lr.CancellationReason, lr.CurrentAction, lr.LeaveRequestStatus, lr.DelegatedEmployeeId, lr.TenantId AS OrganisationId, lr.InsertDate, lr.InsertUserId, lr.UpdateDate, lr.UpdateUserId, e.Name AS EmployeeName, lt.DisplayName AS LeaveTypeName FROM LeaveRequest lr LEFT JOIN Employee e ON lr.EmployeeId = e.Id LEFT JOIN LeaveTypes lt ON lr.LeaveTypeId = lt.Id WHERE (@OrganisationId IS NULL OR lr.TenantId = @OrganisationId) AND (@EmployeeId IS NULL OR lr.EmployeeId = @EmployeeId) AND (@LeaveTypeId IS NULL OR lr.LeaveTypeId = @LeaveTypeId) AND (@Status IS NULL OR lr.LeaveRequestStatus = @Status) ORDER BY lr.InsertDate DESC",
+
+    "GetLeaveRequestsByEmployeeId": "SELECT lr.Id, lr.Number, lr.EmployeeId, lr.LeaveTypeId, lr.FromDate, lr.ToDate, lr.Duration, lr.Description, lr.CancellationReason, lr.CurrentAction, lr.LeaveRequestStatus, lr.DelegatedEmployeeId, lr.TenantId AS OrganisationId, lr.InsertDate, lr.InsertUserId, lr.UpdateDate, lr.UpdateUserId, e.Name AS EmployeeName, lt.DisplayName AS LeaveTypeName FROM LeaveRequest lr LEFT JOIN Employee e ON lr.EmployeeId = e.Id LEFT JOIN LeaveTypes lt ON lr.LeaveTypeId = lt.Id WHERE lr.EmployeeId = @EmployeeId ORDER BY lr.InsertDate DESC",
+
+    "UpdateLeaveRequestStatus": "UPDATE LeaveRequest SET LeaveRequestStatus = @StatusId, CurrentAction = @StatusText, UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE Id = @Id",
+
+    "GetLeaveBalanceByEmployeeId": "SELECT lb.Id, lb.EmployeeId, lb.LeaveTypeId, lb.LeaveBalance AS LeaveBalanceValue, lb.Description, lb.InsertDate, lb.InsertUserId, lb.UpdateDate, lb.UpdateUserId, lb.TenantId AS OrganisationId, lt.DisplayName AS LeaveTypeName FROM EmployeeLeave lb LEFT JOIN LeaveTypes lt ON lb.LeaveTypeId = lt.Id WHERE lb.EmployeeId = @EmployeeId",
+
+    "GetLeaveBalance": "SELECT lb.Id, lb.EmployeeId, lb.LeaveTypeId, lb.LeaveBalance AS LeaveBalanceValue, lb.Description, lb.InsertDate, lb.InsertUserId, lb.UpdateDate, lb.UpdateUserId, lb.TenantId AS OrganisationId, lt.DisplayName AS LeaveTypeName FROM EmployeeLeave lb LEFT JOIN LeaveTypes lt ON lb.LeaveTypeId = lt.Id WHERE lb.EmployeeId = @EmployeeId AND lb.LeaveTypeId = @LeaveTypeId",
+
+    "UpdateLeaveBalance": "UPDATE EmployeeLeave SET LeaveBalance = @LeaveBalance, UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE EmployeeId = @EmployeeId AND LeaveTypeId = @LeaveTypeId",
+
+    "CreateLeaveTransaction": "INSERT INTO LeaveTransaction (LeaveTransactionType, EmployeeId, LeaveTypeId, Description, LeaveBalance, EffectiveDate, InsertDate, InsertUserId, IsActive, TenantId) VALUES (@LeaveTransactionType, @EmployeeId, @LeaveTypeId, @Description, @LeaveBalance, @EffectiveDate, GETDATE(), @InsertUserId, 1, @OrganisationId); SELECT CAST(SCOPE_IDENTITY() AS INT);",
+
+    "GetLeaveTransactionsByEmployeeId": "SELECT Id, LeaveTransactionType, EmployeeId, LeaveTypeId, Description, LeaveBalance, EffectiveDate, InsertDate, InsertUserId, UpdateDate, UpdateUserId, IsActive, TenantId AS OrganisationId FROM LeaveTransaction WHERE EmployeeId = @EmployeeId ORDER BY InsertDate DESC",
+
+    "GetLeaveTypeIdByName": "SELECT Id FROM LeaveTypes WHERE DisplayName = @LeaveTypeName",
+
+    "GetEmployeeIdByUserId": "SELECT Id FROM Employee WHERE SystemUserId = @UserId",
+
+    "GetNextLeaveRequestNumber": "SELECT TOP 1 Number FROM LeaveRequest WHERE TenantId = @OrganisationId ORDER BY Id DESC",
+
+    "GetUserByUsernameForWebLogin": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.BranchId, u.department AS Designation, w.WorkRoleName FROM Users u LEFT JOIN WorkRole w ON w.WorkRoleId = u.WorkRoleId WHERE u.Username = @Username",
+
+    "CreateUser": "INSERT INTO Users (Username, DisplayName, Email, MobileNumber, PinNumber, PasswordHash, PasswordSalt, WorkRoleId, TenantId, BranchId, IsHrUser, IsTenantAdmin, IsActive) VALUES (@Username, @DisplayName, @Email, @MobileNumber, @PinNumber, @PasswordHash, @PasswordSalt, @WorkRoleId, @OrganisationId, @BranchId, @IsHrUser, @IsTenantAdmin, @IsActive); SELECT CAST(SCOPE_IDENTITY() AS INT);",
+
+    "DeleteUser": "DELETE FROM Users WHERE UserId = @UserId",
+
+    "DeactivateUser": "UPDATE Users SET IsActive = 0 WHERE UserId = @UserId",
+
+    "CheckUsernameExists": "SELECT COUNT(1) FROM Users WHERE Username = @Username",
+
+    "CheckMobileExists": "SELECT COUNT(1) FROM Users WHERE MobileNumber = @MobileNumber",
+
+    "GetEmployeeById": "SELECT Id,Name,Description,EmployeeNumber,Street,City,State,ZipCode,Phone,Email,Picture,DateOfBirth,PlaceOfBirth,BiometricNumber,TaxNumber,LatestEducationDegree,GenderId,GradeId,ESINo,PFNo,SalarySlab,BasicSalary,IsPerDayWagesEmployee,PerDayOverTimeWages,DesignationId,DepartmentId,BranchId,SupervisorId,LeaveQuota,LeaveTaken,DateOfJoining,BankAccountForPayroll,IFSCCode,BankNameForPayroll,BankBranchName,SpouseName,SpouseDateOfBirth,SpouseProfession,SpouseStreet,SpouseCity,SpouseState,SpouseZipCode,SpousePhone,SpouseEmail,SystemUserId,TenantId AS OrganisationId,CostToCompany,CtcFrequencyType,IsEmployeeActive,CategoryId,BloodGroup,MaritalStatus,PermanentStreet,PermanentCity,PermanentState,PermanentZipCode,PermanentPhone,PermanentEmail,PersonalEmail,CountryId,StateId,PermanentCountryId,GroupName,NotificationGroupName,UANNo,IsPayrollOnHold,FirstName,MiddleName,LastName,CompensationTemplateId FROM Employee WHERE Id = @Id",
+
+    "GetEmployeePersonalDetailsById": "SELECT e.EmployeeNumber AS EmpId, e.FirstName, e.MiddleName, e.LastName, e.Picture, e.Phone, e.Email, d.Name AS Designation, e.Street, e.City, COALESCE(s.Name, e.State) AS State, e.ZipCode, c.Name AS Country, e.SupervisorId, sup.FirstName AS SupervisorFirstName, sup.MiddleName AS SupervisorMiddleName, sup.LastName AS SupervisorLastName, e.SystemUserId FROM Employee e LEFT JOIN Designation d ON e.DesignationId = d.Id LEFT JOIN State s ON e.StateId = s.Id LEFT JOIN Country c ON e.CountryId = c.Id LEFT JOIN Employee sup ON e.SupervisorId = sup.Id WHERE e.Id = @Id",
+
+    "GetEmployeeByPhone": "SELECT Id,Name,Description,EmployeeNumber,Street,City,State,ZipCode,Phone,Email,Picture,DateOfBirth,PlaceOfBirth,BiometricNumber,TaxNumber,LatestEducationDegree,GenderId,GradeId,ESINo,PFNo,SalarySlab,BasicSalary,IsPerDayWagesEmployee,PerDayOverTimeWages,DesignationId,DepartmentId,BranchId,SupervisorId,LeaveQuota,LeaveTaken,DateOfJoining,BankAccountForPayroll,IFSCCode,BankNameForPayroll,BankBranchName,SpouseName,SpouseDateOfBirth,SpouseProfession,SpouseStreet,SpouseCity,SpouseState,SpouseZipCode,SpousePhone,SpouseEmail,SystemUserId,TenantId AS OrganisationId,CostToCompany,CtcFrequencyType,IsEmployeeActive,CategoryId,BloodGroup,MaritalStatus,PermanentStreet,PermanentCity,PermanentState,PermanentZipCode,PermanentPhone,PermanentEmail,PersonalEmail,CountryId,StateId,PermanentCountryId,GroupName,NotificationGroupName,UANNo,IsPayrollOnHold,FirstName,MiddleName,LastName,CompensationTemplateId FROM Employee WHERE Phone = @Phone AND IsEmployeeActive = 1",
+
+    "GetEmployeeByEmployeeNumber": "SELECT Id,Name,Description,EmployeeNumber,Street,City,State,ZipCode,Phone,Email,Picture,DateOfBirth,PlaceOfBirth,BiometricNumber,TaxNumber,LatestEducationDegree,GenderId,GradeId,ESINo,PFNo,SalarySlab,BasicSalary,IsPerDayWagesEmployee,PerDayOverTimeWages,DesignationId,DepartmentId,BranchId,SupervisorId,LeaveQuota,LeaveTaken,DateOfJoining,BankAccountForPayroll,IFSCCode,BankNameForPayroll,BankBranchName,SpouseName,SpouseDateOfBirth,SpouseProfession,SpouseStreet,SpouseCity,SpouseState,SpouseZipCode,SpousePhone,SpouseEmail,SystemUserId,TenantId AS OrganisationId,CostToCompany,CtcFrequencyType,IsEmployeeActive,CategoryId,BloodGroup,MaritalStatus,PermanentStreet,PermanentCity,PermanentState,PermanentZipCode,PermanentPhone,PermanentEmail,PersonalEmail,CountryId,StateId,PermanentCountryId,GroupName,NotificationGroupName,UANNo,IsPayrollOnHold,FirstName,MiddleName,LastName,CompensationTemplateId FROM Employee WHERE EmployeeNumber = @EmployeeNumber",
+
+    "UpdateEmployee": "UPDATE Employee SET Name = COALESCE(@Name, Name), Email = COALESCE(@Email, Email), PersonalEmail = COALESCE(@PersonalEmail, PersonalEmail), Phone = COALESCE(@Phone, Phone), GenderId = COALESCE(@GenderId, GenderId), DateOfJoining = COALESCE(@DateOfJoining, DateOfJoining), DateOfBirth = COALESCE(@DateOfBirth, DateOfBirth), DesignationId = COALESCE(@DesignationId, DesignationId), BranchId = COALESCE(@BranchId, BranchId), DepartmentId = COALESCE(@DepartmentId, DepartmentId), BloodGroup = COALESCE(@BloodGroup, BloodGroup), MaritalStatus = COALESCE(@MaritalStatus, MaritalStatus), Street = COALESCE(@Street, Street), City = COALESCE(@City, City), StateId = COALESCE(@StateId, StateId), CountryId = COALESCE(@CountryId, CountryId), ZipCode = COALESCE(@ZipCode, ZipCode), PermanentStreet = COALESCE(@PermanentStreet, PermanentStreet), PermanentCity = COALESCE(@PermanentCity, PermanentCity), PermanentState = COALESCE(@PermanentState, PermanentState), PermanentCountryId = COALESCE(@PermanentCountryId, PermanentCountryId), PermanentZipCode = COALESCE(@PermanentZipCode, PermanentZipCode), FirstName = COALESCE(@FirstName, FirstName), LastName = COALESCE(@LastName, LastName), IsEmployeeActive = COALESCE(@IsEmployeeActive, IsEmployeeActive) WHERE Id = @Id",
+
+    "UpdateEmployeePhoneAndPicture": "UPDATE Employee SET Phone = COALESCE(@Phone, Phone), Picture = COALESCE(@Picture, Picture) WHERE Id = @Id",
+
+    "DeleteEmployee": "DELETE FROM Employee WHERE Id = @Id",
+
+    "DeactivateEmployee": "UPDATE Employee SET IsEmployeeActive = 0 WHERE Id = @Id",
+
+    "GetPaySlipsByEmployeeId": "SELECT Id, PayrollId, EmployeeId, BankAccountNumber, BankName, IFSCCode, BankBranchName, BasicSalary, TotalIncome, TotalDeduction, TakeHomePay, TenantId, Gross, EmployeeName, EmployeeNumber, Email, DateOfBirth, TaxNumber, ESINo, PFNo, UANNo, IsPerDayWagesEmployee, DateOfJoining, PerDayOverTimeWages, PayrollMonth, PayrollYear, DaysPayable, OverTimeDays, PresentDays, SalarySlab, PerDayWages, OvertimeSalary, SalaryEarned, TenantName, Currency, GenderName, DesignationName, BranchName, PayrollMonthName, FinancialYearStart, LossPayDays, Logo FROM [dbo].[vwPayrollDetailPrint] WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND (@Year IS NULL OR PayrollYear = @Year) AND (@Month IS NULL OR PayrollMonth = @Month) ORDER BY PayrollYear DESC, PayrollMonth DESC",
+
+    "GetPaySlipById": "SELECT Id, PayrollId, EmployeeId, BankAccountNumber, BankName, IFSCCode, BankBranchName, BasicSalary, TotalIncome, TotalDeduction, TakeHomePay, TenantId, Gross, EmployeeName, EmployeeNumber, Email, DateOfBirth, TaxNumber, ESINo, PFNo, UANNo, IsPerDayWagesEmployee, DateOfJoining, PerDayOverTimeWages, PayrollMonth, PayrollYear, DaysPayable, OverTimeDays, PresentDays, SalarySlab, PerDayWages, OvertimeSalary, SalaryEarned, TenantName, Currency, GenderName, DesignationName, BranchName, PayrollMonthName, FinancialYearStart, LossPayDays, Logo FROM [dbo].[vwPayrollDetailPrint] WHERE Id = @Id AND TenantId = @TenantId",
+
+    "GetPaySlipByEmployeeMonthYear": "SELECT Id, PayrollId, EmployeeId, BankAccountNumber, BankName, IFSCCode, BankBranchName, BasicSalary, TotalIncome, TotalDeduction, TakeHomePay, TenantId, Gross, EmployeeName, EmployeeNumber, Email, DateOfBirth, TaxNumber, ESINo, PFNo, UANNo, IsPerDayWagesEmployee, DateOfJoining, PerDayOverTimeWages, PayrollMonth, PayrollYear, DaysPayable, OverTimeDays, PresentDays, SalarySlab, PerDayWages, OvertimeSalary, SalaryEarned, TenantName, Currency, GenderName, DesignationName, BranchName, PayrollMonthName, FinancialYearStart, LossPayDays, Logo FROM [dbo].[vwPayrollDetailPrint] WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND PayrollMonth = @Month AND PayrollYear = @Year",
+
+    "GetPaySlipFilePath": "SELECT PaySlipFilePath FROM PaySlip WHERE Id = @Id",
+
+    "GetEmployeeIdAndTenantByUserId": "SELECT Id, TenantId FROM Employee WHERE SystemUserId = @UserId",
+
+    "UpdatePassword": "UPDATE Users SET PasswordHash = @PasswordHash, PasswordSalt = @PasswordSalt WHERE UserId = @UserId",
+
+    "GetAttendanceByCalendar": "SELECT v.Id, v.EmployeeNumber, v.EmployeeName, v.CalendarDate, v.PunchIn, v.PunchOut, v.WorkingDuration, v.Month, v.Source, v.TenantId AS OrganisationId, v.SystemUserId FROM [dbo].[VwTimsheetPageData] v INNER JOIN Employee e ON v.EmployeeNumber = e.EmployeeNumber WHERE e.Id = @EmployeeId AND v.CalendarDate >= @DateFrom AND v.CalendarDate <= @DateTo AND v.Source='Punch' ORDER BY v.CalendarDate",
+
+    "InsertEvent": "INSERT INTO Events (UserId, EventTypeId, EventData, State, Status, TenantId, InsertDate, InsertUserId, created_at) VALUES (@UserId, @EventTypeId, @EventData, @State, @Status, @TenantId, GETDATE(), @InsertUserId, GETDATE()); SELECT CAST(SCOPE_IDENTITY() AS INT);",
+
+    "GetEventById": "SELECT EventId AS Id, UserId, EventTypeId, EventData, State, Status, TenantId, InsertDate, InsertUserId, UpdateDate, UpdateUserId FROM Events WHERE EventId = @Id AND TenantId = @TenantId",
+
+    "UpdateEventStatus": "UPDATE Events SET State = @State, Status = @Status, UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE EventId = @EventId AND TenantId = @TenantId",
+
+    "GetEventTypeIdByName": "SELECT EventTypeId FROM EventTypes WHERE EventName = @EventName AND TenantId = @TenantId AND IsActive = 1",
+
+    "GetEventTypeById": "SELECT EventTypeId AS Id, EventName, Description, TenantId, IsActive FROM EventTypes WHERE EventTypeId = @Id AND TenantId = @TenantId",
+
+    "IsEventTypeActive": "SELECT CAST(CASE WHEN EXISTS(SELECT 1 FROM EventTypes WHERE EventTypeId = @Id AND TenantId = @TenantId AND IsActive = 1) THEN 1 ELSE 0 END AS BIT)",
+
+    "GetFirstApprovalLevelName": "SELECT TOP 1 StageName FROM ApprovalStage WHERE EventTypeId = @EventTypeId AND TenantId = @TenantId AND IsActive = 1 ORDER BY Sequence ASC",
+
+    "GetApprovalStageByLevelName": "SELECT StageId AS Id, EventTypeId, StageName AS LevelName, WorkRoleId, UserId AS ExplicitUserIds, Sequence AS StageOrder, TenantId, IsActive FROM ApprovalStage WHERE EventTypeId = @EventTypeId AND StageName = @LevelName AND TenantId = @TenantId AND IsActive = 1",
+
+    "IsApprovalStageActive": "SELECT CAST(CASE WHEN EXISTS(SELECT 1 FROM ApprovalStage WHERE StageId = @Id AND TenantId = @TenantId AND IsActive = 1) THEN 1 ELSE 0 END AS BIT)",
+
+    "GetApproversByWorkRole": "SELECT u.UserId, u.Email, e.Name, e.Id AS EmployeeId FROM Users u LEFT JOIN Employee e ON u.UserId = e.SystemUserId WHERE u.TenantId = @TenantId AND u.IsActive = 1 AND EXISTS (SELECT 1 FROM STRING_SPLIT(u.WorkRoleId, ',') AS s WHERE TRY_CAST(s.value AS INT) = @WorkRoleId)",
+
+    "GetApproversByUserIds": "SELECT u.UserId, u.Email, e.Name, e.Id AS EmployeeId FROM Users u LEFT JOIN Employee e ON u.UserId = e.SystemUserId WHERE u.UserId IN (@UserIds) AND u.TenantId = @TenantId AND u.IsActive = 1",
+
+    "GetUserIdByEmployeeId": "SELECT SystemUserId FROM Employee WHERE Id = @EmployeeId AND TenantId = @TenantId",
+
+    "GetEmployeeNamesByUserIds": "SELECT e.Name FROM Employee e INNER JOIN Users u ON e.SystemUserId = u.UserId WHERE u.UserId IN (@UserIds) AND e.TenantId = @TenantId",
+
+    "InsertApproval": "INSERT INTO Approvals (EventId, StageId, ApproverId, Action, TenantId, InsertDate, InsertUserId) VALUES (@EventId, @StageId, @ApproverId, @Action, @TenantId, GETDATE(), @InsertUserId); SELECT CAST(SCOPE_IDENTITY() AS INT);",
+
+    "UpdateApprovalStatus": "UPDATE Approvals SET Action = @Action, comments = @Comments, ActionDate = @ActionDate, UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE ApprovalId = @Id",
+
+    "GetApprovalsByEventId": "SELECT ApprovalId AS Id, EventId, StageId AS ApprovalStageId, ApproverId, Action AS ApprovalStatus, comments AS Comments, ActionDate AS ApprovalDate, TenantId, InsertDate, InsertUserId, UpdateDate, UpdateUserId FROM Approvals WHERE EventId = @EventId AND TenantId = @TenantId",
+
+    "InsertScreenNotification": "INSERT INTO ScreenNotification (TenantId, UserId, EventId, Title, Message, IsRead, IsActive, status, InsertDate, InsertUserId) VALUES (@TenantId, @UserId, @EventId, @Title, @Message, @IsRead, @IsActive, 'Unread', GETDATE(), @InsertUserId); SELECT CAST(SCOPE_IDENTITY() AS INT);",
+
+    "InsertEmailNotification": "INSERT INTO EmailNotification (ToEmail, Subject, Body, IsSent, TenantId, InsertDate, InsertUserId) VALUES (@ToEmail, @Subject, @Body, 0, @TenantId, GETDATE(), @InsertUserId); SELECT CAST(SCOPE_IDENTITY() AS INT);",
+
+    "GetEmailTemplate": "SELECT Id, EventName, ActionType, Subject, Body, TenantId, IsActive FROM EmailTemplate WHERE EventName = @EventName AND ActionType = @ActionType AND TenantId = @TenantId AND IsActive = 1",
+
+    "GetNotificationTemplate": "SELECT Id, TemplateName, Title, Body, Parameter, Format, TemplateType, ActionType, TenantId, IsActive FROM Template WHERE TemplateName = @TemplateName AND TemplateType = @TemplateType AND ActionType = @ActionType AND TenantId = @TenantId AND IsActive = 1",
+
+    "GetTenantName": "SELECT TenantName FROM Tenant WHERE TenantId = @TenantId",
+
+    "GetAttendanceReportsByOrganisation": "SELECT v.Id, v.EmployeeNumber, v.EmployeeName, v.CalendarDate, v.PunchIn, v.PunchOut, v.WorkingDuration, v.Month, v.Source, v.TenantId AS OrganisationId, v.SystemUserId FROM [dbo].[VwTimsheetPageData] v WHERE v.TenantId = @OrganisationId AND v.CalendarDate >= @DateFrom AND v.CalendarDate <= @DateTo AND v.Source='Punch' ORDER BY v.CalendarDate, v.EmployeeNumber",
+
+    "CreateHoliday": "INSERT INTO Holiday (Name, Date, Description, TenantId, InsertDate, InsertUserId) VALUES (@Name, @Date, @Description, @TenantId, GETDATE(), @InsertUserId); SELECT CAST(SCOPE_IDENTITY() AS INT);",
+
+    "GetHolidayById": "SELECT Id, Name, Date, Description, InsertDate, InsertUserId, UpdateDate, UpdateUserId, TenantId FROM Holiday WHERE Id = @Id AND TenantId = @TenantId",
+
+    "GetAllHolidays": "SELECT Id, Name, Date, Description, InsertDate, InsertUserId, UpdateDate, UpdateUserId, TenantId FROM Holiday WHERE TenantId = @TenantId ORDER BY Date ASC",
+
+    "GetHolidaysWithFilters": "SELECT Id, Name, Date, Description, InsertDate, InsertUserId, UpdateDate, UpdateUserId, TenantId FROM Holiday WHERE TenantId = @TenantId AND (@Year IS NULL OR YEAR(Date) = @Year) ORDER BY Date ASC",
+
+    "UpdateHoliday": "UPDATE Holiday SET Name = @Name, Date = @Date, Description = @Description, UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE Id = @Id AND TenantId = @TenantId",
+
+    "HardDeleteHoliday": "DELETE FROM Holiday WHERE Id = @Id AND TenantId = @TenantId",
+
+    "GetEventDataAndName": "SELECT e.EventData, et.EventName FROM Events e INNER JOIN EventTypes et ON e.EventTypeId = et.EventTypeId WHERE e.EventId = @EventId AND e.TenantId = @TenantId",
+
+    "GetLeaveRequestDates": "SELECT FromDate, ToDate FROM LeaveRequest WHERE Id = @LeaveRequestId AND TenantId = @TenantId",
+
+    "GetOvertimeDetails": "SELECT OvertimeDate, Duration FROM Overtime WHERE Id = @OvertimeId AND TenantId = @TenantId",
+
+    "GetReimbursementDetails": "SELECT TransactionDate, TotalAmount FROM Reimbursement WHERE Id = @ReimbursementId AND TenantId = @TenantId",
+
+    "GetResignationDetails": "SELECT ResignationDate, Number FROM Resignation WHERE Id = @ResignationId AND TenantId = @TenantId",
+
+    "GetPayrollMonthYear": "SELECT PayrollMonth, PayrollYear FROM Payroll WHERE Id = @PayrollId AND TenantId = @TenantId",
+    "UpdatePayrollApprovalStatus": "UPDATE Payroll SET IsPayrollApproved = @IsApproved WHERE Id = @PayrollId AND TenantId = @TenantId",
+
+    "GetWorkingHoursByTenantId": "SELECT TOP 1 WorkingHours FROM TenantConfiguration WHERE TenantId = @TenantId",
+
+    "GetTenantDayOffIds": "SELECT DISTINCT DayOffId FROM TenantConfiguredDayOffDays WHERE TenantConfigurationId IN (SELECT TenantConfigurationId FROM TenantConfiguration WHERE TenantId = @TenantId)",
+
+    "GetActualHoursByEmployeeAndDateRange": "SELECT ISNULL(SUM(Duration), 0) AS TotalHours FROM Punch WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND PunchDate >= @FromDate AND PunchDate <= @ToDate AND PunchOut IS NOT NULL",
+
+    "AttendanceOverview_GetWorkingHours": "SELECT TOP 1 WorkingHours FROM TenantConfiguration WHERE TenantId = @TenantId",
+
+    "AttendanceOverview_GetDayOffs": "SELECT DISTINCT DayOffId FROM TenantConfiguredDayOffDays WHERE TenantConfigurationId IN (SELECT TenantConfigurationId FROM TenantConfiguration WHERE TenantId = @TenantId)",
+
+    "AttendanceOverview_GetActualHours": "SELECT ISNULL(SUM(Duration), 0) AS TotalHours FROM Punch WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND PunchDate >= @FromDate AND PunchDate <= @ToDate AND PunchOut IS NOT NULL",
+
+    "GetDisputeCategories": "SELECT Id, CategoryName, IsActive, CreatedOn FROM DisputeCategory WHERE IsActive = 1 ORDER BY CategoryName",
+
+    "GetExistingDispute": "SELECT Id, EmployeeId, DisputeCategoryId, DisputeDate, Description, Status, CreatedOn FROM EmployeeDispute WHERE EmployeeId = @EmployeeId AND DisputeDate = @DisputeDate",
+
+    "InsertDispute": "INSERT INTO EmployeeDispute (EmployeeId, DisputeCategoryId, DisputeDate, Description, Status, CreatedOn) VALUES (@EmployeeId, @DisputeCategoryId, @DisputeDate, @Description, @Status, @CreatedOn); SELECT CAST(SCOPE_IDENTITY() AS INT)"
+
+  }
+}
