@@ -113,7 +113,7 @@ namespace MobileWebApi.Services
                 x.AutoOrient();
                 x.Resize(new ResizeOptions
                 {
-                    Size = new Size(150, 150),
+                    Size = new Size(128, 128),
                     Mode = ResizeMode.Max
                 });
             });
@@ -123,7 +123,7 @@ namespace MobileWebApi.Services
                 output,
                 new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder
                 {
-                    Quality = 90
+                    Quality = 80
                 });
         }
 
