@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "328732730198",
+    "project_id": "altroz-app",
+    "storage_bucket": "altroz-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:328732730198:android:28b7fdb018da6fd0c7ecf7",
+        "android_client_info": {
+          "package_name": "com.example.altroz"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCspIJE-aIiLVkonl16e-96XSFSQxOBB_g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

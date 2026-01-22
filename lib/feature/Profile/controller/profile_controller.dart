@@ -1,0 +1,52 @@
+import 'package:flutter/material.dart';
+import '../model/profile_model.dart';
+import '../../../core/Utils/services/profile_service/profile_service.dart';
+
+class ProfileController extends ChangeNotifier {
+  ProfileModel? profile;
+  bool isLoading = false;
+  bool _fetched = false;
+
+  String get profileImageUrl {
+    final pic = profile?.picture;
+    print(' PROFILE CONTROLLER: picture from model = $pic');
+
+    if (pic == null || pic.isEmpty) {
+      print(' PROFILE CONTROLLER: No picture in profile model');
+      return '';
+    }
+
+    if (pic.startsWith('http://') || pic.startsWith('https://')) {
+      print(' PROFILE CONTROLLER: Full URL detected = $pic');
+      return pic;
+    }
+
+    final fullUrl = 'http://103.123.74.160:81/$pic';
+    print(' PROFILE CONTROLLER: Built URL = $fullUrl');
+    return fullUrl;
+  }
+
+
+  Future<void> fetchProfileOnce() async {
+    if (_fetched) return;
+    _fetched = true;
+
+    print(' PROFILE CONTROLLER: Starting profile fetch...');
+    isLoading = true;
+    notifyListeners();
+
+    profile = await ProfileService.fetchProfile();
+
+    print(' PROFILE CONTROLLER: Profile fetched');
+    print(' PROFILE CONTROLLER: Name = ${profile?.name}');
+    print(' PROFILE CONTROLLER: Picture = ${profile?.picture}');
+
+    isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> refreshProfile() async {
+    _fetched = false;
+    await fetchProfileOnce();
+  }
+}
