@@ -85,7 +85,6 @@ class _AttendanceHeaderState extends State<AttendanceHeader>
                   color: AppColors.textDark,
                 ),
               ),
-              const SizedBox(width: 8),
               Text(
                 DateFormat('MMM dd, EEEE').format(DateTime.now()),
                 style: TextStyle(

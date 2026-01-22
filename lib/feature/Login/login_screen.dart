@@ -142,7 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(
                   "Welcome Back",
                   style: TextStyle(
-                    fontSize: 28 * scale,
+                    fontSize: 29.87 * scale,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -190,7 +190,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF94A3B8),                    letterSpacing: 0.6,
+                    color: const Color(0xFF94A3B8),
+                    letterSpacing: 0.6,
                   ),
                 ),
 
@@ -323,8 +324,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                     ),
-
-
                   ),
                 ),
               ],
