@@ -31,6 +31,11 @@ namespace MobileWebApi.Repositories
                 return null;
 
             string query = _queryProvider.Get("GetUserByUsernameOrMobile");
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                _logger.LogError("SQL query 'GetUserByUsernameOrMobile' not found in configuration");
+                throw new InvalidOperationException("SQL query 'GetUserByUsernameOrMobile' not found in configuration");
+            }
 
             using var connection = _context.CreateConnection();
             return await connection.QueryFirstOrDefaultAsync<User>(
@@ -45,6 +50,11 @@ namespace MobileWebApi.Repositories
                 return null;
 
             string query = _queryProvider.Get("GetUserByUsernameForWebLogin");
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                _logger.LogError("SQL query 'GetUserByUsernameForWebLogin' not found in configuration");
+                throw new InvalidOperationException("SQL query 'GetUserByUsernameForWebLogin' not found in configuration");
+            }
 
             using var connection = _context.CreateConnection();
             return await connection.QueryFirstOrDefaultAsync<User>(
@@ -59,6 +69,11 @@ namespace MobileWebApi.Repositories
                 return null;
 
             string query = _queryProvider.Get("GetUserByEmail");
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                _logger.LogError("SQL query 'GetUserByEmail' not found in configuration");
+                throw new InvalidOperationException("SQL query 'GetUserByEmail' not found in configuration");
+            }
 
             using var connection = _context.CreateConnection();
             return await connection.QueryFirstOrDefaultAsync<User>(
@@ -73,6 +88,11 @@ namespace MobileWebApi.Repositories
                 return null;
 
             string query = _queryProvider.Get("GetUserByMobile");
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                _logger.LogError("SQL query 'GetUserByMobile' not found in configuration");
+                throw new InvalidOperationException("SQL query 'GetUserByMobile' not found in configuration");
+            }
 
             using var connection = _context.CreateConnection();
             return await connection.QueryFirstOrDefaultAsync<User>(
@@ -105,6 +125,11 @@ namespace MobileWebApi.Repositories
             using var connection = _context.CreateConnection();
 
             string query = _queryProvider.Get("GetUserById");
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                _logger.LogError("SQL query 'GetUserById' not found in configuration");
+                throw new InvalidOperationException("SQL query 'GetUserById' not found in configuration");
+            }
 
             return await connection.QueryFirstOrDefaultAsync<User>(query, new { UserId = userId });
         }

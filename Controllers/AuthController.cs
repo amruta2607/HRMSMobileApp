@@ -52,7 +52,13 @@ namespace MobileWebApi.Controllers
         [HttpPost("login-email")]
         public async Task<IActionResult> LoginWithEmail([FromBody] EmailLoginRequest request)
         {
-            _logger.LogInformation(LogMessages.Auth.LoginAttempt, request.email);
+            if (request == null)
+            {
+                _logger.LogWarning(LogMessages.Auth.LoginFailed, "null request");
+                return BadRequest(new { Success = false, Message = "Request body is required" });
+            }
+
+            _logger.LogInformation(LogMessages.Auth.LoginAttempt, request?.email ?? "null");
 
             if (string.IsNullOrWhiteSpace(request.email) || string.IsNullOrWhiteSpace(request.password))
             {
@@ -506,6 +512,16 @@ namespace MobileWebApi.Controllers
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
         {
+            if (request == null)
+            {
+                _logger.LogWarning("ForgotPassword request is null");
+                return BadRequest(new ForgotPasswordResponse
+                {
+                    Success = false,
+                    Message = "Request body is required"
+                });
+            }
+
             _logger.LogInformation(LogMessages.Auth.ForgotPasswordRequest, request.email);
 
             if (string.IsNullOrWhiteSpace(request.email))
@@ -587,6 +603,12 @@ namespace MobileWebApi.Controllers
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
         {
+            if (request == null)
+            {
+                _logger.LogWarning("ResetPassword request is null");
+                return BadRequest(new { Success = false, Message = "Request body is required" });
+            }
+
             _logger.LogInformation(LogMessages.Auth.OtpVerificationAttempt, request.email);
 
             // Validate request
