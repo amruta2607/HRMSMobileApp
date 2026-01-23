@@ -70,11 +70,19 @@ class _ProfileInfoRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(
-              item.icon,
-              size: 20 * scale,
-              color: item.color ?? AppColors.textDark,
-            ),
+            if (item.imagePath != null)
+              Image.asset(
+                item.imagePath!,
+                width: 20 * scale,
+                height: 20 * scale,
+                fit: BoxFit.contain,
+              )
+            else
+              Icon(
+                item.icon,
+                size: 20 * scale,
+                color: item.color ?? AppColors.textDark,
+              ),
             SizedBox(width: 12 * scale),
 
             /// LABEL
@@ -94,9 +102,8 @@ class _ProfileInfoRow extends StatelessWidget {
               Text(
                 item.value!,
                 style: TextStyle(
-                  fontSize: 13 * scale,
-                  color: AppColors.textGrey,
-                ),
+                  fontSize: 14 * scale,
+                  color: const Color(0xFF5D6063),                ),
               ),
 
             /// ARROW (for action rows)
@@ -118,7 +125,8 @@ class _ProfileInfoRow extends StatelessWidget {
 
 
 class ProfileInfoItem {
-  final IconData icon;
+  final IconData? icon;
+  final String? imagePath;
   final String label;
   final String? value;
   final bool isAction;
@@ -126,7 +134,8 @@ class ProfileInfoItem {
   final VoidCallback? onTap;
 
   const ProfileInfoItem({
-    required this.icon,
+    this.icon,
+    this.imagePath,
     required this.label,
     this.value,
     this.isAction = false,

@@ -21,8 +21,8 @@ class CustomNavigationBar extends StatelessWidget {
     final scale = (screenWidth / designWidth).clamp(0.9, 1.05);
 
     return Container(
-      height: 57 + bottomInset,
-      padding: EdgeInsets.only(bottom: bottomInset),
+      height: 65 + bottomInset, // Increased height slightly
+      padding: EdgeInsets.only(bottom: bottomInset + 8), // Added extra bottom padding to lift content
       decoration: const BoxDecoration(
         color: AppColors.navBarBg,
         boxShadow: [
@@ -45,21 +45,21 @@ class CustomNavigationBar extends StatelessWidget {
             onTap: () => onChanged(0),
           ),
           _NavItem(
-            imagePath: 'img/task.png',
+            imagePath: 'img/TaskNav.png',
             label: 'Tasks',
             active: currentIndex == 1,
             scale: scale,
             onTap: () => onChanged(1),
           ),
           _NavItem(
-            imagePath: 'img/notification.png',
+            imagePath: 'img/NotificationNav.png',
             label: 'Notifications',
             active: currentIndex == 2,
             scale: scale,
             onTap: () => onChanged(2),
           ),
           _NavItem(
-            imagePath: 'img/attendance.png',
+            imagePath: 'img/AttendanceNav.png',
             label: 'Attendance',
             active: currentIndex == 3,
             scale: scale,

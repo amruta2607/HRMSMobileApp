@@ -32,27 +32,28 @@ class ProfileBody extends StatelessWidget {
                 ProfileInfoCard(
                   items: [
                     ProfileInfoItem(
-                      icon: Icons.verified,
+                      imagePath: 'img/Vector.png',
                       label: 'Designation',
                       value: profile?.designation ?? '--',
                     ),
                     ProfileInfoItem(
-                      icon: Icons.badge,
+                      imagePath: 'img/EmpId.png',
                       label: 'Employee ID',
                       value: profile?.empId ?? '--',
                     ),
                     ProfileInfoItem(
-                      icon: Icons.email,
+                      imagePath: 'img/Pmail.png',
                       label: 'Email',
                       value: profile?.email ?? '--',
                     ),
+
                     ProfileInfoItem(
                       icon: Icons.phone,
                       label: 'Phone',
                       value: profile?.phone ?? '--',
                     ),
                     ProfileInfoItem(
-                      icon: FontAwesomeIcons.addressCard,
+                      imagePath: 'img/address.png',
                       label: 'Address',
                       value: profile?.address ?? '--',
                     ),
@@ -70,7 +71,7 @@ class ProfileBody extends StatelessWidget {
                 ProfileInfoCard(
                   items: [
                     const ProfileInfoItem(
-                      icon: Icons.lock,
+                      imagePath: 'img/passwordC.png',
                       label: 'Change Password',
                       isAction: true,
                     ),

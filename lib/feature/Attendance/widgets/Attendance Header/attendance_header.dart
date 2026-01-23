@@ -60,9 +60,17 @@ class _AttendanceHeaderState extends State<AttendanceHeader>
   }
 
   String _format(Duration d) {
-    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$m:$s';
+    if (d.inSeconds == 0) {
+      return '00:00 Hours';
+    } else if (d.inHours == 0) {
+      final m = d.inMinutes.toString().padLeft(2, '0');
+      final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+      return '$m:$s Min';
+    } else {
+      final h = d.inHours.toString().padLeft(2, '0');
+      final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+      return '$h:$m Hours';
+    }
   }
 
   @override
@@ -95,14 +103,17 @@ class _AttendanceHeaderState extends State<AttendanceHeader>
             ],
           ),
 
-          const SizedBox(height: 6),
+          const SizedBox(height: 3),
 
-          Text(
-            widget.title,
-            style: TextStyle(
-              fontSize: 27 * scale,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textDark,
+          Padding(
+            padding: EdgeInsets.only(left: 14 * scale), // adjust value if needed
+            child: Text(
+              widget.title,
+              style: TextStyle(
+                fontSize: 27 * scale,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+              ),
             ),
           ),
 
@@ -124,7 +135,9 @@ class _AttendanceHeaderState extends State<AttendanceHeader>
                       'Location: $text',
                       style: TextStyle(
                         fontSize: 14 * scale,
-                        color: AppColors.textGrey,
+                        fontWeight: FontWeight.w500,
+
+                        color: Color(0xFF64748B),
                       ),
                     );
                   },
@@ -136,7 +149,9 @@ class _AttendanceHeaderState extends State<AttendanceHeader>
                   style: TextStyle(
                     fontSize: 20 * scale,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.presentGreen,
+                    color: widget.workedDuration.inSeconds == 0
+                        ? const Color(0xFF625B71)
+                        : AppColors.presentGreen,
                   ),
                 ),
               ],

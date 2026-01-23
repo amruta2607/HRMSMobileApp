@@ -251,7 +251,9 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection> {
                                 style: TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 13 * scale,
-                                  color: AppColors.textGrey,
+                                  color: Color(0xFF64748B),
+                                  fontWeight: FontWeight.w500,
+
                                 ),
                               ),
                               Text(
@@ -321,12 +323,21 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection> {
                   child: Row(
                     children: [
                       Container(
-                        padding: EdgeInsets.all(12 * scale),
+                        width: 45 * scale,
+                        height: 45 * scale,
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
                           color: iconBgColor,
+                          borderRadius: BorderRadius.circular(16 * scale),
                         ),
-                        child: Icon(
+                        child: status.isMarked
+                            ? Center(
+                          child: Image.asset(
+                            'img/present.png',
+                            width: 24 * scale,
+                            height: 24 * scale,
+                          ),
+                        )
+                            : Icon(
                           statusIcon,
                           size: 20 * scale,
                           color: statusColor,

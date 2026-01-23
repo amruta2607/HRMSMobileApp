@@ -33,7 +33,6 @@ class ProfileHeader extends StatelessWidget {
           child: Column(
             children: [
               // Spacer for fixed navigation icons
-              SizedBox(height: 56 * scale),
 
               // Profile content
               Padding(
@@ -42,51 +41,65 @@ class ProfileHeader extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     /// Profile Image - Only show if exists
-                    if (imageUrl.isNotEmpty)
-                      CircleAvatar(
-                        radius: 44 * scale,
-                        backgroundColor: Colors.white,
-                        child: ClipOval(
-                          child: Image.network(
-                            imageUrl,
-                            width: 88 * scale,
-                            height: 88 * scale,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (_, child, progress) {
-                              if (progress == null) return child;
-                              return Center(
-                                child: SizedBox(
-                                  width: 30 * scale,
-                                  height: 30 * scale,
-                                  child: const CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      AppColors.primaryBlue,
-                                    ),
+                    CircleAvatar(
+                      radius: 44 * scale,
+                      backgroundColor: Colors.white,
+                      child: ClipOval(
+                        child: imageUrl.isNotEmpty
+                            ? Image.network(
+                          imageUrl,
+                          width: 88 * scale,
+                          height: 88 * scale,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (_, child, progress) {
+                            if (progress == null) return child;
+                            return Center(
+                              child: SizedBox(
+                                width: 30 * scale,
+                                height: 30 * scale,
+                                child: const CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor:
+                                  AlwaysStoppedAnimation<Color>(
+                                    AppColors.primaryBlue,
                                   ),
                                 ),
-                              );
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              // Show fallback user icon instead of empty space
-                              return Center(
-                                child: Text(
-                                  profile?.name != null && profile!.name!.isNotEmpty
-                                      ? profile!.name![0].toUpperCase()
-                                      : 'U',
-                                  style: TextStyle(
-                                    fontSize: 30 * scale,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primaryBlue,
-                                  ),
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return Center(
+                              child: Text(
+                                profile?.name != null &&
+                                    profile!.name!.isNotEmpty
+                                    ? profile!.name![0].toUpperCase()
+                                    : 'U',
+                                style: TextStyle(
+                                  fontSize: 30 * scale,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryBlue,
                                 ),
-                              );
-                            },
+                              ),
+                            );
+                          },
+                        )
+                            : Center(
+                          child: Text(
+                            profile?.name != null &&
+                                profile!.name!.isNotEmpty
+                                ? profile!.name![0].toUpperCase()
+                                : 'U',
+                            style: TextStyle(
+                              fontSize: 30 * scale,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryBlue,
+                            ),
                           ),
                         ),
                       ),
+                    ),
 
-                    SizedBox(height: 12 * scale),
+                    SizedBox(height: 8 * scale),
 
                     Text(
                       profile?.name ?? '--',
@@ -96,11 +109,14 @@ class ProfileHeader extends StatelessWidget {
                       ),
                     ),
 
-                    SizedBox(height: 4 * scale),
 
                     Text(
                       profile?.designation ?? '--',
-                      style: const TextStyle(color: Color(0xFF5D6063)),
+                      style: const TextStyle(color: Color(0xFF5D6063),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+
+                      ),
                     ),
 
                     SizedBox(height: 8 * scale),
@@ -108,7 +124,7 @@ class ProfileHeader extends StatelessWidget {
                     Container(
                       padding: EdgeInsets.symmetric(
                         horizontal: 12 * scale,
-                        vertical: 4,
+                        vertical: 2,
                       ),
                       decoration: BoxDecoration(
                         color: AppColors.primaryBlueSoft,

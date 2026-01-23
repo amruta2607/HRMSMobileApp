@@ -9,31 +9,10 @@ class HomeWorkspaceSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final width = constraints.maxWidth;
-
-        // 🔹 Figma base card width
-        const figmaCardWidth = 113.0;
-
-        // 🔹 Decide columns based on available width
-        final crossAxisCount = (width / figmaCardWidth).floor().clamp(2, 4);
-
         final spacing = 14.0;
 
         final items = const [
-          WorkspaceCard(
-            title: 'Attendance',
-            subtitle: '08:42 hrs',
-            icon: Icons.access_time,
-            iconColor: AppColors.attendanceBlue,
-            iconBgColor: Color(0x8FAFF8CC),
 
-          ),
-          WorkspaceCard(
-            title: 'Leave',
-            subtitle: '12 days',
-            imagePath: 'img/leave.png',
-            iconBgColor: Color(0x8FAFF8CC),
-          ),
           WorkspaceCard(
             title: 'Payroll',
             subtitle: 'Slip',
@@ -41,6 +20,7 @@ class HomeWorkspaceSection extends StatelessWidget {
             iconBgColor: Color(0x8FAFF8CC),
 
           ),
+
           WorkspaceCard(
             title: 'Tasks',
             subtitle: '3 Pending',
@@ -49,6 +29,23 @@ class HomeWorkspaceSection extends StatelessWidget {
             iconBgColor: Color(0x8FAFF8CC),
 
           ),
+
+          WorkspaceCard(
+            title: 'Leave',
+            subtitle: '12 days',
+            imagePath: 'img/leave.png',
+            iconBgColor: Color(0x8FAFF8CC),
+          ),
+
+          WorkspaceCard(
+            title: 'Attendance',
+            subtitle: '08:42 hrs',
+            icon: Icons.access_time,
+            iconColor: AppColors.attendanceBlue,
+            iconBgColor: Color(0x8FAFF8CC),
+
+          ),
+
           WorkspaceCard(
             title: 'Attendance',
             subtitle: 'Today',
@@ -87,7 +84,7 @@ class HomeWorkspaceSection extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               itemCount: items.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
+                crossAxisCount: 3,
                 crossAxisSpacing: spacing,
                 mainAxisSpacing: spacing,
 

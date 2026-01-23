@@ -59,9 +59,9 @@ class _AttendanceOverviewCardState extends State<AttendanceOverviewCard> {
         return _buildCard(
           scale,
           week: data.week,
-          expected: '${data.expectedHours}:00',
-          actual: '${data.actualHours}:00',
-          shortfall: '${data.shortfallHours}:00',
+          expected: '${data.expectedHours}',
+          actual: '${data.actualHours}',
+          shortfall: '${data.shortfallHours}',
         );
       },
     );
@@ -98,18 +98,21 @@ class _AttendanceOverviewCardState extends State<AttendanceOverviewCard> {
             'Expected Hours:',
             expected,
             scale,
+            labelWidth: 160,
             suffix: ' Hours',
           ),
           _Row(
             'Actual Hours:',
             actual,
             scale,
+            labelWidth: 160,
             suffix: ' Hours',
           ),
           _Row(
             'Shortfall:',
             shortfall,
             scale,
+            labelWidth: 160,
             suffix: ' Hours',
           ),
         ],

@@ -19,44 +19,68 @@ class ProfileScreen extends StatelessWidget {
     if (showNavigation) {
       return Scaffold(
         backgroundColor: AppColors.background,
-        body: Stack(
+        body: Column(
           children: [
-            const Positioned.fill(
+
+            /// Top White Navigation Bar
+            Container(
+              width: double.infinity,
+              color: Colors.white,
               child: SafeArea(
-                child: ProfileBody(),
-              ),
-            ),
-            // Fixed Navigation Icons
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: SafeArea(
+                bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_ios, color: AppColors.textDark),
-                        onPressed: () => Navigator.pushAndRemoveUntil(
+
+                      /// Back Arrow
+                      GestureDetector(
+                        onTap: () => Navigator.pushAndRemoveUntil(
                           context,
-                          MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+                          MaterialPageRoute(
+                            builder: (_) =>
+                            const MainNavigationScreen(),
+                          ),
                               (route) => false,
                         ),
+                        child: const Icon(
+                          Icons.arrow_back_ios,
+                          size: 22,
+                          color: AppColors.textDark,
+                        ),
                       ),
+
+                      const SizedBox(width: 8),
+
+                      /// Profile Title
+                      const Text(
+                        "Profile",
+                        style: TextStyle(
+                          fontSize: 23,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+
                       const Spacer(),
-                      Padding(
-                        padding: const EdgeInsets.only(right: 16),
-                        child: GestureDetector(
-                          onTap: () {
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.transparent,
-                              builder: (context) => const EditProfileDialog(),
-                            );
-                          },
-                          child: const Icon(Icons.edit, color: AppColors.textDark),
+
+                      /// Edit Icon
+                      GestureDetector(
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) =>
+                            const EditProfileDialog(),
+                          );
+                        },
+                        child: const Icon(
+                          Icons.edit,
+                          size: 24,
+                          color: AppColors.textDark,
                         ),
                       ),
                     ],
@@ -64,14 +88,25 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
             ),
+
+            /// Profile Body
+            const Expanded(
+              child: ProfileBody(),
+            ),
           ],
         ),
+
         bottomNavigationBar: CustomNavigationBar(
-          currentIndex: -1, // No tab selected when viewing from home
+          currentIndex: -1,
           onChanged: (index) {
-            // Pop current profile screen and navigate to selected tab
-            Navigator.pop(context);
-            // The main navigation screen will handle the index change
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    MainNavigationScreen(initialIndex: index),
+              ),
+                  (route) => false,
+            );
           },
         ),
       );

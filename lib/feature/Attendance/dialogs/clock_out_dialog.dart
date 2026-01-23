@@ -48,14 +48,15 @@ class _ClockOutDialogState extends State<ClockOutDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 /// HEADER
-                const Column(
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
                       Icons.access_time,
                       size: 28,
                       color: AppColors.popOrange,
                     ),
-                    SizedBox(height: 10),
+                    SizedBox(width: 10),
                     Text(
                       'Do you want to Clock-Out?',
                       textAlign: TextAlign.center,
@@ -80,7 +81,8 @@ class _ClockOutDialogState extends State<ClockOutDialog> {
                           'Time : ${DateFormat('hh:mm a').format(_currentTime)}',
                           style: const TextStyle(
                             fontSize: 14,
-                            color: AppColors.textGrey,
+                            color: Color(0xFF64748B),
+
                           ),
                         );
                       },
@@ -93,7 +95,8 @@ class _ClockOutDialogState extends State<ClockOutDialog> {
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 14,
-                          color: AppColors.textGrey,
+                          color: Color(0xFF64748B),
+
                         ),
                       ),
                     ),

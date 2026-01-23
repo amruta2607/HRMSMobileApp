@@ -199,23 +199,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 InputField(
                   hint: isEmailSelected
-                      ? "name@company.com"
+                      ? "name@altroz.com"
                       : "Mobile Number",
                   icon: isEmailSelected
                       ? Icons.email_outlined
                       : Icons.phone_outlined,
-                  iconPath: isEmailSelected ? 'img/mail.png' : null,
+                  iconPath: isEmailSelected ? 'img/workMail.png' : null,
                   controller: fieldController,
                   errorText: fieldError,
                   keyboardType: isEmailSelected
                       ? TextInputType.emailAddress
                       : TextInputType.number,
                   inputFormatters: isEmailSelected
-                      ? [
-                    FilteringTextInputFormatter.allow(
-                      RegExp(r'[a-zA-Z0-9@._-]'),
-                    )
-                  ]
+                      ? []
                       : [
                     FilteringTextInputFormatter.digitsOnly,
                     LengthLimitingTextInputFormatter(10),
@@ -225,7 +221,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(height: 15 * scale),
 
                 Text(
-                  isEmailSelected ? "Password" : "OTP",
+                  isEmailSelected ? "PASSWORD" : "OTP",
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -239,17 +235,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   hint: isEmailSelected ? "Enter Password" : "OTP",
                   icon: Icons.lock_outline,
 
-                  iconPath: 'img/password.png',
+                  iconPath: 'img/passwordP.png',
                   isPassword: true,
                   controller: passwordController,
                   errorText: passwordError,
-                  keyboardType: TextInputType.number,
+                  keyboardType: isEmailSelected
+                      ? TextInputType.visiblePassword
+                      : TextInputType.number,
                   inputFormatters: isEmailSelected
-                      ? [
-                    FilteringTextInputFormatter.allow(
-                      RegExp(r'[a-zA-Z0-9]'),
-                    )
-                  ]
+                      ? []
                       : [
                     FilteringTextInputFormatter.digitsOnly,
                     LengthLimitingTextInputFormatter(6),
@@ -273,16 +267,25 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Resend OTP logic
                       }
                     },
-                    child: Text(
-                      isEmailSelected ? "Forgot Password?" : "Resend OTP",
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        color: const Color(0xFFCCCCCC),
-                        fontSize: 17.42 * scale,
-                        fontWeight: FontWeight.w500,
-                        height: 24.89 / 17.42,
-                        decoration: TextDecoration.underline,
-                        decorationColor: const Color(0xFFCCCCCC),
+                    child: Container(
+                      padding: const EdgeInsets.only(bottom: 1.0),
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: Color(0xFFCCCCCC),
+                            width: 1.0,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        isEmailSelected ? "Forgot Password?" : "Resend OTP",
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          color: const Color(0xFFCCCCCC),
+                          fontSize: 17.42 * scale,
+                          fontWeight: FontWeight.w500,
+                          height: 20.89 / 17.42,
+                        ),
                       ),
                     ),
                   ),

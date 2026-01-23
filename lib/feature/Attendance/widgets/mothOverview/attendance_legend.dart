@@ -16,10 +16,8 @@ class AttendanceLegend extends StatelessWidget {
         return Center(
           child: Padding(
             padding: EdgeInsets.symmetric(vertical: 8 * scale),
-            child: Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 16 * scale, // horizontal gap
-              runSpacing: 8 * scale, // vertical gap (small screens)
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: const [
                 _LegendItem(
                   label: 'Present',
@@ -62,7 +60,7 @@ class _LegendItem extends StatelessWidget {
     final scale = (screenWidth / designWidth).clamp(0.85, 1.1);
 
     return SizedBox(
-      width: 70 * scale,
+      width: 85 * scale,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
