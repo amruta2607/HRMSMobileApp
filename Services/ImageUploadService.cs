@@ -123,7 +123,7 @@ namespace MobileWebApi.Services
                 output,
                 new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder
                 {
-                    Quality = 80
+                    Quality = 90
                 });
         }
 
