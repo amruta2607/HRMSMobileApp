@@ -4,8 +4,13 @@ import 'attendance_daywise_model.dart';
 
 class AttendanceDayWiseRow extends StatelessWidget {
   final AttendanceRowData data;
+  final double scale;
 
-  const AttendanceDayWiseRow({super.key, required this.data});
+  const AttendanceDayWiseRow({
+    super.key,
+    required this.data,
+    required this.scale,
+  });
 
   String _formatDuration(Duration d) {
     final h = d.inHours.toString().padLeft(2, '0');
@@ -26,18 +31,19 @@ class AttendanceDayWiseRow extends StatelessWidget {
       children: [
         SizedBox(width: 5),
 
-        _Cell(data.date),
+        _Cell(data.date, scale: scale),
         SizedBox(width: 10),
 
-        _Cell(data.clockIn ?? '-', color: data.late ? Colors.deepOrange : null),
+        _Cell(data.clockIn ?? '-', scale: scale, color: data.late ? Colors.deepOrange : null),
         SizedBox(width: 15),
 
-        _Cell(data.clockOut ?? '-'),
+        _Cell(data.clockOut ?? '-', scale: scale),
 
         _Cell(
           data.workedDuration != null
               ? _formatDuration(data.workedDuration!)
               : '-',
+          scale: scale,
           alignRight: true,
           bold: true,
           color: hourColor,
@@ -54,9 +60,11 @@ class _Cell extends StatelessWidget {
   final bool alignRight;
   final bool bold;
   final Color? color;
+  final double scale;
 
   const _Cell(
       this.text, {
+        required this.scale,
         this.alignRight = false,
         this.bold = false,
         this.color,
@@ -69,8 +77,11 @@ class _Cell extends StatelessWidget {
         text,
         textAlign: alignRight ? TextAlign.right : TextAlign.left,
         style: TextStyle(
-          fontSize: 11,
+          fontFamily: 'Inter',
+          fontSize: 12 * scale, // Scaled font size
           fontWeight: bold ? FontWeight.w600 : FontWeight.w500,
+          height: 22.69 / 12, // Preserve Original Line Height Ratio
+          letterSpacing: 0,
           color: color ?? AppColors.textGrey,
         ),
       ),

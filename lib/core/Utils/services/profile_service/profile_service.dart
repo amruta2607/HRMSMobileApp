@@ -40,7 +40,7 @@ class ProfileService {
 
       if (response.statusCode == 401) {
         print(' PROFILE: Token expired, logging out');
-        await TokenStorage.logout();
+        await TokenStorage.logoutAndNavigate();
         return null;
       }
 
@@ -140,7 +140,7 @@ class ProfileService {
 
       if (response.statusCode == 401) {
         print(' UPDATE PROFILE: Token expired, logging out');
-        await TokenStorage.logout();
+        await TokenStorage.logoutAndNavigate();
         return false;
       }
 

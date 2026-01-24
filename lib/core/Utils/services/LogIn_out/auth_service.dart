@@ -136,7 +136,7 @@ class AuthService {
       final isExpired = await TokenStorage.isTokenExpired();
       if (isExpired) {
         print("LOGOUT: Token expired, forcing logout");
-        await TokenStorage.logout();
+        await TokenStorage.logoutAndNavigate();
         return true;
       }
 

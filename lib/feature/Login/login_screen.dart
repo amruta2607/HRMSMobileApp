@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:io';
 
+import 'package:provider/provider.dart';
+import '../../feature/Profile/controller/profile_controller.dart';
 import '../../core/validators/validation.dart';
 import '../../feature/Login/Widgets/toggle_item.dart';
 import '../../feature/Login/Widgets/input_field.dart';
@@ -68,6 +71,12 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (!mounted) return;
+
+      // Force refresh profile for new user
+      if (mounted) {
+        context.read<ProfileController>().refreshProfile();
+      }
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -75,6 +84,17 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     } catch (e) {
+      if (e is SocketException) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Connect to the Internet to Proceed"),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+        return;
+      }
+
       final msg = e.toString().toLowerCase();
 
       String? newFieldError;
@@ -204,7 +224,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   icon: isEmailSelected
                       ? Icons.email_outlined
                       : Icons.phone_outlined,
-                  iconPath: isEmailSelected ? 'img/workMail.png' : null,
+                  iconPath: isEmailSelected ? 'img/mail.png' : null,
                   controller: fieldController,
                   errorText: fieldError,
                   keyboardType: isEmailSelected
@@ -221,7 +241,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(height: 15 * scale),
 
                 Text(
-                  isEmailSelected ? "PASSWORD" : "OTP",
+                  isEmailSelected ? "Password" : "OTP",
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -235,7 +255,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   hint: isEmailSelected ? "Enter Password" : "OTP",
                   icon: Icons.lock_outline,
 
-                  iconPath: 'img/passwordP.png',
+                  iconPath: 'img/password.png',
                   isPassword: true,
                   controller: passwordController,
                   errorText: passwordError,
@@ -284,7 +304,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           color: const Color(0xFFCCCCCC),
                           fontSize: 17.42 * scale,
                           fontWeight: FontWeight.w500,
-                          height: 20.89 / 17.42,
+                          height: 19.89 / 17.42,
                         ),
                       ),
                     ),

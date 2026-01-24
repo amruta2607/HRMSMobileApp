@@ -49,4 +49,12 @@ class ProfileController extends ChangeNotifier {
     _fetched = false;
     await fetchProfileOnce();
   }
+
+  void clearData() {
+    profile = null;
+    _fetched = false;
+    isLoading = false;
+    notifyListeners();
+    print(' PROFILE CONTROLLER: Data cleared');
+  }
 }

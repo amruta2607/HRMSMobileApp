@@ -17,11 +17,16 @@ class AttendanceDayWiseCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scale =
-    (MediaQuery.of(context).size.width / 402).clamp(0.85, 1.1);
+    (MediaQuery.of(context).size.width / 402).clamp(0.75, 1.1);
 
     return Container(
       height: 361 * scale,
-      padding: EdgeInsets.all(14 * scale),
+      padding: EdgeInsets.fromLTRB(
+        22 * scale,
+        14 * scale,
+        14 * scale,
+        14 * scale,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(23.07 * scale),
@@ -35,20 +40,20 @@ class AttendanceDayWiseCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Row(
+          Row(
             children: [
-              SizedBox(width: 5),
+              const SizedBox(width: 5),
 
-              _HeaderCell('Date:'),
-              SizedBox(width: 10),
+              _HeaderCell('Date:', scale: scale),
+             SizedBox(width: 10),
 
-              _HeaderCell('Clock In'),
+            _HeaderCell('ClockIn', scale: scale),
               SizedBox(width: 15),
-              _HeaderCell('Clock Out'),
+          _HeaderCell('ClockOut', scale: scale),
 
 
-              _HeaderCell('Hours', alignRight: true),
-              SizedBox(width: 10),
+               _HeaderCell('Hours', alignRight: true, scale: scale),
+              const SizedBox(width: 5),
 
             ],
           ),
@@ -64,7 +69,7 @@ class AttendanceDayWiseCard extends StatelessWidget {
                 final row = rows[i];
                 return InkWell(
                   onTap: () => onRowTap(row),
-                  child: AttendanceDayWiseRow(data: row),
+                  child: AttendanceDayWiseRow(data: row, scale: scale),
                 );
               },
             ),
@@ -78,8 +83,9 @@ class AttendanceDayWiseCard extends StatelessWidget {
 class _HeaderCell extends StatelessWidget {
   final String text;
   final bool alignRight;
+  final double scale;
 
-  const _HeaderCell(this.text, {this.alignRight = false});
+  const _HeaderCell(this.text, {required this.scale, this.alignRight = false});
 
   @override
   Widget build(BuildContext context) {
@@ -87,9 +93,9 @@ class _HeaderCell extends StatelessWidget {
       child: Text(
         text,
         textAlign: alignRight ? TextAlign.right : TextAlign.left,
-        style: const TextStyle(
+        style: TextStyle(
           fontWeight: FontWeight.w700,
-          fontSize: 14,
+          fontSize: 13 * scale, // Reduced base slightly to 13 for better fit + scale
           color: AppColors.textDark,
         ),
       ),

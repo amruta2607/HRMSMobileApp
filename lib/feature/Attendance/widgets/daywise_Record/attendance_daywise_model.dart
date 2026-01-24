@@ -26,7 +26,7 @@ class AttendanceRowData {
     try {
       if (rawDate.isNotEmpty) {
         final dt = DateTime.parse(rawDate);
-        formattedDate = DateFormat('dd/MM/yyyy').format(dt);
+        formattedDate = DateFormat('dd/MM/yy').format(dt);
       }
     } catch (_) {}
 

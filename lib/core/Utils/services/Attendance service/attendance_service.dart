@@ -82,7 +82,7 @@ class AttendanceService {
 
       if (response.statusCode == 401) {
         print(' ATTENDANCE: Token expired, logging out');
-        await TokenStorage.logout();
+        await TokenStorage.logoutAndNavigate();
         return false;
       }
 
@@ -150,7 +150,7 @@ class AttendanceService {
 
       if (response.statusCode == 401) {
         print(' CALENDAR: Token expired, logging out');
-        await TokenStorage.logout();
+        await TokenStorage.logoutAndNavigate();
         return null;
       }
 
@@ -235,7 +235,7 @@ class AttendanceService {
       print(' OVERVIEW RESPONSE => ${response.body}');
 
       if (response.statusCode == 401) {
-        await TokenStorage.logout();
+        await TokenStorage.logoutAndNavigate();
         throw Exception("Session Expired (401)");
       }
 
@@ -299,7 +299,7 @@ class AttendanceService {
 
       if (response.statusCode == 401) {
         print('🔴 ATTENDANCE STATUS: Token expired, logging out');
-        await TokenStorage.logout();
+        await TokenStorage.logoutAndNavigate();
         return null;
       }
 
@@ -312,8 +312,8 @@ class AttendanceService {
 
       return AttendanceStatusResponse.fromJson(decoded);
     } catch (e, s) {
-      print('🔴 ATTENDANCE STATUS ERROR => $e');
-      print('🔴 STACKTRACE => $s');
+      print(' ATTENDANCE STATUS ERROR => $e');
+      print(' STACKTRACE => $s');
       return null;
     }
   }

@@ -1,4 +1,9 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import ' navigation_service.dart';
+import '../../../../feature/Profile/controller/profile_controller.dart';
 
 class TokenStorage {
   static Future<void> saveLoginData({
@@ -47,7 +52,6 @@ class TokenStorage {
     final hasOrgId = prefs.containsKey('organisationId');
 
     if (isLoggedIn && (!hasUserId || !hasOrgId)) {
-      // Data is missing/corrupted, force logout state
       await logout();
       return false;
     }
@@ -66,5 +70,31 @@ class TokenStorage {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     print('LOGOUT → STORAGE CLEARED');
+  }
+
+  static Future<void> logoutAndNavigate() async {
+    final context = NavigationService.navigatorKey.currentContext;
+    if (context != null) {
+      try {
+        Provider.of<ProfileController>(context, listen: false).clearData();
+      } catch (e) {
+        print('LOGOUT ERROR CLEARING DATA: $e');
+      }
+    }
+
+    await logout();
+
+    if (context != null) {
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/login', // Assuming named route or use MaterialPageRoute
+            (route) => false,
+      );
+    } else {
+      NavigationService.navigatorKey.currentState?.pushNamedAndRemoveUntil(
+        '/login',
+            (route) => false,
+      );
+    }
+    print('LOGOUT → NAVIGATED TO LOGIN');
   }
 }
