@@ -224,7 +224,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   icon: isEmailSelected
                       ? Icons.email_outlined
                       : Icons.phone_outlined,
-                  iconPath: isEmailSelected ? 'img/mail.png' : null,
+                  iconPath: isEmailSelected ? 'img/workMail.png' : null,
                   controller: fieldController,
                   errorText: fieldError,
                   keyboardType: isEmailSelected
@@ -241,7 +241,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(height: 15 * scale),
 
                 Text(
-                  isEmailSelected ? "Password" : "OTP",
+                  isEmailSelected ? "PASSWORD" : "OTP",
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -255,7 +255,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   hint: isEmailSelected ? "Enter Password" : "OTP",
                   icon: Icons.lock_outline,
 
-                  iconPath: 'img/password.png',
+                  iconPath: 'img/passwordP.png',
                   isPassword: true,
                   controller: passwordController,
                   errorText: passwordError,

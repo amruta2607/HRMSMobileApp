@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/Theme/app_colors.dart';
+import '../../leave/leave_screen.dart';
 import 'workspace_card.dart';
 
 class HomeWorkspaceSection extends StatelessWidget {
@@ -11,7 +12,7 @@ class HomeWorkspaceSection extends StatelessWidget {
       builder: (context, constraints) {
         final spacing = 14.0;
 
-        final items = const [
+        final items = [
 
           WorkspaceCard(
             title: 'Payroll',
@@ -35,6 +36,12 @@ class HomeWorkspaceSection extends StatelessWidget {
             subtitle: '12 days',
             imagePath: 'img/leave.png',
             iconBgColor: Color(0x8FAFF8CC),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const LeaveScreen()),
+              );
+            },
           ),
 
           WorkspaceCard(

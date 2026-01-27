@@ -4,11 +4,13 @@ import '../../core/Theme/app_colors.dart';
 class HomeScreenConstent extends StatelessWidget {
   final Widget body;
   final Widget? floating;
+  final Widget? bottomNavigationBar;
 
   const HomeScreenConstent({
     super.key,
     required this.body,
     this.floating,
+    this.bottomNavigationBar,
   });
 
   @override
@@ -21,6 +23,7 @@ class HomeScreenConstent extends StatelessWidget {
           if (floating != null) floating!,
         ],
       ),
+      bottomNavigationBar: bottomNavigationBar,
     );
   }
 }
