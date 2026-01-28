@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
+import '../leave_details/leave_details.dart';
 
 class RecentLeaveSection extends StatelessWidget {
-  const RecentLeaveSection({super.key});
+  final List<Map<String, String>> leaves;
+
+  const RecentLeaveSection({
+    super.key,
+    this.leaves = const [], // Default empty
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -29,29 +35,31 @@ class RecentLeaveSection extends StatelessWidget {
         SizedBox(height: 16 * scale),
 
         Expanded(
-          child: ListView(
+          child: ListView.builder(
             padding: EdgeInsets.symmetric(horizontal: 20 * scale),
-            children: [
-              SizedBox(height: 5 * scale),
-              LeaveRequestTile(
-
-                title: "Casual Leave",
-                date: "2nd Mar – 4th Mar",
-              ),
-              SizedBox(height: 8 * scale),
-              LeaveRequestTile(
-                title: "Casual Leave",
-                date: "8th Jan",
-              ),
-              SizedBox(height: 8 * scale),
-
-              LeaveRequestTile(
-                title: "Sick Leave",
-                date: "20th Nov – 24th Nov",
-              ),
-              SizedBox(height: 8 * scale),
-
-            ],
+            itemCount: leaves.length,
+            itemBuilder: (context, index) {
+              final leave = leaves[index];
+              return Column(
+                children: [
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => LeaveDetailsScreen(leaveData: leave),
+                        ),
+                      );
+                    },
+                    child: LeaveRequestTile(
+                      title: leave['title']!,
+                      date: leave['date']!,
+                    ),
+                  ),
+                  SizedBox(height: 8 * scale),
+                ],
+              );
+            },
           ),
         ),
       ],

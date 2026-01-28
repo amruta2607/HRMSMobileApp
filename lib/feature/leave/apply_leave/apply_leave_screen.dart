@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import '../../Reuse_Widgets/leave_primary_button.dart';
 import '../../Navigation/navigation_bar.dart';
 import '../../Navigation/main_navigation_screen.dart';
+import '../../../../core/Utils/services/leave_service/leave_service.dart';
 
 import 'package:file_picker/file_picker.dart' as fp;
 import 'package:intl/intl.dart';
 import '../leave_success_screen.dart';
+import '../model/leave_balence_model.dart';
 
 class ApplyLeaveScreen extends StatefulWidget {
   const ApplyLeaveScreen({super.key});
@@ -18,8 +20,33 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
   fp.PlatformFile? _selectedFile;
-  String? _selectedLeaveType;
+
+  LeaveBalanceModel? _selectedLeaveType;
+
   final TextEditingController _reasonController = TextEditingController();
+
+  List<LeaveBalanceModel> _leaveTypes = [];
+  bool _isLoadingTypes = true;
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLeaveTypes();
+  }
+
+  Future<void> _fetchLeaveTypes() async {
+    setState(() {
+      _isLoadingTypes = true;
+    });
+
+    final types = await LeaveService.getLeaveBalance();
+
+    setState(() {
+      _leaveTypes = types ?? [];
+      _isLoadingTypes = false;
+    });
+  }
 
   @override
   void dispose() {
@@ -55,7 +82,6 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
       setState(() {
         if (isStart) {
           _startDate = picked;
-          // Reset end date if it's before start date
           if (_endDate != null && _endDate!.isBefore(_startDate!)) {
             _endDate = null;
           }
@@ -83,7 +109,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
     }
   }
 
-  void _submitApplication() {
+  Future<void> _submitApplication() async {
     if (_selectedLeaveType == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please select a Leave Type")),
@@ -97,25 +123,70 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
       return;
     }
 
-    // Mock Submission
-    print("--- LEAVE APPLICATION SUBMITTED ---");
-    print("Type: $_selectedLeaveType");
-    print("Start: $_startDate");
-    print("End: $_endDate");
-    print("Reason: ${_reasonController.text}");
-    print("File: ${_selectedFile?.name ?? 'None'}");
+    setState(() {
+      _isSubmitting = true;
+    });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Leave Application Submitted Successfully"),
-        backgroundColor: Colors.green,
-      ),
+    final success = await LeaveService.submitLeaveApplication(
+      leaveTypeId: _selectedLeaveType!.leaveTypeId,
+      startDate: _startDate!,
+      endDate: _endDate!,
+      reason: _reasonController.text,
+      isHalfDay: false, // Hardcoded to false for now unless UI has toggle
+      attachmentPath: _selectedFile?.path,
     );
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const LeaveSuccessScreen()),
-    );
+    setState(() {
+      _isSubmitting = false;
+    });
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Leave Application Submitted Successfully"),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const LeaveSuccessScreen()),
+      ).then((value) {
+        if (value == true) {
+          // Prepare data to return
+          // Format date for display: "2nd Mar" or "2nd Mar - 4th Mar"
+          // We'll use a simple format for now
+          String dateStr = DateFormat("d MMM").format(_startDate!);
+          int days = 1;
+
+          if (_endDate != null) {
+            days = _endDate!.difference(_startDate!).inDays + 1;
+            if (_startDate != _endDate) {
+              dateStr += " - ${DateFormat("d MMM").format(_endDate!)}";
+            }
+          }
+
+          // Add day count in brackets
+          dateStr += " ($days ${days == 1 ? 'day' : 'days'})";
+
+          final leaveData = {
+            "title": _selectedLeaveType?.leaveTypeName ?? "Leave",
+            "date": dateStr,
+            "reason": _reasonController.text,
+            "status": "Pending",
+          };
+
+          Navigator.pop(context, leaveData);
+        }
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Failed to submit leave application"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -193,40 +264,27 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                     _sectionTitle("Select Leave Type", scale),
                     SizedBox(height: 16 * scale),
 
-                    GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 12 * scale,
-                      mainAxisSpacing: 12 * scale,
-                      childAspectRatio: 174 / 75,
-                      children: [
-                        _LeaveTypeCard(
-                          title: "Casual Leave",
-                          days: 4,
-                          isSelected: _selectedLeaveType == "Casual Leave",
-                          onTap: () => setState(() => _selectedLeaveType = "Casual Leave"),
-                        ),
-                        _LeaveTypeCard(
-                          title: "Earned Leave",
-                          days: 10,
-                          isSelected: _selectedLeaveType == "Earned Leave",
-                          onTap: () => setState(() => _selectedLeaveType = "Earned Leave"),
-                        ),
-                        _LeaveTypeCard(
-                          title: "Sick Leave",
-                          days: 6,
-                          isSelected: _selectedLeaveType == "Sick Leave",
-                          onTap: () => setState(() => _selectedLeaveType = "Sick Leave"),
-                        ),
-                        _LeaveTypeCard(
-                          title: "Comp - Off",
-                          days: 1,
-                          isSelected: _selectedLeaveType == "Comp - Off",
-                          onTap: () => setState(() => _selectedLeaveType = "Comp - Off"),
-                        ),
-                      ],
-                    ),
+                    if (_isLoadingTypes)
+                      const Center(child: CircularProgressIndicator())
+                    else if (_leaveTypes.isEmpty)
+                      const Text("No leave types available")
+                    else
+                      GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12 * scale,
+                        mainAxisSpacing: 12 * scale,
+                        childAspectRatio: 174 / 75,
+                        children: _leaveTypes.map((type) {
+                          return _LeaveTypeCard(
+                            title: type.leaveTypeName,
+                            days: type.remainingBalance,
+                            isSelected: _selectedLeaveType == type,
+                            onTap: () => setState(() => _selectedLeaveType = type),
+                          );
+                        }).toList(),
+                      ),
 
                     SizedBox(height: 28 * scale),
 
@@ -324,8 +382,10 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
 
                     /// SUBMIT BUTTON
                     AppPrimaryButton(
-                      onTap: _submitApplication,
-                      child: Text(
+                      onTap: _isSubmitting ? () {} : _submitApplication,
+                      child: _isSubmitting
+                          ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                          : Text(
                         "Submit Leave Application",
                         style: TextStyle(
                           fontFamily: 'Roboto',

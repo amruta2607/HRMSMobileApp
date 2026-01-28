@@ -69,4 +69,17 @@ class AppColors {
 
   static const Color popOrange = Color(0xFFEA580C);
 
+  // Leave Status Colors
+  static const Color statusApprovedBg = Color(0xFFC8F7D0);
+  static const Color statusApprovedBorder = Color(0xFF4CAF50);
+  static const Color statusApprovedText = Color(0xFF2E7D32);
+
+  static const Color statusPendingBg = Color(0xFFFFF3E0);
+  static const Color statusPendingBorder = Color(0xFFFFB74D);
+  static const Color statusPendingText = Color(0xFFE65100);
+
+  static const Color statusRejectedBg = Color(0xFFFFEBEE);
+  static const Color statusRejectedBorder = Color(0xFFEF9A9A);
+  static const Color statusRejectedText = Color(0xFFC62828);
+
 }
