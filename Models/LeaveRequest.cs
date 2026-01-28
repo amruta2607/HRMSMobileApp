@@ -23,8 +23,7 @@ namespace MobileWebApi.Models
         /// OrganisationId - maps to TenantId column in database
         /// </summary>
         public int? OrganisationId { get; set; }
-        
-        public int? BranchId { get; set; }
+      
         public DateTime? InsertDate { get; set; }
         public int? InsertUserId { get; set; }
         public DateTime? UpdateDate { get; set; }

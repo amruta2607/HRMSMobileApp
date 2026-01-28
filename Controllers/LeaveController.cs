@@ -49,8 +49,8 @@ namespace MobileWebApi.Controllers
         public async Task<IActionResult> GetLeaveRequests(
             [FromQuery] int? user_id = null,
             [FromQuery] int? organization_id = null,
-            [FromQuery] string? status = null,
-            [FromQuery] int? branch = null)
+            [FromQuery] string? status = null
+           )
         {
             // Validate tenant access - use user's org if not specified
             var validatedOrgId = GetValidatedOrganisationId(organization_id);
@@ -72,8 +72,8 @@ namespace MobileWebApi.Controllers
             {
                 organization = validatedOrgId,
                 status = status,
-                user = validatedUserId,
-                branch = branch
+                user = validatedUserId
+                
             };
 
             var result = await _leaveService.GetLeaveRequestsAsync(request);

@@ -123,7 +123,7 @@ namespace MobileWebApi.Services
                     CurrentAction = STATUS_SUBMIT,
                     LeaveRequestStatus = STATUS_ID_SUBMIT,
                     OrganisationId = organisationId,
-                    BranchId = request.branch,
+                 
                     InsertUserId = request.user,
                     InsertDate = DateTime.Now
                 };
