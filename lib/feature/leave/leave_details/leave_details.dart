@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../Navigation/navigation_bar.dart';
 import '../../Navigation/main_navigation_screen.dart';
 import '../../../core/Theme/app_colors.dart';
 import '../dilog/withdraw_leave_dialog.dart';
+import '../model/leave_reuest_model.dart';
 
 class LeaveDetailsScreen extends StatelessWidget {
-  final Map<String, dynamic> leaveData;
+  final LeaveRequestModel leaveData;
 
   const LeaveDetailsScreen({
     super.key,
@@ -16,25 +18,24 @@ class LeaveDetailsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final scale = MediaQuery.of(context).size.width / 375;
 
-    final String title = leaveData['title'] ?? 'Leave';
-    final String date = leaveData['date'] ?? 'Unknown Date';
-    final String reason = leaveData['reason'] ?? 'No reason provided';
-    final String status = leaveData['status'] ?? 'Pending';
+    final String title = leaveData.leaveTypeName;
+    final String date = _formatDuration(leaveData.fromDate, leaveData.toDate, leaveData.duration);
+    final String reason = leaveData.description ?? 'No reason provided';
+    final String status = leaveData.status;
 
     Color statusBgColor = AppColors.statusApprovedBg;
     Color statusBorderColor = AppColors.statusApprovedBorder;
     Color statusTextColor = AppColors.statusApprovedText;
 
-    if (status.toLowerCase() == 'pending') {
+    if (status.toLowerCase().contains('submit') || status.toLowerCase().contains('pending')) {
       statusBgColor = AppColors.statusPendingBg;
       statusBorderColor = AppColors.statusPendingBorder;
       statusTextColor = AppColors.statusPendingText;
-    } else if (status.toLowerCase() == 'rejected') {
+    } else if (status.toLowerCase().contains('reject')) {
       statusBgColor = AppColors.statusRejectedBg;
       statusBorderColor = AppColors.statusRejectedBorder;
       statusTextColor = AppColors.statusRejectedText;
-    } else if (status.toLowerCase() == 'approved' ||
-        status.toLowerCase() == 'accepted') {
+    } else if (status.toLowerCase().contains('approved')) {
       statusBgColor = AppColors.statusApprovedBg;
       statusBorderColor = AppColors.statusApprovedBorder;
       statusTextColor = AppColors.statusApprovedText;
@@ -95,7 +96,7 @@ class LeaveDetailsScreen extends StatelessWidget {
                   color: const Color(0xFF0F172A),
                 ),
               ),
-
+              SizedBox(height: 8 * scale), // Added spacing
               Text(
                 date,
                 style: TextStyle(
@@ -117,7 +118,7 @@ class LeaveDetailsScreen extends StatelessWidget {
                 ),
               ),
 
-              SizedBox(height: 10 * scale),
+              SizedBox(height: 7 * scale),
 
               const Divider(thickness: 1),
 
@@ -145,9 +146,11 @@ class LeaveDetailsScreen extends StatelessWidget {
                 ),
               ),
 
-              const Spacer(),
+              SizedBox(height: 25 * scale),
 
-              if (status.toLowerCase() == 'pending') ...[
+
+
+              if (status.toLowerCase().contains('submit') || status.toLowerCase().contains('pending')) ...[
                 SizedBox(
                   width: double.infinity,
                   height: 55 * scale,
@@ -158,7 +161,7 @@ class LeaveDetailsScreen extends StatelessWidget {
                         builder: (context) {
                           return WithdrawLeaveDialog(
                             onWithdraw: () {
-                              // api
+                              // api implementation for withdraw if needed
                             },
                           );
                         },
@@ -183,11 +186,17 @@ class LeaveDetailsScreen extends StatelessWidget {
                 ),
               ],
 
-              SizedBox(height: 400 * scale),
+
             ],
           ),
         ),
       ),
     );
+  }
+
+  String _formatDuration(DateTime from, DateTime to, int duration) {
+    final start = DateFormat("dd MMM yyyy").format(from);
+    final end = DateFormat("dd MMM yyyy").format(to);
+    return "$start - $end ($duration days)";
   }
 }

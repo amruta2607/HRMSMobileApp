@@ -1,6 +1,8 @@
+
 import 'package:flutter/material.dart';
 import '../../../core/Utils/services/leave_service/leave_service.dart';
 import '../apply_leave/apply_leave_screen.dart';
+import '../model/leave_reuest_model.dart';
 import 'recent_leave_section.dart';
 import 'apply_leave_button.dart';
 
@@ -14,7 +16,8 @@ class LeaveBody extends StatefulWidget {
 
 class _LeaveBodyState extends State<LeaveBody> {
 
-  List<Map<String, String>> _recentLeaves = [];
+  List<LeaveRequestModel> _recentLeaves = [];
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -23,24 +26,18 @@ class _LeaveBodyState extends State<LeaveBody> {
   }
 
   Future<void> _loadRecentLeaves() async {
-    final leaves = await LeaveService.getRecentLeaves();
     setState(() {
-      _recentLeaves = leaves;
+      _isLoading = true;
+    });
+    final leaves = await LeaveService.getLeaveRequests();
+    setState(() {
+      _recentLeaves = leaves ?? [];
+      _isLoading = false;
     });
   }
 
-  void _addNewLeave(Map<String, dynamic> data) async {
-    final newLeave = {
-      "title": data['title'].toString(),
-      "date": data['date'].toString(),
-    };
-
-    await LeaveService.saveRecentLeave(newLeave);
-
-    setState(() {
-      _recentLeaves.insert(0, newLeave);
-    });
-
+  void _handleLeaveApplied() {
+    _loadRecentLeaves();
     widget.onLeaveApplied?.call();
   }
 
@@ -64,8 +61,9 @@ class _LeaveBodyState extends State<LeaveBody> {
                 ),
               );
 
-              if (result != null && result is Map<String, dynamic>) {
-                _addNewLeave(result);
+              // If result is not null, it means leave was applied (or we can assume we should refresh)
+              if (result != null) {
+                _handleLeaveApplied();
               }
             },
           ),
@@ -75,9 +73,23 @@ class _LeaveBodyState extends State<LeaveBody> {
 
         /// Recent Leave Section
         Expanded(
-          child: RecentLeaveSection(leaves: _recentLeaves),
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _recentLeaves.isEmpty
+              ? Center(
+            child: Text(
+              "No leave application found",
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 14 * scale,
+                color: Colors.grey,
+              ),
+            ),
+          )
+              : RecentLeaveSection(leaves: _recentLeaves),
         ),
       ],
     );
   }
 }
+

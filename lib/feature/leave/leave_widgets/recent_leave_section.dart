@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../leave_details/leave_details.dart';
+import '../model/leave_reuest_model.dart';
 
 class RecentLeaveSection extends StatelessWidget {
-  final List<Map<String, String>> leaves;
+  final List<LeaveRequestModel> leaves;
 
   const RecentLeaveSection({
     super.key,
-    this.leaves = const [], // Default empty
+    this.leaves = const [],
   });
 
   @override
@@ -16,12 +18,12 @@ class RecentLeaveSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(height: 24 * scale),
+        SizedBox(height: 8 * scale),
 
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 20 * scale),
           child: Text(
-            "RECENT LEAVE REQUESTS",
+            "Recent Leave Request",
             style: TextStyle(
               fontFamily: 'Inter',
               fontWeight: FontWeight.w600,
@@ -32,7 +34,7 @@ class RecentLeaveSection extends StatelessWidget {
           ),
         ),
 
-        SizedBox(height: 16 * scale),
+        SizedBox(height: 14 * scale),
 
         Expanded(
           child: ListView.builder(
@@ -42,6 +44,8 @@ class RecentLeaveSection extends StatelessWidget {
               final leave = leaves[index];
               return Column(
                 children: [
+                  SizedBox(height: 4 * scale),
+
                   InkWell(
                     onTap: () {
                       Navigator.push(
@@ -51,12 +55,12 @@ class RecentLeaveSection extends StatelessWidget {
                         ),
                       );
                     },
+
                     child: LeaveRequestTile(
-                      title: leave['title']!,
-                      date: leave['date']!,
+                      title: leave.leaveTypeName,
+                      date: _formatDuration(leave.fromDate, leave.toDate, leave.duration),
                     ),
                   ),
-                  SizedBox(height: 8 * scale),
                 ],
               );
             },
@@ -64,6 +68,12 @@ class RecentLeaveSection extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _formatDuration(DateTime from, DateTime to, int duration) {
+    final start = DateFormat("dd MMM yyyy").format(from);
+    final end = DateFormat("dd MMM yyyy").format(to);
+    return "$start - $end ($duration days)";
   }
 }
 
@@ -130,6 +140,8 @@ class LeaveRequestTile extends StatelessWidget {
                     color: Colors.black,
                   ),
                 ),
+                SizedBox(height: 6 * scale),
+
               ],
             ),
           ),
@@ -158,5 +170,11 @@ class LeaveRequestTile extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    if (status.toLowerCase() == 'approved') return Colors.green;
+    if (status.toLowerCase().contains('reject')) return Colors.red;
+    return Colors.orange;
   }
 }

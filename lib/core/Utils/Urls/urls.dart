@@ -34,7 +34,5 @@ class BaseUrls {
   static const String leaveBalance = "$base/api/Leave/balance";
   static const String applyLeave = "$base/api/Leave/request";
   static const String leaveRequests = "$base/apipunch/leave/request/get"; // GET
-  static const String approveLeave = "$base/api/Leave/approve"; // PUT
-  static const String rejectLeave = "$base/api/Leave/reject";
 
 }

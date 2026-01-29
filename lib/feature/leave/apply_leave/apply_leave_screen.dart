@@ -127,12 +127,18 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
       _isSubmitting = true;
     });
 
+    int duration = 1;
+    if (_endDate != null) {
+      duration = _endDate!.difference(_startDate!).inDays + 1;
+    }
+
     final success = await LeaveService.submitLeaveApplication(
       leaveTypeId: _selectedLeaveType!.leaveTypeId,
       startDate: _startDate!,
       endDate: _endDate!,
       reason: _reasonController.text,
       isHalfDay: false, // Hardcoded to false for now unless UI has toggle
+      duration: duration,
       attachmentPath: _selectedFile?.path,
     );
 
