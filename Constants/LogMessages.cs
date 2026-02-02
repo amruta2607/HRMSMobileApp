@@ -431,9 +431,7 @@ namespace MobileWebApi.Constants
             public const string UsingUploadBasePath = "Using upload base path: {UploadPath}";
             public const string CreatedDirectory = "Created directory: {Directory}";
             public const string ImageSavedSuccessfully = "Image saved successfully: {FilePath}";
-            public const string ImageThumbnailSavedSuccessfully = "Image thumbnail saved successfully: {FilePath}";
             public const string ErrorSavingEmployeeImage = "Error saving employee image: {FileName}";
-            public const string ErrorSavingEmployeeImageThumbnail = "Error saving employee image thumbnail for original file: {FilePath}";
             public const string UploadPathNotConfiguredUsingFallback = "UploadSettings:RootPath is not configured. Using wwwroot as fallback. This should be configured to point to a shared folder outside both projects (e.g., C:\\SharedUploads\\Indotalent).";
             public const string UsingSharedUploadRootPath = "Using shared upload root path from configuration: {Path}";
         }

@@ -25,10 +25,7 @@ namespace MobileWebApi.Models
         /// </summary>
         public int? user { get; set; }
 
-        /// <summary>
-        /// Branch ID filter
-        /// </summary>
-        public int? branch { get; set; }
+        
     }
 }
 

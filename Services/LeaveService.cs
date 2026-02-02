@@ -16,15 +16,18 @@ namespace MobileWebApi.Services
         private const string STATUS_PENDING = "Pending";
         private const string STATUS_APPROVED = "Approved";
         private const string STATUS_REJECTED = "Rejected";
-        private const string STATUS_CANCELLED = "Cancelled";
+        private const string STATUS_CANCELLED = "Cancelled"; 
+        private const string STATUS_WITHDRAWN = "Withdrawn";
 
-        // Leave request status IDs (int for LeaveRequestStatus column)
-        private const int STATUS_ID_SUBMIT = 1;
+
+		// Leave request status IDs (int for LeaveRequestStatus column)
+		private const int STATUS_ID_SUBMIT = 1;
         private const int STATUS_ID_APPROVED = 2;
         private const int STATUS_ID_REJECTED = 3;
         private const int STATUS_ID_CANCELLED = 4;
+		private const int STATUS_ID_WITHDRAWN = 5;
 
-        public LeaveService(
+		public LeaveService(
             ILeaveRepository leaveRepository, 
             IEmployeeRepository employeeRepository, 
             IApprovalWorkflowService approvalWorkflowService,
@@ -123,7 +126,7 @@ namespace MobileWebApi.Services
                     CurrentAction = STATUS_SUBMIT,
                     LeaveRequestStatus = STATUS_ID_SUBMIT,
                     OrganisationId = organisationId,
-                    BranchId = request.branch,
+                 
                     InsertUserId = request.user,
                     InsertDate = DateTime.Now
                 };
@@ -636,11 +639,72 @@ namespace MobileWebApi.Services
                 };
             }
         }
+		public async Task<LeaveRequestResponse> WithdrawLeaveRequestAsync(int id, int userId, string? reason)
+		{
+			try
+			{
+				_logger.LogInformation("Withdrawing leave request {LeaveRequestId}", id);
 
-        /// <summary>
-        /// Map mobile app status to database status
-        /// </summary>
-        private string? MapMobileStatusToDbStatus(string? mobileStatus)
+				var leaveRequest = await _leaveRepository.GetLeaveRequestByIdAsync(id);
+
+				if (leaveRequest == null)
+				{
+					return new LeaveRequestResponse
+					{
+						Success = false,
+						Message = LeaveMessages.LeaveRequestNotFound
+					};
+				}
+
+				// Only pending/submitted leaves can be withdrawn
+				if (leaveRequest.LeaveRequestStatus != STATUS_ID_SUBMIT)
+				{
+					return new LeaveRequestResponse
+					{
+						Success = false,
+						Message = "Only pending leave requests can be withdrawn"
+					};
+				}
+
+				var updated = await _leaveRepository.UpdateLeaveRequestStatusAsync(
+					id,
+					STATUS_ID_WITHDRAWN,
+					STATUS_WITHDRAWN,
+					userId
+				);
+
+				if (!updated)
+				{
+					return new LeaveRequestResponse
+					{
+						Success = false,
+						Message = "Failed to withdraw leave request"
+					};
+				}
+
+				return new LeaveRequestResponse
+				{
+					Success = true,
+					Message = "Leave request withdrawn successfully",
+					Data = new { Id = id },
+					TotalRecords = 1
+				};
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error withdrawing leave request");
+				return new LeaveRequestResponse
+				{
+					Success = false,
+					Message = ex.Message
+				};
+			}
+		}
+
+		/// <summary>
+		/// Map mobile app status to database status
+		/// </summary>
+		private string? MapMobileStatusToDbStatus(string? mobileStatus)
         {
             if (string.IsNullOrEmpty(mobileStatus)) return null;
 
@@ -665,7 +729,8 @@ namespace MobileWebApi.Services
                 STATUS_ID_APPROVED => STATUS_APPROVED,
                 STATUS_ID_REJECTED => STATUS_REJECTED,
                 STATUS_ID_CANCELLED => STATUS_CANCELLED,
-                _ => statusId?.ToString()
+				STATUS_ID_WITHDRAWN => STATUS_WITHDRAWN,
+				_ => statusId?.ToString()
             };
         }
     }

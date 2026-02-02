@@ -334,18 +334,6 @@ namespace MobileWebApi.Controllers
             Logger.LogInformation(LogMessages.Employee.UpdatingEmployee, request.UserId);
             var result = await _employeeService.UpdateEmployeePhoneAndPictureAsync(serviceRequest);
 
-            // Ensure the updated picture path is returned to the client immediately.
-            // In some cases the service/repository can still return the previous value
-            // (e.g. due to caching / projection delays). When we have just saved a new
-            // image in this request, prefer that path so the UI can refresh without an
-            // extra round‑trip or manual click.
-            if (!string.IsNullOrWhiteSpace(savedPicturePath) &&
-                result.Success &&
-                result.Data != null)
-            {
-                result.Data.Picture = savedPicturePath.Replace("\\", "/");
-            }
-
             if (!result.Success)
             {
                 Logger.LogWarning(LogMessages.Employee.ErrorUpdatingEmployee, request.UserId);
