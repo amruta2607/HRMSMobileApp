@@ -55,27 +55,28 @@ namespace MobileWebApi.Repositories
             return await conn.QueryFirstOrDefaultAsync<LeaveRequest>(query, new { Id = id });
         }
 
-        /// <summary>
-        /// Get leave requests with filters
-        /// </summary>
-        public async Task<IEnumerable<LeaveRequest>> GetLeaveRequestsAsync(int? organisationId, int? employeeId, int? leaveTypeId, string? status)
-        {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetLeaveRequests");
+		/// <summary>
+		/// Get leave requests with filters
+		/// </summary>
+		public async Task<IEnumerable<LeaveRequest>> GetLeaveRequestsAsync(
+	int? organisationId, int? employeeId, int? leaveTypeId, int? status)
+		{
+			using var conn = _context.CreateConnection();
+			string query = _queryProvider.Get("GetLeaveRequests");
 
-            return await conn.QueryAsync<LeaveRequest>(query, new
-            {
-                OrganisationId = organisationId,
-                EmployeeId = employeeId,
-                LeaveTypeId = leaveTypeId,
-                Status = status
-            });
-        }
+			return await conn.QueryAsync<LeaveRequest>(query, new
+			{
+				OrganisationId = organisationId,
+				EmployeeId = employeeId,
+				LeaveTypeId = leaveTypeId,
+				Status = status // must match @Status in SQL
+			});
+		}
 
-        /// <summary>
-        /// Get leave requests by employee ID
-        /// </summary>
-        public async Task<IEnumerable<LeaveRequest>> GetLeaveRequestsByEmployeeIdAsync(int employeeId)
+		/// <summary>
+		/// Get leave requests by employee ID
+		/// </summary>
+		public async Task<IEnumerable<LeaveRequest>> GetLeaveRequestsByEmployeeIdAsync(int employeeId)
         {
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("GetLeaveRequestsByEmployeeId");
