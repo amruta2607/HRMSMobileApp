@@ -145,13 +145,42 @@ namespace MobileWebApi.Controllers
 
             return BadRequest(result);
         }
+		/// <summary>
+		/// Withdraw a leave request (only if pending)
+		/// PUT: api/leave/withdraw
+		/// </summary>
+		[HttpPut("withdraw")]
+		public async Task<IActionResult> WithdrawLeaveRequest([FromBody] WithdrawLeaveRequest request)
+		{
+			if (request == null || request.Id <= 0)
+			{
+				return BadRequest(new
+				{
+					Success = false,
+					Message = "Leave request ID is required"
+				});
+			}
 
-        /// <summary>
-        /// Get leave balance for an employee
-        /// GET: api/leave/balance/?user=10
-        /// Note: Regular users can only see their own leave balance. HR/TenantAdmin can see all.
-        /// </summary>
-        [HttpGet("balance")]
+			Logger.LogInformation("Withdraw leave request {Id}", request.Id);
+
+			var result = await _leaveService.WithdrawLeaveRequestAsync(
+				request.Id,
+				request.UserId,
+				request.Reason
+			);
+
+			if (result.Success)
+				return Ok(result);
+
+			return BadRequest(result);
+		}
+
+		/// <summary>
+		/// Get leave balance for an employee
+		/// GET: api/leave/balance/?user=10
+		/// Note: Regular users can only see their own leave balance. HR/TenantAdmin can see all.
+		/// </summary>
+		[HttpGet("balance")]
         public async Task<IActionResult> GetLeaveBalance([FromQuery] int user, [FromQuery] int? organization = null)
         {
             // Validate tenant access - use user's org if not specified

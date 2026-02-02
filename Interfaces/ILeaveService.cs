@@ -38,6 +38,8 @@ namespace MobileWebApi.Interfaces
         /// Get leave balance for an employee
         /// </summary>
         Task<LeaveBalanceResponse> GetLeaveBalanceAsync(int userId, int? organization);
-    }
+		Task<LeaveRequestResponse> WithdrawLeaveRequestAsync(int id, int userId, string? reason);
+
+	}
 }
 
