@@ -193,9 +193,10 @@ namespace MobileWebApi.Constants
         public const string FailedToRejectLeaveRequest = "Failed to reject leave request.";
         public const string FailedToCancelLeaveRequest = "Failed to cancel leave request.";
         public const string LeaveServiceNotAvailable = "Leave service not available.";
+        public const string InvalidRequest = "Invalid leave request data.";
 
-        // Error templates
-        public const string LeaveRequestNotFoundWithId = "Leave request with ID {0} not found.";
+		// Error templates
+		public const string LeaveRequestNotFoundWithId = "Leave request with ID {0} not found.";
         public const string ErrorCreatingLeaveRequest = "Error creating leave request: {0}";
         public const string ErrorFetchingLeaveRequests = "Error fetching leave requests: {0}";
         public const string ErrorFetchingLeaveRequest = "Error fetching leave request: {0}";
