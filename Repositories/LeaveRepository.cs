@@ -59,7 +59,10 @@ namespace MobileWebApi.Repositories
 		/// Get leave requests with filters
 		/// </summary>
 		public async Task<IEnumerable<LeaveRequest>> GetLeaveRequestsAsync(
-	int? organisationId, int? employeeId, int? leaveTypeId, int? status)
+	int? organisationId,
+	int? employeeId,
+	int? leaveTypeId
+)
 		{
 			using var conn = _context.CreateConnection();
 			string query = _queryProvider.Get("GetLeaveRequests");
@@ -68,10 +71,10 @@ namespace MobileWebApi.Repositories
 			{
 				OrganisationId = organisationId,
 				EmployeeId = employeeId,
-				LeaveTypeId = leaveTypeId,
-				Status = status // must match @Status in SQL
+				LeaveTypeId = leaveTypeId
 			});
 		}
+
 
 		/// <summary>
 		/// Get leave requests by employee ID

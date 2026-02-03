@@ -4,9 +4,9 @@
 
     "GetUserByUsernameOrMobile": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(u.WorkRoleId, ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.Username = @Login OR u.MobileNumber = @Login",
 
-    
-      "GetUserByEmail": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.Department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(CAST(u.WorkRoleId AS NVARCHAR(MAX)), ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.Email = @Email",
-    
+
+    "GetUserByEmail": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.Department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(CAST(u.WorkRoleId AS NVARCHAR(MAX)), ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.Email = @Email",
+
 
 
     "GetUserByMobile": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PinNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(u.WorkRoleId, ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.MobileNumber = @MobileNumber",
@@ -90,7 +90,8 @@
 
     "GetLeaveRequestById": "SELECT lr.Id, lr.Number, lr.EmployeeId, lr.LeaveTypeId, lr.FromDate, lr.ToDate, lr.Duration, lr.Description, lr.CancellationReason, lr.CurrentAction, lr.LeaveRequestStatus, lr.DelegatedEmployeeId, lr.TenantId AS OrganisationId, lr.InsertDate, lr.InsertUserId, lr.UpdateDate, lr.UpdateUserId, e.Name AS EmployeeName, lt.DisplayName AS LeaveTypeName FROM LeaveRequest lr LEFT JOIN Employee e ON lr.EmployeeId = e.Id LEFT JOIN LeaveTypes lt ON lr.LeaveTypeId = lt.Id WHERE lr.Id = @Id",
 
-    "GetLeaveRequests": "SELECT lr.Id, lr.Number, lr.EmployeeId, lr.LeaveTypeId, lr.FromDate, lr.ToDate, lr.Duration, lr.Description, lr.CancellationReason, lr.CurrentAction, lr.LeaveRequestStatus, lr.DelegatedEmployeeId, lr.TenantId AS OrganisationId, lr.InsertDate, lr.InsertUserId, lr.UpdateDate, lr.UpdateUserId, e.Name AS EmployeeName, lt.DisplayName AS LeaveTypeName FROM LeaveRequest lr LEFT JOIN Employee e ON lr.EmployeeId = e.Id LEFT JOIN LeaveTypes lt ON lr.LeaveTypeId = lt.Id WHERE (@OrganisationId IS NULL OR lr.TenantId = @OrganisationId) AND (@EmployeeId IS NULL OR lr.EmployeeId = @EmployeeId) AND (@LeaveTypeId IS NULL OR lr.LeaveTypeId = @LeaveTypeId) AND (@Status IS NULL OR lr.LeaveRequestStatus = @Status) ORDER BY lr.InsertDate DESC",
+    "GetLeaveRequests": "SELECT lr.Id, lr.Number, lr.EmployeeId, lr.LeaveTypeId, lr.FromDate, lr.ToDate, lr.Duration, lr.Description, lr.CancellationReason, lr.CurrentAction, lr.LeaveRequestStatus, lr.DelegatedEmployeeId, lr.TenantId AS OrganisationId, lr.InsertDate, lr.InsertUserId, lr.UpdateDate, lr.UpdateUserId, e.Name AS EmployeeName, lt.DisplayName AS LeaveTypeName FROM LeaveRequest lr LEFT JOIN Employee e ON lr.EmployeeId = e.Id LEFT JOIN LeaveTypes lt ON lr.LeaveTypeId = lt.Id WHERE (@OrganisationId IS NULL OR lr.TenantId = @OrganisationId) AND (@EmployeeId IS NULL OR lr.EmployeeId = @EmployeeId) AND (@LeaveTypeId IS NULL OR lr.LeaveTypeId = @LeaveTypeId) ORDER BY lr.InsertDate DESC",
+
 
     "GetLeaveRequestsByEmployeeId": "SELECT lr.Id, lr.Number, lr.EmployeeId, lr.LeaveTypeId, lr.FromDate, lr.ToDate, lr.Duration, lr.Description, lr.CancellationReason, lr.CurrentAction, lr.LeaveRequestStatus, lr.DelegatedEmployeeId, lr.TenantId AS OrganisationId, lr.InsertDate, lr.InsertUserId, lr.UpdateDate, lr.UpdateUserId, e.Name AS EmployeeName, lt.DisplayName AS LeaveTypeName FROM LeaveRequest lr LEFT JOIN Employee e ON lr.EmployeeId = e.Id LEFT JOIN LeaveTypes lt ON lr.LeaveTypeId = lt.Id WHERE lr.EmployeeId = @EmployeeId ORDER BY lr.InsertDate DESC",
 

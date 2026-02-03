@@ -123,28 +123,14 @@ namespace MobileWebApi.Services
 			try
 			{
 				int? employeeId = null;
+
 				if (request.user.HasValue)
 					employeeId = await _leaveRepository.GetEmployeeIdByUserIdAsync(request.user.Value);
-
-				int? statusId = MapMobileStatusToDbStatus(request.status);
-
-				// If statusId is null, return empty result
-				if (!statusId.HasValue)
-				{
-					return new LeaveRequestResponse
-					{
-						Success = true,
-						Message = LeaveMessages.LeaveRequestsFetchedSuccessfully,
-						Data = new List<LeaveRequest>(),
-						TotalRecords = 0
-					};
-				}
 
 				var list = (await _leaveRepository.GetLeaveRequestsAsync(
 					request.organization,
 					employeeId,
-					request.leave_type,
-					statusId
+					request.leave_type   // keep this only if you still support leave type
 				)).ToList();
 
 				return new LeaveRequestResponse
@@ -161,6 +147,7 @@ namespace MobileWebApi.Services
 				return Fail(ex.Message);
 			}
 		}
+
 
 
 		// =====================================================

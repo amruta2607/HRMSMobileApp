@@ -40,57 +40,53 @@ namespace MobileWebApi.Controllers
             return BadRequest(result);
         }
 
-        /// <summary>
-        /// Get leave requests with filters
-        /// GET: apipunch/leave/request/get/?user_id=10&organization_id=1&status=PENDING&branch=1
-        /// Note: Regular users can only see their own leave requests. HR/TenantAdmin can see all.
-        /// </summary>
-        [HttpGet("/apipunch/leave/request/get")]
-        public async Task<IActionResult> GetLeaveRequests(
-            [FromQuery] int? user_id = null,
-            [FromQuery] int? organization_id = null,
-            [FromQuery] string? status = null
-           )
-        {
-            // Validate tenant access - use user's org if not specified
-            var validatedOrgId = GetValidatedOrganisationId(organization_id);
-            
-            // Validate user access - regular users can only see their own leave requests
-            int? validatedUserId;
-            try
-            {
-                validatedUserId = GetValidatedUserId(user_id);
-            }
-            catch (Services.TenantAccessException)
-            {
-                return UserAccessDenied();
-            }
-            
-            Logger.LogInformation(LogMessages.Leave.FetchingLeaveRequestsByFilter, validatedUserId, validatedOrgId, status);
-            
-            var request = new LeaveRequestGetRequest
-            {
-                organization = validatedOrgId,
-                status = status,
-                user = validatedUserId
-                
-            };
+		[HttpGet("/apipunch/leave/request/get")]
+		public async Task<IActionResult> GetLeaveRequests(
+	[FromQuery] int? user_id = null,
+	[FromQuery] int? organization_id = null
+)
+		{
+			// Validate tenant access - use user's org if not specified
+			var validatedOrgId = GetValidatedOrganisationId(organization_id);
 
-            var result = await _leaveService.GetLeaveRequestsAsync(request);
+			// Validate user access - regular users can only see their own leave requests
+			int? validatedUserId;
+			try
+			{
+				validatedUserId = GetValidatedUserId(user_id);
+			}
+			catch (Services.TenantAccessException)
+			{
+				return UserAccessDenied();
+			}
 
-            if (result.Success)
-            {
-                return Ok(result);
-            }
+			Logger.LogInformation(
+				LogMessages.Leave.FetchingLeaveRequestsByFilter,
+				validatedUserId,
+				validatedOrgId
+			);
 
-            return BadRequest(result);
-        }
+			var request = new LeaveRequestGetRequest
+			{
+				organization = validatedOrgId,
+				user = validatedUserId
+			};
 
-        /// <summary>
-        /// Approve a leave request
-        /// PUT: api/leave/approve
-        /// </summary>
-        [HttpPut("approve")]
+			var result = await _leaveService.GetLeaveRequestsAsync(request);
+
+			if (result.Success)
+			{
+				return Ok(result);
+			}
+
+			return BadRequest(result);
+		}
+
+		/// <summary>
+		/// Approve a leave request
+		/// PUT: api/leave/approve
+		/// </summary>
+		[HttpPut("approve")]
         public async Task<IActionResult> ApproveLeaveRequest([FromBody] ApproveLeaveRequest request)
         {
             if (request == null)

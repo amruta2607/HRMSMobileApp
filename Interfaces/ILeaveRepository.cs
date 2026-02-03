@@ -7,7 +7,7 @@ namespace MobileWebApi.Interfaces
         // Leave Request operations
         Task<int> CreateLeaveRequestAsync(LeaveRequest leaveRequest);
         Task<LeaveRequest?> GetLeaveRequestByIdAsync(int id);
-        Task<IEnumerable<LeaveRequest>> GetLeaveRequestsAsync(int? organisationId, int? employeeId, int? leaveTypeId, int? status);
+        Task<IEnumerable<LeaveRequest>> GetLeaveRequestsAsync(int? organisationId, int? employeeId, int? leaveTypeId);
         Task<IEnumerable<LeaveRequest>> GetLeaveRequestsByEmployeeIdAsync(int employeeId);
         Task<bool> UpdateLeaveRequestStatusAsync(int id, int statusId, string statusText, int updateUserId);
         
