@@ -312,7 +312,7 @@ namespace MobileWebApi.Controllers
                     var webRootPath = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
                     savedPicturePath = await _imageUploadService.SaveEmployeeImageAsync(
                         request.Picture, 
-                        webRootPath, 
+                         
                         employeeId);
                     Logger.LogInformation(LogMessages.PersonalDetails.PictureSavedSuccessfully, employeeId, request.UserId, savedPicturePath);
                 }
