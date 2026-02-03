@@ -4,7 +4,10 @@
 
     "GetUserByUsernameOrMobile": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(u.WorkRoleId, ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.Username = @Login OR u.MobileNumber = @Login",
 
-    "GetUserByEmail": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(u.WorkRoleId, ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.Email = @Email",
+    
+      "GetUserByEmail": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.Department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(CAST(u.WorkRoleId AS NVARCHAR(MAX)), ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.Email = @Email",
+    
+
 
     "GetUserByMobile": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PinNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(u.WorkRoleId, ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.MobileNumber = @MobileNumber",
 
