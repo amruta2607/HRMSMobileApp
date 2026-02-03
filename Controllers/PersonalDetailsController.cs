@@ -343,45 +343,7 @@ namespace MobileWebApi.Controllers
             return Ok(result);
         }
 
-        /// <summary>
-        /// Update personal details
-        /// Note: Regular users can only update their own details. HR/TenantAdmin can update all.
-        /// </summary>
-        //[HttpPut("Update-Personal-Details")]
-        //public async Task<IActionResult> UpdatePersonalDetails([FromBody] PersonalDetailUpdateRequest request)
-        //{
-        //    if (request == null || request.EmployeeId <= 0)
-        //    {
-        //        Logger.LogWarning(EmployeeMessages.InvalidRequestOrEmployeeId);
-        //        return BadRequest(new { Message = EmployeeMessages.InvalidRequestOrEmployeeId });
-        //    }
-
-        //    // Validate user access - regular users can only update their own data
-        //    if (!HasElevatedAccess)
-        //    {
-        //        var existingEmployee = await _employeeService.GetEmployeeByIdAsync(request.EmployeeId);
-        //        if (existingEmployee.Success && existingEmployee.Data != null)
-        //        {
-        //            if (existingEmployee.Data.SystemUserId != CurrentUserId)
-        //            {
-        //                Logger.LogWarning(LogMessages.TenantAccess.UnauthorizedUpdatePersonalDetails, 
-        //                    CurrentUserId, request.EmployeeId);
-        //                return UserAccessDenied();
-        //            }
-        //        }
-        //    }
-
-        //    Logger.LogInformation(LogMessages.Employee.UpdatingEmployee, request.EmployeeId);
-        //    var result = await _employeeService.UpdateEmployeeAsync(request);
-
-        //    if (!result.Success)
-        //    {
-        //        Logger.LogWarning(LogMessages.Employee.ErrorUpdatingEmployee, request.EmployeeId);
-        //        return BadRequest(result);
-        //    }
-
-        //    return Ok(result);
-        //}
+        
 
         /// <summary>
         /// Delete personal details (hard delete)
@@ -418,157 +380,196 @@ namespace MobileWebApi.Controllers
 
             return Ok(result);
         }
+		/// <summary>
+		/// Update personal details
+		/// Note: Regular users can only update their own details. HR/TenantAdmin can update all.
+		/// </summary>
+		//[HttpPut("Update-Personal-Details")]
+		//public async Task<IActionResult> UpdatePersonalDetails([FromBody] PersonalDetailUpdateRequest request)
+		//{
+		//    if (request == null || request.EmployeeId <= 0)
+		//    {
+		//        Logger.LogWarning(EmployeeMessages.InvalidRequestOrEmployeeId);
+		//        return BadRequest(new { Message = EmployeeMessages.InvalidRequestOrEmployeeId });
+		//    }
 
-        /// <summary>
-        /// Upload employee picture
-        /// DEPRECATED: Use PUT api/personal-details instead which now supports picture upload
-        /// POST: api/personal-details/upload-picture
-        /// Accepts multipart/form-data with employeeId and picture file (jpg, png, max 2MB)
-        /// Saves image to wwwroot/Image/Employee/ with GUID-based filename
-        /// Stores relative path in database (matches Serenity ImageUploadEditor behavior)
-        /// Note: Regular users can only upload pictures for their own employee record. HR/TenantAdmin can upload for any employee.
-        /// </summary>
-        //[HttpPost("upload-picture")]
-        //[Consumes("multipart/form-data")]
-        //[ProducesResponseType(typeof(EmployeePictureUploadResponse), StatusCodes.Status200OK)]
-        //[ProducesResponseType(StatusCodes.Status400BadRequest)]
-        //[ProducesResponseType(StatusCodes.Status403Forbidden)]
-        //[ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        //public async Task<IActionResult> UploadEmployeePicture([FromForm] EmployeePictureUploadRequest request)
-        //{
-        //    if (request == null || request.EmployeeId <= 0)
-        //    {
-        //        Logger.LogWarning(EmployeeMessages.InvalidRequestOrEmployeeId);
-        //        return BadRequest(new EmployeePictureUploadResponse
-        //        {
-        //            Success = false,
-        //            Message = EmployeeMessages.InvalidRequestOrEmployeeId
-        //        });
-        //    }
+		//    // Validate user access - regular users can only update their own data
+		//    if (!HasElevatedAccess)
+		//    {
+		//        var existingEmployee = await _employeeService.GetEmployeeByIdAsync(request.EmployeeId);
+		//        if (existingEmployee.Success && existingEmployee.Data != null)
+		//        {
+		//            if (existingEmployee.Data.SystemUserId != CurrentUserId)
+		//            {
+		//                Logger.LogWarning(LogMessages.TenantAccess.UnauthorizedUpdatePersonalDetails, 
+		//                    CurrentUserId, request.EmployeeId);
+		//                return UserAccessDenied();
+		//            }
+		//        }
+		//    }
 
-        //    if (request.Picture == null || request.Picture.Length == 0)
-        //    {
-        //        Logger.LogWarning("Picture file is required");
-        //        return BadRequest(new EmployeePictureUploadResponse
-        //        {
-        //            Success = false,
-        //            Message = "Picture file is required."
-        //        });
-        //    }
+		//    Logger.LogInformation(LogMessages.Employee.UpdatingEmployee, request.EmployeeId);
+		//    var result = await _employeeService.UpdateEmployeeAsync(request);
 
-        //    // Validate user access - regular users can only upload pictures for their own employee record
-        //    if (!HasElevatedAccess)
-        //    {
-        //        var existingEmployee = await _employeeService.GetEmployeeByIdAsync(request.EmployeeId);
-        //        if (existingEmployee.Success && existingEmployee.Data != null)
-        //        {
-        //            if (existingEmployee.SystemUserId != CurrentUserId)
-        //            {
-        //                Logger.LogWarning(LogMessages.TenantAccess.UnauthorizedUpdatePersonalDetails,
-        //                    CurrentUserId, request.EmployeeId);
-        //                return UserAccessDenied();
-        //            }
-        //        }
-        //    }
+		//    if (!result.Success)
+		//    {
+		//        Logger.LogWarning(LogMessages.Employee.ErrorUpdatingEmployee, request.EmployeeId);
+		//        return BadRequest(result);
+		//    }
 
-        //    try
-        //    {
-        //        // Validate image
-        //        var validation = _imageUploadService.ValidateImage(request.Picture);
-        //        if (!validation.IsValid)
-        //        {
-        //            Logger.LogWarning("Image validation failed: {Error}", validation.ErrorMessage);
-        //            return BadRequest(new EmployeePictureUploadResponse
-        //            {
-        //                Success = false,
-        //                Message = validation.ErrorMessage
-        //            });
-        //        }
+		//    return Ok(result);
+		//}
 
-        //        // Save image and get relative path
-        //        var webRootPath = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
-        //        var savedImagePath = await _imageUploadService.SaveEmployeeImageAsync(request.Picture, webRootPath);
+		/// <summary>
+		/// Upload employee picture
+		/// DEPRECATED: Use PUT api/personal-details instead which now supports picture upload
+		/// POST: api/personal-details/upload-picture
+		/// Accepts multipart/form-data with employeeId and picture file (jpg, png, max 2MB)
+		/// Saves image to wwwroot/Image/Employee/ with GUID-based filename
+		/// Stores relative path in database (matches Serenity ImageUploadEditor behavior)
+		/// Note: Regular users can only upload pictures for their own employee record. HR/TenantAdmin can upload for any employee.
+		/// </summary>
+		//[HttpPost("upload-picture")]
+		//[Consumes("multipart/form-data")]
+		//[ProducesResponseType(typeof(EmployeePictureUploadResponse), StatusCodes.Status200OK)]
+		//[ProducesResponseType(StatusCodes.Status400BadRequest)]
+		//[ProducesResponseType(StatusCodes.Status403Forbidden)]
+		//[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+		//public async Task<IActionResult> UploadEmployeePicture([FromForm] EmployeePictureUploadRequest request)
+		//{
+		//    if (request == null || request.EmployeeId <= 0)
+		//    {
+		//        Logger.LogWarning(EmployeeMessages.InvalidRequestOrEmployeeId);
+		//        return BadRequest(new EmployeePictureUploadResponse
+		//        {
+		//            Success = false,
+		//            Message = EmployeeMessages.InvalidRequestOrEmployeeId
+		//        });
+		//    }
 
-        //        // Update database with relative path
-        //        var updateRequest = new PersonalDetailPhonePictureUpdateRequestInternal
-        //        {
-        //            EmployeeId = request.EmployeeId,
-        //            Phone = null, // Only updating picture
-        //            Picture = savedImagePath
-        //        };
+		//    if (request.Picture == null || request.Picture.Length == 0)
+		//    {
+		//        Logger.LogWarning("Picture file is required");
+		//        return BadRequest(new EmployeePictureUploadResponse
+		//        {
+		//            Success = false,
+		//            Message = "Picture file is required."
+		//        });
+		//    }
 
-        //        Logger.LogInformation("Uploading picture for employee {EmployeeId}", request.EmployeeId);
-        //        var updateResult = await _employeeService.UpdateEmployeePhoneAndPictureAsync(updateRequest);
+		//    // Validate user access - regular users can only upload pictures for their own employee record
+		//    if (!HasElevatedAccess)
+		//    {
+		//        var existingEmployee = await _employeeService.GetEmployeeByIdAsync(request.EmployeeId);
+		//        if (existingEmployee.Success && existingEmployee.Data != null)
+		//        {
+		//            if (existingEmployee.SystemUserId != CurrentUserId)
+		//            {
+		//                Logger.LogWarning(LogMessages.TenantAccess.UnauthorizedUpdatePersonalDetails,
+		//                    CurrentUserId, request.EmployeeId);
+		//                return UserAccessDenied();
+		//            }
+		//        }
+		//    }
 
-        //        if (!updateResult.Success)
-        //        {
-        //            Logger.LogWarning("Failed to update employee picture in database: {Message}", updateResult.Message);
-        //            return StatusCode(500, new EmployeePictureUploadResponse
-        //            {
-        //                Success = false,
-        //                Message = $"Image saved but failed to update database: {updateResult.Message}"
-        //            });
-        //        }
+		//    try
+		//    {
+		//        // Validate image
+		//        var validation = _imageUploadService.ValidateImage(request.Picture);
+		//        if (!validation.IsValid)
+		//        {
+		//            Logger.LogWarning("Image validation failed: {Error}", validation.ErrorMessage);
+		//            return BadRequest(new EmployeePictureUploadResponse
+		//            {
+		//                Success = false,
+		//                Message = validation.ErrorMessage
+		//            });
+		//        }
 
-        //        Logger.LogInformation("Picture uploaded successfully for employee {EmployeeId}: {Path}", request.EmployeeId, savedImagePath);
+		//        // Save image and get relative path
+		//        var webRootPath = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
+		//        var savedImagePath = await _imageUploadService.SaveEmployeeImageAsync(request.Picture, webRootPath);
 
-        //        return Ok(new EmployeePictureUploadResponse
-        //        {
-        //            Success = true,
-        //            Message = "Picture uploaded successfully",
-        //            PicturePath = savedImagePath
-        //        });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Logger.LogError(ex, "Error uploading employee picture for employee {EmployeeId}", request.EmployeeId);
-        //        return StatusCode(500, new EmployeePictureUploadResponse
-        //        {
-        //            Success = false,
-        //            Message = $"Error uploading picture: {ex.Message}"
-        //        });
-        //    }
-        //}
+		//        // Update database with relative path
+		//        var updateRequest = new PersonalDetailPhonePictureUpdateRequestInternal
+		//        {
+		//            EmployeeId = request.EmployeeId,
+		//            Phone = null, // Only updating picture
+		//            Picture = savedImagePath
+		//        };
 
-        /// <summary>
-        /// Deactivate employee (soft delete)
-        /// Note: Regular users can only deactivate their own account. HR/TenantAdmin can deactivate all.
-        /// </summary>
-        //[HttpPatch("{id}/deactivate")]
-        //public async Task<IActionResult> DeactivateEmployee(int id)
-        //{
-        //    if (id <= 0)
-        //    {
-        //        Logger.LogWarning(EmployeeMessages.InvalidEmployeeId);
-        //        return BadRequest(new { Message = EmployeeMessages.InvalidEmployeeId });
-        //    }
+		//        Logger.LogInformation("Uploading picture for employee {EmployeeId}", request.EmployeeId);
+		//        var updateResult = await _employeeService.UpdateEmployeePhoneAndPictureAsync(updateRequest);
 
-        //    // Validate user access - regular users can only deactivate their own account
-        //    if (!HasElevatedAccess)
-        //    {
-        //        var existingEmployee = await _employeeService.GetEmployeeByIdAsync(id);
-        //        if (existingEmployee.Success && existingEmployee.Data != null)
-        //        {
-        //            if (existingEmployee.Data.SystemUserId != CurrentUserId)
-        //            {
-        //                Logger.LogWarning(LogMessages.TenantAccess.UnauthorizedDeactivateEmployee, 
-        //                    CurrentUserId, id);
-        //                return UserAccessDenied();
-        //            }
-        //        }
-        //    }
+		//        if (!updateResult.Success)
+		//        {
+		//            Logger.LogWarning("Failed to update employee picture in database: {Message}", updateResult.Message);
+		//            return StatusCode(500, new EmployeePictureUploadResponse
+		//            {
+		//                Success = false,
+		//                Message = $"Image saved but failed to update database: {updateResult.Message}"
+		//            });
+		//        }
 
-        //    Logger.LogInformation(LogMessages.Employee.DeactivatingEmployee, id);
-        //    var result = await _employeeService.DeactivateEmployeeAsync(id);
+		//        Logger.LogInformation("Picture uploaded successfully for employee {EmployeeId}: {Path}", request.EmployeeId, savedImagePath);
 
-        //    if (!result.Success)
-        //    {
-        //        Logger.LogWarning(LogMessages.Employee.ErrorDeactivatingEmployee, id);
-        //        return NotFound(result);
-        //    }
+		//        return Ok(new EmployeePictureUploadResponse
+		//        {
+		//            Success = true,
+		//            Message = "Picture uploaded successfully",
+		//            PicturePath = savedImagePath
+		//        });
+		//    }
+		//    catch (Exception ex)
+		//    {
+		//        Logger.LogError(ex, "Error uploading employee picture for employee {EmployeeId}", request.EmployeeId);
+		//        return StatusCode(500, new EmployeePictureUploadResponse
+		//        {
+		//            Success = false,
+		//            Message = $"Error uploading picture: {ex.Message}"
+		//        });
+		//    }
+		//}
 
-        //    return Ok(result);
-        //}
+		/// <summary>
+		/// Deactivate employee (soft delete)
+		/// Note: Regular users can only deactivate their own account. HR/TenantAdmin can deactivate all.
+		/// </summary>
+		//[HttpPatch("{id}/deactivate")]
+		//public async Task<IActionResult> DeactivateEmployee(int id)
+		//{
+		//    if (id <= 0)
+		//    {
+		//        Logger.LogWarning(EmployeeMessages.InvalidEmployeeId);
+		//        return BadRequest(new { Message = EmployeeMessages.InvalidEmployeeId });
+		//    }
 
-    }
+		//    // Validate user access - regular users can only deactivate their own account
+		//    if (!HasElevatedAccess)
+		//    {
+		//        var existingEmployee = await _employeeService.GetEmployeeByIdAsync(id);
+		//        if (existingEmployee.Success && existingEmployee.Data != null)
+		//        {
+		//            if (existingEmployee.Data.SystemUserId != CurrentUserId)
+		//            {
+		//                Logger.LogWarning(LogMessages.TenantAccess.UnauthorizedDeactivateEmployee, 
+		//                    CurrentUserId, id);
+		//                return UserAccessDenied();
+		//            }
+		//        }
+		//    }
+
+		//    Logger.LogInformation(LogMessages.Employee.DeactivatingEmployee, id);
+		//    var result = await _employeeService.DeactivateEmployeeAsync(id);
+
+		//    if (!result.Success)
+		//    {
+		//        Logger.LogWarning(LogMessages.Employee.ErrorDeactivatingEmployee, id);
+		//        return NotFound(result);
+		//    }
+
+		//    return Ok(result);
+		//}
+
+	}
 }
