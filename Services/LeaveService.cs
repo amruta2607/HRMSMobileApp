@@ -125,13 +125,21 @@ namespace MobileWebApi.Services
 				int? employeeId = null;
 
 				if (request.user.HasValue)
-					employeeId = await _leaveRepository.GetEmployeeIdByUserIdAsync(request.user.Value);
+					employeeId = await _leaveRepository
+						.GetEmployeeIdByUserIdAsync(request.user.Value);
 
 				var list = (await _leaveRepository.GetLeaveRequestsAsync(
 					request.organization,
 					employeeId,
-					request.leave_type   // keep this only if you still support leave type
+					request.leave_type
 				)).ToList();
+
+				// ✅ Convert status ID → status text
+				foreach (var item in list)
+				{
+					item.LeaveRequestStatusText =
+						MapDbStatusIdToText((int)item.LeaveRequestStatus);
+				}
 
 				return new LeaveRequestResponse
 				{
@@ -146,6 +154,19 @@ namespace MobileWebApi.Services
 				_logger.LogError(ex, "GetLeaveRequestsAsync failed");
 				return Fail(ex.Message);
 			}
+		}
+		private string MapDbStatusIdToText(int statusId)
+		{
+			return statusId switch
+			{
+				STATUS_ID_SUBMIT => STATUS_SUBMIT,
+				STATUS_ID_APPROVED => STATUS_APPROVED,
+				STATUS_ID_REJECTED => STATUS_REJECTED,
+				STATUS_ID_CANCELLED => STATUS_CANCELLED,
+				STATUS_ID_WITHDRAW => STATUS_WITHDRAW,
+				STATUS_ID_PENDING => STATUS_PENDING,
+				_ => "Unknown"
+			};
 		}
 
 

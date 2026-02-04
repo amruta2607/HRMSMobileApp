@@ -17,7 +17,8 @@ namespace MobileWebApi.Models
         public string? CancellationReason { get; set; }
         public string? CurrentAction { get; set; }
         public int? LeaveRequestStatus { get; set; }
-        public int? DelegatedEmployeeId { get; set; }
+		public string? LeaveRequestStatusText { get; set; }
+		public int? DelegatedEmployeeId { get; set; }
         
         /// <summary>
         /// OrganisationId - maps to TenantId column in database
