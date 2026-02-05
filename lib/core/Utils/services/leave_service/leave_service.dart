@@ -259,4 +259,64 @@ class LeaveService {
       return null;
     }
   }
+
+  static Future<Map<String, dynamic>?> withdrawLeave({
+    required int leaveId,
+    required String reason,
+  }) async {
+    try {
+      final token = await TokenStorage.getToken();
+      if (token == null) {
+        print(' WITHDRAW LEAVE: Token is NULL');
+        return null;
+      }
+
+      final userId = await _getUserId();
+      if (userId == null) {
+        print(' WITHDRAW LEAVE: userId is NULL');
+        return null;
+      }
+
+      final url = Uri.parse(BaseUrls.withdrawLeave);
+
+      final body = {
+        "id": leaveId,
+        "userId": userId,
+        "reason": reason,
+      };
+
+      print(' WITHDRAW LEAVE API URL => $url');
+      print(' WITHDRAW LEAVE BODY => ${jsonEncode(body)}');
+
+      final response = await http.put(
+        url,
+        headers: {
+          'accept': '*/*',
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+
+      print(' WITHDRAW LEAVE STATUS => ${response.statusCode}');
+      print(' WITHDRAW LEAVE RESPONSE => ${response.body}');
+
+      if (response.statusCode == 401) {
+        await TokenStorage.logoutAndNavigate();
+        return null;
+      }
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        return decoded;
+      }
+
+      return null;
+
+    } catch (e, s) {
+      print(' WITHDRAW LEAVE ERROR => $e');
+      print(' STACKTRACE => $s');
+      return null;
+    }
+  }
 }

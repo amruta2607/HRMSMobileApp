@@ -54,11 +54,199 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
     super.dispose();
   }
 
+  // ===================== SELECT LEAVE TYPE (NEW DESIGN) =====================
+
+
+  Widget _leaveTypeDropdown(double scale) {
+    return GestureDetector(
+      onTap: _showLeaveTypeDialog,
+      child: Container(
+        height: 52 * scale,
+        padding: EdgeInsets.symmetric(horizontal: 16 * scale),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12 * scale),
+          border: Border.all(color: const Color(0xFF0F172A), width: 1),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: _selectedLeaveType == null
+                  ? Text(
+                "Select Leave Type",
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14 * scale,
+                  color: Colors.grey,
+                ),
+                overflow: TextOverflow.ellipsis,
+              )
+                  : Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: "${_selectedLeaveType!.leaveTypeName} ",
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14 * scale,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
+                    TextSpan(
+                      text:
+                      "(${_selectedLeaveType!.remainingBalance} days left)",
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600, // Semi Bold
+                        fontSize: 14 * scale,
+                        height: 1.0, // close to 14.07px line-height
+                        letterSpacing: 0,
+                        color: const Color(0xFF808080), // #808080
+                      ),
+                    ),
+                  ],
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+
+            ),
+            const Icon(Icons.keyboard_arrow_down),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLeaveTypeDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16), // Outer radius 16
+          ),
+          child: SizedBox(
+            width: 316, // Outer card width
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                vertical: 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+
+                  // Title
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      "Select Leave Type:",
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Leave Type List
+                  ..._leaveTypes.map((type) {
+                    return Padding(
+                      padding: const EdgeInsets.only(
+                        left: 24,
+                        bottom: 22,
+                        right: 24,
+
+                      ),
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedLeaveType = type;
+                          });
+                          Navigator.pop(context);
+                        },
+                        child: Container(
+                          width: 258,  // Inner width
+                          height: 49,  // Inner height
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 15,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10), // 10px
+                            border: Border.all(
+
+                              color: const Color(0xFF0F172A),
+                              width: 1, // 1px border
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment:
+                            CrossAxisAlignment.center,
+                            children: [
+
+                              // Leave Type Name
+                              Expanded(
+                                child: Text(
+                                  type.leaveTypeName,
+                                  style: const TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+
+                              // Remaining Days
+                              Text(
+                                "${type.remainingBalance} days left",
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 12,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ],
+                          ),
+
+                        ),
+                      ),
+                    );
+                  }).toList(),
+
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ===================== REST OF YOUR ORIGINAL CODE =====================
+
   Future<void> _selectDate(BuildContext context, bool isStart) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
+      initialDate: isStart
+          ? DateTime.now()
+          : (_startDate ?? DateTime.now()),
+      firstDate: isStart
+          ? DateTime.now()
+          : (_startDate ?? DateTime.now()),
       lastDate: DateTime(2101),
       builder: (context, child) {
         return Theme(
@@ -68,21 +256,18 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
               onPrimary: Colors.white,
               onSurface: Color(0xFF0F172A),
             ),
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF0F172A),
-              ),
-            ),
           ),
           child: child!,
         );
       },
     );
+
     if (picked != null) {
       setState(() {
         if (isStart) {
           _startDate = picked;
-          if (_endDate != null && _endDate!.isBefore(_startDate!)) {
+          if (_endDate != null &&
+              _endDate!.isBefore(_startDate!)) {
             _endDate = null;
           }
         } else {
@@ -94,7 +279,8 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
 
   Future<void> _pickFile() async {
     try {
-      fp.FilePickerResult? result = await fp.FilePicker.platform.pickFiles(
+      fp.FilePickerResult? result =
+      await fp.FilePicker.platform.pickFiles(
         type: fp.FileType.custom,
         allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
       );
@@ -127,17 +313,16 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
       _isSubmitting = true;
     });
 
-    int duration = 1;
-    if (_endDate != null) {
-      duration = _endDate!.difference(_startDate!).inDays + 1;
-    }
+    int duration =
+        _endDate!.difference(_startDate!).inDays + 1;
 
-    final success = await LeaveService.submitLeaveApplication(
+    final success =
+    await LeaveService.submitLeaveApplication(
       leaveTypeId: _selectedLeaveType!.leaveTypeId,
       startDate: _startDate!,
       endDate: _endDate!,
       reason: _reasonController.text,
-      isHalfDay: false, // Hardcoded to false for now unless UI has toggle
+      isHalfDay: false,
       duration: duration,
       attachmentPath: _selectedFile?.path,
     );
@@ -147,50 +332,11 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
     });
 
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Leave Application Submitted Successfully"),
-          backgroundColor: Colors.green,
-        ),
-      );
-
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const LeaveSuccessScreen()),
-      ).then((value) {
-        if (value == true) {
-          // Prepare data to return
-          // Format date for display: "2nd Mar" or "2nd Mar - 4th Mar"
-          // We'll use a simple format for now
-          String dateStr = DateFormat("d MMM").format(_startDate!);
-          int days = 1;
-
-          if (_endDate != null) {
-            days = _endDate!.difference(_startDate!).inDays + 1;
-            if (_startDate != _endDate) {
-              dateStr += " - ${DateFormat("d MMM").format(_endDate!)}";
-            }
-          }
-
-          // Add day count in brackets
-          dateStr += " ($days ${days == 1 ? 'day' : 'days'})";
-
-          final leaveData = {
-            "title": _selectedLeaveType?.leaveTypeName ?? "Leave",
-            "date": dateStr,
-            "reason": _reasonController.text,
-            "status": "Pending",
-          };
-
-          Navigator.pop(context, leaveData);
-        }
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Failed to submit leave application"),
-          backgroundColor: Colors.red,
-        ),
+        MaterialPageRoute(
+            builder: (context) =>
+            const LeaveSuccessScreen()),
       );
     }
   }
@@ -203,12 +349,13 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       bottomNavigationBar: CustomNavigationBar(
-        currentIndex: 0, // Highlight Home
+        currentIndex: 0,
         onChanged: (index) {
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-              builder: (context) => MainNavigationScreen(initialIndex: index),
+              builder: (context) =>
+                  MainNavigationScreen(initialIndex: index),
             ),
                 (route) => false,
           );
@@ -218,26 +365,26 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
         child: Column(
           children: [
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16 * scale),
+              padding:
+              EdgeInsets.symmetric(horizontal: 16 * scale),
               child: Column(
                 children: [
                   SizedBox(height: 10 * scale),
-
-                  /// HEADER
                   SizedBox(
                     height: 37 * scale,
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         SizedBox(
                           width: 24 * scale,
                           height: 25 * scale,
                           child: InkWell(
-                            onTap: () => Navigator.pop(context),
+                            onTap: () =>
+                                Navigator.pop(context),
                             child: Icon(
                               Icons.arrow_back_ios,
                               size: 15 * scale,
-                              color: const Color(0xFF0F172A),
+                              color:
+                              const Color(0xFF0F172A),
                             ),
                           ),
                         ),
@@ -247,9 +394,8 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                             fontFamily: 'Inter',
                             fontWeight: FontWeight.w700,
                             fontSize: 20 * scale,
-                            height: 36.31 / 20,
-                            letterSpacing: -0.68 * scale,
-                            color: const Color(0xFF0F172A),
+                            color:
+                            const Color(0xFF0F172A),
                           ),
                         ),
                       ],
@@ -260,82 +406,111 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 16 * scale),
+                padding: EdgeInsets.symmetric(
+                    horizontal: 16 * scale),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                  CrossAxisAlignment.start,
                   children: [
                     SizedBox(height: 17 * scale),
 
-                    /// SELECT LEAVE TYPE
-                    _sectionTitle("Select Leave Type", scale),
+                    _sectionTitle(
+                        "Select Leave Type", scale),
                     SizedBox(height: 16 * scale),
 
                     if (_isLoadingTypes)
-                      const Center(child: CircularProgressIndicator())
+                      const Center(
+                          child:
+                          CircularProgressIndicator())
                     else if (_leaveTypes.isEmpty)
-                      const Text("No leave types available")
+                      const Text(
+                          "No leave types available")
                     else
-                      GridView.count(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 12 * scale,
-                        mainAxisSpacing: 12 * scale,
-                        childAspectRatio: 174 / 75,
-                        children: _leaveTypes.map((type) {
-                          return _LeaveTypeCard(
-                            title: type.leaveTypeName,
-                            days: type.remainingBalance,
-                            isSelected: _selectedLeaveType == type,
-                            onTap: () => setState(() => _selectedLeaveType = type),
-                          );
-                        }).toList(),
-                      ),
+                      _leaveTypeDropdown(scale),
 
                     SizedBox(height: 28 * scale),
 
-                    /// SELECT DAYS
-                    _sectionTitle("Select Days", scale),
+                    Row(
+                      children: [
+                        Text(
+                          "Select Days",
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w600,
+                            fontSize: 18 * scale,
+                            letterSpacing: -0.68 * scale,
+                            color: const Color(0xFF0F172A),
+                          ),
+                        ),
+                        SizedBox(width: 8 * scale),
+                        if (_startDate != null && _endDate != null)
+                          Text(
+                            "(-${_endDate!.difference(_startDate!).inDays + 1} "
+                                "${(_endDate!.difference(_startDate!).inDays + 1) == 1 ? 'day' : 'days'})",
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w500,
+                              fontSize: 16 * scale,
+                              color: const Color(0xFF808080), // grey only for count
+                            ),
+                          ),
+                      ],
+                    ),
+
                     SizedBox(height: 12 * scale),
 
                     Row(
                       children: [
-                        Expanded(child: _dateField("Start Date", _startDate, scale, true)),
+                        Expanded(
+                            child: _dateField("Start Date",
+                                _startDate, scale, true)),
                         SizedBox(width: 12 * scale),
-                        Expanded(child: _dateField("End Date", _endDate, scale, false)),
+                        Expanded(
+                            child: _dateField("End Date",
+                                _endDate, scale, false)),
                       ],
                     ),
 
                     SizedBox(height: 28 * scale),
 
-                    /// REASON
-                    _sectionTitle("Reason for Leave", scale),
+                    _sectionTitle(
+                        "Reason for Leave", scale),
                     SizedBox(height: 12 * scale),
 
                     Container(
-                      constraints: BoxConstraints(minHeight: 99 * scale),
+                      constraints: BoxConstraints(
+                          minHeight: 99 * scale),
                       padding: EdgeInsets.all(12 * scale),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(10 * scale),
-                        border: Border.all(color: const Color(0xFF5D6063)),
+                        borderRadius:
+                        BorderRadius.circular(
+                            10 * scale),
+                        border: Border.all(
+                            color:
+                            const Color(0xFF5D6063)),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0x40000000),
+                            color:
+                            const Color(0x40000000),
                             blurRadius: 4 * scale,
                           ),
                         ],
                       ),
                       child: TextField(
-                        controller: _reasonController,
+                        controller:
+                        _reasonController,
                         maxLines: null,
                         decoration: InputDecoration(
                           border: InputBorder.none,
-                          hintText: "Optional note for your manager",
+                          hintText:
+                          "Optional note for your manager",
                           hintStyle: TextStyle(
                             fontFamily: 'Inter',
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14 * scale,
+                            fontWeight:
+                            FontWeight.w500,
+                            fontSize:
+                            14 * scale,
                             color: Colors.grey,
                           ),
                         ),
@@ -344,67 +519,97 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
 
                     SizedBox(height: 28 * scale),
 
-                    /// ATTACH DOCUMENT
-                    _sectionTitle("Attach Document", scale),
-                    SizedBox(height: 16 * scale),
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: "Attach Document ",
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                              fontSize: 18 * scale, // adjust if needed
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
+                          TextSpan(
+                            text: "(Optional)",
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w500,
+                              fontSize: 18 * scale,
+                              color: const Color(0xFF808080), // #808080
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
+                    SizedBox(height: 16 * scale),
                     Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment:
+                      CrossAxisAlignment.start,
                       children: [
                         _uploadButton(scale),
-                        SizedBox(height: 0 * scale),
+                        SizedBox(height: 8 * scale),
                         Padding(
-                          padding: EdgeInsets.only(left: 8 * scale),
+                          padding: EdgeInsets.only(
+                              left: 8 * scale),
                           child: Text(
                             "PDF, JPG, PNG",
                             style: TextStyle(
                               fontFamily: 'Inter',
-                              fontWeight: FontWeight.w300,
-                              fontSize: 12 * scale,
-                              height: 36.31 / 12,
-                              letterSpacing: -0.68 * scale,
+                              fontWeight:
+                              FontWeight.w300,
+                              fontSize:
+                              12 * scale,
                               color: Colors.black,
                             ),
                           ),
                         ),
-                        if (_selectedFile != null) ...[
-                          SizedBox(height: 4 * scale),
+                        if (_selectedFile != null)
                           Text(
                             "Selected: ${_selectedFile!.name}",
                             style: TextStyle(
                               fontFamily: 'Inter',
-                              fontWeight: FontWeight.w500,
-                              fontSize: 12 * scale,
-                              color: const Color(0xFF0F172A),
+                              fontWeight:
+                              FontWeight.w500,
+                              fontSize:
+                              12 * scale,
+                              color:
+                              const Color(
+                                  0xFF0F172A),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ],
                       ],
                     ),
 
-                    SizedBox(height: 26 * scale),
+                    SizedBox(height: 45 * scale),
 
-                    /// SUBMIT BUTTON
                     AppPrimaryButton(
-                      onTap: _isSubmitting ? () {} : _submitApplication,
+                      onTap: _isSubmitting
+                          ? () {}
+                          : _submitApplication,
                       child: _isSubmitting
-                          ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                          ? const Center(
+                          child:
+                          CircularProgressIndicator(
+                              color:
+                              Colors.white))
                           : Text(
                         "Submit Leave Application",
                         style: TextStyle(
-                          fontFamily: 'Roboto',
-                          fontWeight: FontWeight.w500,
-                          fontSize: 20 * scale,
-                          letterSpacing: 0.14 * scale,
+                          fontFamily:
+                          'Roboto',
+                          fontWeight:
+                          FontWeight.w500,
+                          fontSize:
+                          20 * scale,
                           color: Colors.white,
                         ),
                       ),
                     ),
 
-
-                    SizedBox(height: 30 * scale),
+                    const SizedBox(height: 15),
                   ],
                 ),
               ),
@@ -422,22 +627,25 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
         fontFamily: 'Inter',
         fontWeight: FontWeight.w600,
         fontSize: 18 * scale,
-        letterSpacing: -0.68 * scale,
         color: const Color(0xFF0F172A),
       ),
     );
   }
 
-  Widget _dateField(String label, DateTime? date, double scale, bool isStart) {
+  Widget _dateField(
+      String label, DateTime? date, double scale, bool isStart) {
     return GestureDetector(
       onTap: () => _selectDate(context, isStart),
       child: Container(
         height: 49 * scale,
-        padding: EdgeInsets.symmetric(horizontal: 12 * scale),
+        padding: EdgeInsets.symmetric(
+            horizontal: 12 * scale),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(10 * scale),
-          border: Border.all(color: const Color(0xFF5D6063)),
+          borderRadius:
+          BorderRadius.circular(10 * scale),
+          border: Border.all(
+              color: const Color(0xFF5D6063)),
           boxShadow: [
             BoxShadow(
               color: const Color(0x40000000),
@@ -446,20 +654,19 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
           ],
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment:
+          MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              date != null ? DateFormat('dd MMM yyyy').format(date) : label,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w500,
-                fontSize: 14 * scale,
-                color: date != null ? const Color(0xFF0F172A) : Colors.grey,
-              ),
+              date != null
+                  ? DateFormat('dd MMM yyyy')
+                  .format(date)
+                  : label,
             ),
             Icon(Icons.calendar_today,
                 size: 18 * scale,
-                color: const Color(0xFF0F172A)),
+                color:
+                const Color(0xFF0F172A)),
           ],
         ),
       ),
@@ -472,17 +679,16 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
       child: IntrinsicWidth(
         child: Container(
           height: 49 * scale,
-          padding: EdgeInsets.symmetric(horizontal: 16 * scale),
+          padding: EdgeInsets.symmetric(
+              horizontal: 16 * scale),
           decoration: BoxDecoration(
             color: const Color(0x295D6063),
-            borderRadius: BorderRadius.circular(10 * scale),
-            border: Border.all(color: const Color(0xFF5D6063)),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0x40000000).withOpacity(0.02),
-                blurRadius: 4 * scale,
-              ),
-            ],
+            borderRadius:
+            BorderRadius.circular(
+                10 * scale),
+            border: Border.all(
+                color:
+                const Color(0xFF5D6063)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -491,102 +697,25 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                 "img/upload_icon.png",
                 width: 18 * scale,
                 height: 18 * scale,
-                color: const Color(0xFF0F172A),
+                color:
+                const Color(0xFF0F172A),
               ),
               SizedBox(width: 8 * scale),
               Text(
                 "Upload Document",
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14 * scale,
-                  color: const Color(0xFF0F172A),
+                  fontWeight:
+                  FontWeight.w600,
+                  fontSize:
+                  14 * scale,
+                  color:
+                  const Color(
+                      0xFF0F172A),
                 ),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-class _LeaveTypeCard extends StatelessWidget {
-  final String title;
-  final int days;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _LeaveTypeCard({
-    required this.title,
-    required this.days,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scale = MediaQuery.of(context).size.width / 375;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 75 * scale,
-        padding: EdgeInsets.all(12 * scale),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFF1F5F9) : Colors.white,
-          borderRadius: BorderRadius.circular(10 * scale),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF808080),
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0x0F000000),
-              offset: Offset(0, 4 * scale),
-              blurRadius: 4 * scale,
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w600,
-                fontSize: 14 * scale,
-                color: const Color(0xFF0F172A),
-              ),
-            ),
-            SizedBox(height: 6 * scale),
-            RichText(
-              text: TextSpan(
-                children: [
-                  TextSpan(
-                    text: "$days ",
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                      fontSize: 18 * scale,
-                      height: 14.07 / 18,
-                      color: const Color(0xFF0F172A),
-                    ),
-                  ),
-                  TextSpan(
-                    text: "Days left",
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w500,
-                      fontSize: 12 * scale,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );

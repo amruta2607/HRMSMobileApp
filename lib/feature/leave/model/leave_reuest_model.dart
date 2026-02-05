@@ -10,7 +10,7 @@ class LeaveRequestModel {
   final DateTime toDate;
   final int duration;
   final String? description;
-  final String status;
+  final String leaveRequestStatusText;
   final String currentAction;
   final DateTime insertDate;
 
@@ -26,7 +26,8 @@ class LeaveRequestModel {
     required this.toDate,
     required this.duration,
     this.description,
-    required this.status,
+    required this.leaveRequestStatusText,
+
     required this.currentAction,
     required this.insertDate,
   });
@@ -44,7 +45,7 @@ class LeaveRequestModel {
       toDate: DateTime.tryParse(json['toDate'] ?? '') ?? DateTime.now(),
       duration: json['duration'] ?? 0,
       description: json['description'],
-      status: json['status'] ?? '',
+      leaveRequestStatusText: json['leaveRequestStatusText'] ?? '',
       currentAction: json['currentAction'] ?? '',
       insertDate: DateTime.tryParse(json['insertDate'] ?? '') ?? DateTime.now(),
     );

@@ -318,6 +318,28 @@ class AttendanceService {
     }
   }
 
+  // ===================================================
+  // GET TODAY STATUS (Convenience)
+  // ===================================================
+  static Future<AttendanceStatusData?> getTodayStatus() async {
+    try {
+      final userId = await _getUserId();
+      if (userId == null) return null;
+
+      final response = await getAttendanceStatus(
+          userId: userId,
+          date: DateTime.now()
+      );
+
+      if (response != null && response.success && response.data != null) {
+        return response.data;
+      }
+    } catch (e) {
+      print('Error fetching today status: $e');
+    }
+    return null;
+  }
+
   // ATTENDANCE SUMMARY (RECORDS)
   // ===================================================
   static Future<Map<String, dynamic>?> getAttendanceSummary({

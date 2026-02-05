@@ -5,15 +5,24 @@ import '../model/leave_reuest_model.dart';
 
 class RecentLeaveSection extends StatelessWidget {
   final List<LeaveRequestModel> leaves;
+  final bool showLimited;
+  final VoidCallback? onViewAllTap;
+  final VoidCallback? onRefreshNeeded;
 
   const RecentLeaveSection({
     super.key,
     this.leaves = const [],
+    this.showLimited = true,
+    this.onViewAllTap,
+    this.onRefreshNeeded,
   });
 
   @override
   Widget build(BuildContext context) {
     final scale = MediaQuery.of(context).size.width / 375;
+    final displayLeaves = showLimited && leaves.length > 3
+        ? leaves.take(3).toList()
+        : leaves;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -36,55 +45,130 @@ class RecentLeaveSection extends StatelessWidget {
 
         SizedBox(height: 14 * scale),
 
-        Expanded(
-          child: ListView.builder(
-            padding: EdgeInsets.symmetric(horizontal: 20 * scale),
-            itemCount: leaves.length,
-            itemBuilder: (context, index) {
-              final leave = leaves[index];
-              return Column(
+        if (showLimited)
+        // Limited mode - no Expanded
+          Column(
+            children: [
+              ...displayLeaves.map((leave) => Column(
                 children: [
                   SizedBox(height: 4 * scale),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20 * scale),
+                    child: InkWell(
+                      onTap: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => LeaveDetailsScreen(leaveData: leave),
+                          ),
+                        );
 
-                  InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => LeaveDetailsScreen(leaveData: leave),
-                        ),
-                      );
-                    },
-
-                    child: LeaveRequestTile(
-                      title: leave.leaveTypeName,
-                      date: _formatDuration(leave.fromDate, leave.toDate, leave.duration),
+                        // If leave was withdrawn, trigger refresh
+                        if (result == true) {
+                          onRefreshNeeded?.call();
+                        }
+                      },
+                      child: LeaveRequestTile(
+                        title: leave.leaveTypeName,
+                        date: _formatDateRange(leave.fromDate, leave.toDate),
+                        status: leave.leaveRequestStatusText,
+                      ),
                     ),
                   ),
                 ],
-              );
-            },
+              )).toList(),
+
+              // View All button (only show if more than 3 items)
+              if (leaves.length > 3 && onViewAllTap != null) ...[
+                SizedBox(height: 12 * scale),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20 * scale),
+                  child: GestureDetector(
+                    onTap: onViewAllTap,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          "View All",
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14 * scale,
+                            color: const Color(0xFF0F62FE),
+                          ),
+                        ),
+                        SizedBox(width: 4 * scale),
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          size: 14 * scale,
+                          color: const Color(0xFF0F62FE),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          )
+        else
+        // Full mode - use Expanded for scrolling
+          Expanded(
+            child: ListView.builder(
+              padding: EdgeInsets.symmetric(horizontal: 20 * scale),
+              itemCount: leaves.length,
+              itemBuilder: (context, index) {
+                final leave = leaves[index];
+                return Column(
+                  children: [
+                    SizedBox(height: 4 * scale),
+
+                    InkWell(
+                      onTap: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => LeaveDetailsScreen(leaveData: leave),
+                          ),
+                        );
+
+                        // If leave was withdrawn, trigger refresh
+                        if (result == true) {
+                          onRefreshNeeded?.call();
+                        }
+                      },
+
+                      child: LeaveRequestTile(
+                        title: leave.leaveTypeName,
+                        date: _formatDateRange(leave.fromDate, leave.toDate),
+                        status: leave.leaveRequestStatusText,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
-        ),
       ],
     );
   }
 
-  String _formatDuration(DateTime from, DateTime to, int duration) {
+  String _formatDateRange(DateTime from, DateTime to) {
     final start = DateFormat("dd MMM yyyy").format(from);
     final end = DateFormat("dd MMM yyyy").format(to);
-    return "$start - $end ($duration days)";
+    return "$start - $end";
   }
 }
 
 class LeaveRequestTile extends StatelessWidget {
   final String title;
   final String date;
+  final String status;
 
   const LeaveRequestTile({
     super.key,
     required this.title,
     required this.date,
+    required this.status,
   });
 
   @override
@@ -119,15 +203,43 @@ class LeaveRequestTile extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14 * scale,
-                    height: 14.07 / 14,
-                    color: Colors.black,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14 * scale,
+                        height: 14.07 / 14,
+                        color: Colors.black,
+                      ),
+                    ),
+                    SizedBox(width: 8 * scale),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 8 * scale,
+                        vertical: 2 * scale,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _getStatusColor(status).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4 * scale),
+                        border: Border.all(
+                          color: _getStatusColor(status),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        status,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
+                          fontSize: 10 * scale,
+                          color: _getStatusColor(status),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 SizedBox(height: 6 * scale),
                 Text(
@@ -173,8 +285,9 @@ class LeaveRequestTile extends StatelessWidget {
   }
 
   Color _getStatusColor(String status) {
-    if (status.toLowerCase() == 'approved') return Colors.green;
+    if (status.toLowerCase().contains('approved')) return Colors.green;
     if (status.toLowerCase().contains('reject')) return Colors.red;
+    if (status.toLowerCase().contains('withdraw')) return Colors.blue;
     return Colors.orange;
   }
 }

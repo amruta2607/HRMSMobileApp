@@ -155,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Image.asset(
                   'img/app_icon.png',
                   height: 105 * scale,
-                  width: 105 * scale,
+                  width: 145 * scale,
                 ),
 
 

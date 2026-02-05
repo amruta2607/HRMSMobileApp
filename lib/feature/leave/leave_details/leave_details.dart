@@ -3,10 +3,12 @@ import 'package:intl/intl.dart';
 import '../../Navigation/navigation_bar.dart';
 import '../../Navigation/main_navigation_screen.dart';
 import '../../../core/Theme/app_colors.dart';
+import '../../../core/Utils/services/leave_service/leave_service.dart';
 import '../dilog/withdraw_leave_dialog.dart';
 import '../model/leave_reuest_model.dart';
 
-class LeaveDetailsScreen extends StatelessWidget {
+
+class LeaveDetailsScreen extends StatefulWidget {
   final LeaveRequestModel leaveData;
 
   const LeaveDetailsScreen({
@@ -15,19 +17,26 @@ class LeaveDetailsScreen extends StatelessWidget {
   });
 
   @override
+  State<LeaveDetailsScreen> createState() => _LeaveDetailsScreenState();
+}
+
+class _LeaveDetailsScreenState extends State<LeaveDetailsScreen> {
+  bool _isLoading = false;
+
+  @override
   Widget build(BuildContext context) {
     final scale = MediaQuery.of(context).size.width / 375;
 
-    final String title = leaveData.leaveTypeName;
-    final String date = _formatDuration(leaveData.fromDate, leaveData.toDate, leaveData.duration);
-    final String reason = leaveData.description ?? 'No reason provided';
-    final String status = leaveData.status;
+    final String title = widget.leaveData.leaveTypeName;
+    final String date = _formatDuration(widget.leaveData.fromDate, widget.leaveData.toDate, widget.leaveData.duration);
+    final String reason = widget.leaveData.description ?? 'No reason provided';
+    final String status = widget.leaveData.leaveRequestStatusText;
 
     Color statusBgColor = AppColors.statusApprovedBg;
     Color statusBorderColor = AppColors.statusApprovedBorder;
     Color statusTextColor = AppColors.statusApprovedText;
 
-    if (status.toLowerCase().contains('submit') || status.toLowerCase().contains('pending')) {
+    if (status.toLowerCase().contains('submit') || status.toLowerCase().contains('pending Approval')) {
       statusBgColor = AppColors.statusPendingBg;
       statusBorderColor = AppColors.statusPendingBorder;
       statusTextColor = AppColors.statusPendingText;
@@ -39,7 +48,13 @@ class LeaveDetailsScreen extends StatelessWidget {
       statusBgColor = AppColors.statusApprovedBg;
       statusBorderColor = AppColors.statusApprovedBorder;
       statusTextColor = AppColors.statusApprovedText;
-    } else {
+    }
+   else if (status.toLowerCase().contains('withdraw')) {
+      statusBgColor = Colors.blue.shade50;
+      statusBorderColor = Colors.blue;
+      statusTextColor = Colors.blue;
+  }
+    else {
       statusBgColor = AppColors.grey96;
       statusBorderColor = Colors.grey;
       statusTextColor = Colors.black;
@@ -155,13 +170,70 @@ class LeaveDetailsScreen extends StatelessWidget {
                   width: double.infinity,
                   height: 55 * scale,
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: _isLoading ? null : () {
                       showDialog(
                         context: context,
                         builder: (context) {
                           return WithdrawLeaveDialog(
-                            onWithdraw: () {
-                              // api implementation for withdraw if needed
+                            onWithdraw: (String reason) async {
+                              // Save references BEFORE any async operations
+                              final messenger = ScaffoldMessenger.of(context);
+                              final navigator = Navigator.of(context);
+
+                              setState(() {
+                                _isLoading = true;
+                              });
+
+                              try {
+                                final result = await LeaveService.withdrawLeave(
+                                  leaveId: widget.leaveData.id,
+                                  reason: reason,
+                                );
+
+                                if (!mounted) return;
+
+                                setState(() {
+                                  _isLoading = false;
+                                });
+
+                                if (result != null && result['success'] == true) {
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text(result['message'] ?? 'Leave request withdrawn successfully'),
+                                      backgroundColor: Colors.green,
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+
+                                  // Navigate back after a brief delay to ensure snackbar is shown
+                                  Future.delayed(const Duration(milliseconds: 300), () {
+                                    // Return true to indicate leave was withdrawn successfully
+                                    navigator.pop(true);
+                                  });
+                                } else {
+                                  messenger.showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Failed to withdraw leave request. Please try again.'),
+                                      backgroundColor: Colors.red,
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (!mounted) return;
+
+                                setState(() {
+                                  _isLoading = false;
+                                });
+
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: $e'),
+                                    backgroundColor: Colors.red,
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                              }
                             },
                           );
                         },
@@ -174,7 +246,16 @@ class LeaveDetailsScreen extends StatelessWidget {
                       ),
                       elevation: 6,
                     ),
-                    child: Text(
+                    child: _isLoading
+                        ? SizedBox(
+                      height: 20 * scale,
+                      width: 20 * scale,
+                      child: const CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                        : Text(
                       "Withdraw Leave",
                       style: TextStyle(
                         fontSize: 18 * scale,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/Utils/services/leave_service/leave_service.dart';
 import '../apply_leave/apply_leave_screen.dart';
 import '../model/leave_reuest_model.dart';
+import '../leave_history/all_leave_requests_screen.dart';
 import 'recent_leave_section.dart';
 import 'apply_leave_button.dart';
 
@@ -61,7 +62,6 @@ class _LeaveBodyState extends State<LeaveBody> {
                 ),
               );
 
-              // If result is not null, it means leave was applied (or we can assume we should refresh)
               if (result != null) {
                 _handleLeaveApplied();
               }
@@ -86,7 +86,19 @@ class _LeaveBodyState extends State<LeaveBody> {
               ),
             ),
           )
-              : RecentLeaveSection(leaves: _recentLeaves),
+              : RecentLeaveSection(
+            leaves: _recentLeaves,
+            showLimited: true,
+            onRefreshNeeded: _loadRecentLeaves,
+            onViewAllTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const AllLeaveRequestsScreen(),
+                ),
+              );
+            },
+          ),
         ),
       ],
     );

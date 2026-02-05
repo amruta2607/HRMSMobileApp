@@ -72,7 +72,13 @@ class LeaveSuccessScreen extends StatelessWidget {
               // Button
               AppPrimaryButton(
                 onTap: () {
-                  Navigator.pop(context, true);
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const LeaveScreen(),
+                    ),
+                        (route) => false,
+                  );
                 },
                 child: Text(
                   "Go to Leave Dashboard",

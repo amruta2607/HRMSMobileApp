@@ -48,8 +48,31 @@ class _AttendanceBodyState extends State<AttendanceBody> {
     super.initState();
     _fetchCalendar(_currentYear, _currentMonth);
     _fetchCurrentMonthRecords(); // Load records for the ACTUAL current month
+    _restoreState();
   }
 
+  // RESTORE STATE
+  Future<void> _restoreState() async {
+    final status = await AttendanceService.getTodayStatus();
+    if (status != null) {
+      if (status.punchIn != null && status.punchOut == null) {
+        // Currently clocked in
+        final now = DateTime.now();
+        final diff = now.difference(status.punchIn!);
+
+        setState(() {
+          isClockedIn = true;
+          _workedDuration = diff;
+        });
+        _startTimer();
+      } else {
+        // Not clocked in
+        setState(() {
+          isClockedIn = false;
+        });
+      }
+    }
+  }
 
   // CALENDAR CARD - Fetches dots for selected month
   Future<void> _fetchCalendar(int year, int month) async {

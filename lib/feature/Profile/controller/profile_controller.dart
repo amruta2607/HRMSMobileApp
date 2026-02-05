@@ -21,7 +21,7 @@ class ProfileController extends ChangeNotifier {
       return pic;
     }
 
-    final fullUrl = 'http://103.123.74.160:81/$pic';
+    final fullUrl = 'http://103.123.74.160:81/upload/$pic';
     print(' PROFILE CONTROLLER: Built URL = $fullUrl');
     return fullUrl;
   }

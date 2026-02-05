@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:typed_data';
+import 'package:http/http.dart' as http;
 
 import '../../../core/Theme/app_colors.dart';
+import '../../../core/Utils/services/token_storage.dart';
 import 'controller/profile_controller.dart';
 
 class ProfileHeader extends StatelessWidget {
@@ -46,42 +49,15 @@ class ProfileHeader extends StatelessWidget {
                       backgroundColor: Colors.white,
                       child: ClipOval(
                         child: imageUrl.isNotEmpty
-                            ? Image.network(
-                          imageUrl,
+                            ? AuthenticatedImage(
+                          imageUrl: imageUrl,
                           width: 88 * scale,
                           height: 88 * scale,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (_, child, progress) {
-                            if (progress == null) return child;
-                            return Center(
-                              child: SizedBox(
-                                width: 30 * scale,
-                                height: 30 * scale,
-                                child: const CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor:
-                                  AlwaysStoppedAnimation<Color>(
-                                    AppColors.primaryBlue,
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return Center(
-                              child: Text(
-                                profile?.name != null &&
-                                    profile!.name!.isNotEmpty
-                                    ? profile!.name![0].toUpperCase()
-                                    : 'U',
-                                style: TextStyle(
-                                  fontSize: 30 * scale,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primaryBlue,
-                                ),
-                              ),
-                            );
-                          },
+                          scale: scale,
+                          fallbackLetter: profile?.name != null &&
+                              profile!.name!.isNotEmpty
+                              ? profile!.name![0].toUpperCase()
+                              : 'U',
                         )
                             : Center(
                           child: Text(
@@ -142,6 +118,150 @@ class ProfileHeader extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Widget to load images with authentication headers
+class AuthenticatedImage extends StatefulWidget {
+  final String imageUrl;
+  final double width;
+  final double height;
+  final double scale;
+  final String fallbackLetter;
+
+  const AuthenticatedImage({
+    super.key,
+    required this.imageUrl,
+    required this.width,
+    required this.height,
+    required this.scale,
+    required this.fallbackLetter,
+  });
+
+  @override
+  State<AuthenticatedImage> createState() => _AuthenticatedImageState();
+}
+
+class _AuthenticatedImageState extends State<AuthenticatedImage> {
+  Uint8List? _imageBytes;
+  bool _isLoading = true;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImage();
+  }
+
+  @override
+  void didUpdateWidget(AuthenticatedImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.imageUrl != widget.imageUrl) {
+      _loadImage();
+    }
+  }
+
+  Future<void> _loadImage() async {
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+    });
+
+    try {
+      print('AUTHENTICATED IMAGE: Loading ${widget.imageUrl}');
+
+      final token = await TokenStorage.getToken();
+
+      if (token == null) {
+        print(' AUTHENTICATED IMAGE: No token found');
+        setState(() {
+          _isLoading = false;
+          _hasError = true;
+        });
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse(widget.imageUrl),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print(' AUTHENTICATED IMAGE: Status ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _imageBytes = response.bodyBytes;
+          _isLoading = false;
+          _hasError = false;
+        });
+        print(' AUTHENTICATED IMAGE: Loaded successfully');
+      } else {
+        print(' AUTHENTICATED IMAGE: Failed with status ${response.statusCode}');
+        setState(() {
+          _isLoading = false;
+          _hasError = true;
+        });
+      }
+    } catch (e) {
+      print(' AUTHENTICATED IMAGE: Error loading image: $e');
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Center(
+        child: SizedBox(
+          width: 30 * widget.scale,
+          height: 30 * widget.scale,
+          child: const CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              AppColors.primaryBlue,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_hasError || _imageBytes == null) {
+      return Center(
+        child: Text(
+          widget.fallbackLetter,
+          style: TextStyle(
+            fontSize: 30 * widget.scale,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primaryBlue,
+          ),
+        ),
+      );
+    }
+
+    return Image.memory(
+      _imageBytes!,
+      width: widget.width,
+      height: widget.height,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        print(' AUTHENTICATED IMAGE: Error displaying image: $error');
+        return Center(
+          child: Text(
+            widget.fallbackLetter,
+            style: TextStyle(
+              fontSize: 30 * widget.scale,
+              fontWeight: FontWeight.bold,
+              color: AppColors.primaryBlue,
+            ),
+          ),
+        );
+      },
     );
   }
 }

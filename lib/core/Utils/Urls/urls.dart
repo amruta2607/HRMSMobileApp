@@ -33,6 +33,7 @@ class BaseUrls {
   //Leave
   static const String leaveBalance = "$base/api/Leave/balance";
   static const String applyLeave = "$base/api/Leave/request";
-  static const String leaveRequests = "$base/apipunch/leave/request/get"; // GET
+  static const String leaveRequests = "$base/apipunch/leave/request/get";
+  static const String withdrawLeave = "$base/api/Leave/withdraw";
 
 }

@@ -36,7 +36,7 @@ class HomeController extends ChangeNotifier {
     }
 
     // Otherwise, prepend the base URL
-    return 'http://103.123.74.160:81/$picture';
+    return 'http://103.123.74.160:81/upload/$picture';
   }
 
   // Fetch all home data
