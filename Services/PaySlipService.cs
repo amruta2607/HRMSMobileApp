@@ -387,5 +387,60 @@ namespace MobileWebApi.Services
                 _ => "application/pdf"
             };
         }
-    }
+		public async Task<PaySlipResponse> GetProvidentFundSummaryAsync(int userId)
+		{
+			try
+			{
+				if (userId <= 0)
+				{
+					return new PaySlipResponse
+					{
+						Success = false,
+						Message = "User Id required"
+					};
+				}
+
+				var (employeeId, tenantId) =
+					await _paySlipRepository.GetEmployeeIdAndTenantByUserIdAsync(userId);
+
+				if (!employeeId.HasValue || !tenantId.HasValue)
+				{
+					return new PaySlipResponse
+					{
+						Success = false,
+						Message = "Employee not found"
+					};
+				}
+
+				var (myShare, employerShare) =
+					await _paySlipRepository
+						.GetEmployeeProvidentFundSummaryAsync(employeeId.Value, tenantId.Value);
+
+				var data = new ProvidentFundSummary
+				{
+					MyShare = myShare,
+					EmployerShare = employerShare,
+					TotalProvidentFund = myShare + employerShare
+				};
+
+				return new PaySlipResponse
+				{
+					Success = true,
+					Message = "Provident Fund fetched successfully",
+					Data = data,
+					TotalRecords = 1
+				};
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error fetching Provident Fund");
+
+				return new PaySlipResponse
+				{
+					Success = false,
+					Message = ex.Message
+				};
+			}
+		}
+	}
 }

@@ -23,5 +23,6 @@ namespace MobileWebApi.Interfaces
         /// Get employee ID and TenantId by user ID
         /// </summary>
         Task<(int? EmployeeId, int? TenantId)> GetEmployeeIdAndTenantByUserIdAsync(int userId);
-    }
+		Task<(decimal MyShare, decimal EmployerShare)>GetEmployeeProvidentFundSummaryAsync(int employeeId, int tenantId);
+	}
 }

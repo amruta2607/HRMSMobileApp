@@ -148,7 +148,7 @@
     "GetPaySlipByEmployeeMonthYear": "SELECT Id, PayrollId, EmployeeId, BankAccountNumber, BankName, IFSCCode, BankBranchName, BasicSalary, TotalIncome, TotalDeduction, TakeHomePay, TenantId, Gross, EmployeeName, EmployeeNumber, Email, DateOfBirth, TaxNumber, ESINo, PFNo, UANNo, IsPerDayWagesEmployee, DateOfJoining, PerDayOverTimeWages, PayrollMonth, PayrollYear, DaysPayable, OverTimeDays, PresentDays, SalarySlab, PerDayWages, OvertimeSalary, SalaryEarned, TenantName, Currency, GenderName, DesignationName, BranchName, PayrollMonthName, FinancialYearStart, LossPayDays, Logo FROM [dbo].[vwPayrollDetailPrint] WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND PayrollMonth = @Month AND PayrollYear = @Year",
 
     "GetPaySlipFilePath": "SELECT PaySlipFilePath FROM PaySlip WHERE Id = @Id",
-
+    "GetEmployeeProvidentFundSummary": "SELECT SUM(CASE WHEN d.DeductionCode = 'ProvidentFundEmployee' THEN pdd.Amount ELSE 0 END) AS MyShare, SUM(CASE WHEN d.DeductionCode = 'ProvidentFundCompany' THEN pdd.Amount ELSE 0 END) AS EmployerShare FROM PayrollDetailDeduction pdd INNER JOIN PayrollDetail pd ON pd.Id = pdd.PayrollDetailId INNER JOIN Deduction d ON d.Id = pdd.DeductionId WHERE pd.EmployeeId = @EmployeeId AND pd.TenantId = @TenantId AND d.IsActive = 1 AND d.DeductionCode IN ('ProvidentFundEmployee','ProvidentFundCompany')",
     "GetEmployeeIdAndTenantByUserId": "SELECT Id, TenantId FROM Employee WHERE SystemUserId = @UserId",
 
     "UpdatePassword": "UPDATE Users SET PasswordHash = @PasswordHash, PasswordSalt = @PasswordSalt WHERE UserId = @UserId",

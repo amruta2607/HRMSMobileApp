@@ -273,6 +273,32 @@ namespace MobileWebApi.Controllers
                 TotalRecords = 0
             });
         }
-    }
+		/// <summary>
+		/// Get Employee Provident Fund Summary
+		/// GET: api/payslip/provident-fund?user=5
+		/// </summary>
+		[HttpGet("provident-fund")]
+		public async Task<IActionResult> GetProvidentFund([FromQuery] int user)
+		{
+			int validatedUserId;
+
+			try
+			{
+				validatedUserId = GetValidatedUserId(user);
+			}
+			catch (Services.TenantAccessException)
+			{
+				return UserAccessDenied();
+			}
+
+			var result = await _paySlipService
+				.GetProvidentFundSummaryAsync(validatedUserId);
+
+			if (result.Success)
+				return Ok(result);
+
+			return BadRequest(result);
+		}
+	}
 }
 

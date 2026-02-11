@@ -79,5 +79,22 @@ namespace MobileWebApi.Repositories
                 
             return ((int?)result.Id, (int?)result.TenantId);
         }
-    }
+		public async Task<(decimal MyShare, decimal EmployerShare)>GetEmployeeProvidentFundSummaryAsync(int employeeId, int tenantId)
+		{
+			using var conn = _context.CreateConnection();
+			string query = _queryProvider.Get("GetEmployeeProvidentFundSummary");
+
+			var result = await conn.QueryFirstOrDefaultAsync<dynamic>(query, new
+			{
+				EmployeeId = employeeId,
+				TenantId = tenantId
+			});
+
+			if (result == null)
+				return (0, 0);
+
+			return ((decimal?)result.MyShare ?? 0,
+					(decimal?)result.EmployerShare ?? 0);
+		}
+	}
 }
