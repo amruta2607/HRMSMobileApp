@@ -149,6 +149,15 @@
 
     "GetPaySlipFilePath": "SELECT PaySlipFilePath FROM PaySlip WHERE Id = @Id",
     "GetEmployeeProvidentFundSummary": "SELECT SUM(CASE WHEN d.DeductionCode = 'ProvidentFundEmployee' THEN pdd.Amount ELSE 0 END) AS MyShare, SUM(CASE WHEN d.DeductionCode = 'ProvidentFundCompany' THEN pdd.Amount ELSE 0 END) AS EmployerShare FROM PayrollDetailDeduction pdd INNER JOIN PayrollDetail pd ON pd.Id = pdd.PayrollDetailId INNER JOIN Deduction d ON d.Id = pdd.DeductionId WHERE pd.EmployeeId = @EmployeeId AND pd.TenantId = @TenantId AND d.IsActive = 1 AND d.DeductionCode IN ('ProvidentFundEmployee','ProvidentFundCompany')",
+
+    "GetMonthlyPayrollSummary": "SELECT pd.BasicSalary, pd.Gross, pd.TotalIncome, pd.TotalDeduction, pd.TakeHomePay FROM PayrollDetail pd INNER JOIN Payroll p ON p.Id = pd.PayrollId WHERE pd.EmployeeId = @EmployeeId AND pd.TenantId = @TenantId AND p.PayrollMonth = @Month AND p.PayrollYear = @Year",
+
+    "GetMonthlyPayrollIncomes": "SELECT i.Name, pdi.Amount FROM PayrollDetailIncome pdi INNER JOIN Income i ON i.Id = pdi.IncomeId INNER JOIN PayrollDetail pd ON pd.Id = pdi.PayrollDetailId INNER JOIN Payroll p ON p.Id = pd.PayrollId WHERE pd.EmployeeId = @EmployeeId AND pd.TenantId = @TenantId AND p.PayrollMonth = @Month AND p.PayrollYear = @Year",
+
+    "GetMonthlyPayrollDeductions": "SELECT d.Name, d.DeductionCode, pdd.Amount FROM PayrollDetailDeduction pdd INNER JOIN Deduction d ON d.Id = pdd.DeductionId INNER JOIN PayrollDetail pd ON pd.Id = pdd.PayrollDetailId INNER JOIN Payroll p ON p.Id = pd.PayrollId WHERE pd.EmployeeId = @EmployeeId AND pd.TenantId = @TenantId AND p.PayrollMonth = @Month AND p.PayrollYear = @Year",
+    "GetPaySlipIncomes": "SELECT i.Name AS Description, pdi.Amount FROM PayrollDetailIncome pdi INNER JOIN Income i ON i.Id = pdi.IncomeId WHERE pdi.PayrollDetailId = @PaySlipId",
+
+    "GetPaySlipDeductions": "SELECT d.Name AS Description, d.DeductionCode, pdd.Amount FROM PayrollDetailDeduction pdd INNER JOIN Deduction d ON d.Id = pdd.DeductionId WHERE pdd.PayrollDetailId = @PaySlipId",
     "GetEmployeeIdAndTenantByUserId": "SELECT Id, TenantId FROM Employee WHERE SystemUserId = @UserId",
 
     "UpdatePassword": "UPDATE Users SET PasswordHash = @PasswordHash, PasswordSalt = @PasswordSalt WHERE UserId = @UserId",

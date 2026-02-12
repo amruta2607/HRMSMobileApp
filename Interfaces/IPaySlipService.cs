@@ -19,7 +19,8 @@ namespace MobileWebApi.Interfaces
         /// </summary>
         Task<PaySlipDownloadResponse> DownloadPaySlipAsync(PaySlipDownloadRequest request);
         Task<PaySlipResponse> GetProvidentFundSummaryAsync(int validatedUserId);
-    }
+		Task<MonthlyPaymentSummaryResponse> GetMonthlyPaymentSummaryAsync(MonthlyPaymentSummaryRequest request);
+	}
 }
 
 

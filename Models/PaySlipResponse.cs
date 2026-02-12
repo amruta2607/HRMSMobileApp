@@ -21,11 +21,11 @@ namespace MobileWebApi.Models
         public byte[]? FileContent { get; set; }
         public string? FileName { get; set; }
         public string? ContentType { get; set; }
-        /// <summary>
-        /// Pay slip data for client-side PDF generation (when no file is stored)
-        /// </summary>
-        public PaySlip? PaySlipData { get; set; }
-    }
+		/// <summary>
+		/// Pay slip data for client-side PDF generation (when no file is stored)
+		/// </summary>
+		public PaySlipDetail? PaySlipData { get; set; }
+	}
 
     /// <summary>
     /// Summary view of pay slip for list display
@@ -108,11 +108,11 @@ namespace MobileWebApi.Models
         public string? TenantName { get; set; }
         public string? Currency { get; set; }
         public string? Logo { get; set; }
-        
-        // Computed Properties for Display
-        public List<PaySlipLineItem> Earnings => GetEarningsItems();
-        public List<PaySlipLineItem> Deductions => GetDeductionsItems();
-        public PaySlipAttendanceSummary AttendanceSummary => GetAttendanceSummary();
+
+		// Computed Properties for Display
+		public List<PaySlipLineItem> Earnings { get; set; } = new();
+		public List<PaySlipLineItem> Deductions { get; set; } = new();
+		public PaySlipAttendanceSummary AttendanceSummary => GetAttendanceSummary();
 
         private List<PaySlipLineItem> GetEarningsItems()
         {

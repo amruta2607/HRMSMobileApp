@@ -1,4 +1,4 @@
-using MobileWebApi.Interfaces;
+﻿using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using MobileWebApi.Constants;
 
@@ -233,8 +233,13 @@ namespace MobileWebApi.Services
                     Currency = paySlip.Currency,
                     Logo = paySlip.Logo
                 };
+				// Fetch actual earnings & deductions from DB
+				var incomes = await _paySlipRepository.GetPaySlipIncomesAsync(paySlip.Id);
+				var deductions = await _paySlipRepository.GetPaySlipDeductionsAsync(paySlip.Id);
 
-                return new PaySlipResponse
+				detail.Earnings = incomes.ToList();
+				detail.Deductions = deductions.ToList();
+				return new PaySlipResponse
                 {
                     Success = true,
                     Message = PaySlipMessages.PaySlipFetchedSuccessfully,
@@ -334,20 +339,82 @@ namespace MobileWebApi.Services
                     };
                 }
 
-                // Since vwPayrollDetailPrint is a view without stored files,
-                // return payslip data as JSON for client-side PDF generation/printing
-                var fileName = $"PaySlip_{paySlip.EmployeeName}_{paySlip.PayrollMonthName}_{paySlip.PayrollYear}.json";
+				// Since vwPayrollDetailPrint is a view without stored files,
+				// return payslip data as JSON for client-side PDF generation/printing
+				// Build detailed payslip (same structure as GetPaySlipByIdAsync)
+				var detail = new PaySlipDetail
+				{
+					Id = paySlip.Id,
+					PayrollId = paySlip.PayrollId,
+					EmployeeId = paySlip.EmployeeId,
 
-                return new PaySlipDownloadResponse
-                {
-                    Success = true,
-                    Message = PaySlipMessages.PaySlipDownloadedSuccessfully,
-                    FileContent = null, // No file stored - use GET /api/payslip/{id} for data
-                    FileName = fileName,
-                    ContentType = "application/json",
-                    PaySlipData = paySlip // Return the data for client-side rendering
-                };
-            }
+					EmployeeName = paySlip.EmployeeName,
+					EmployeeNumber = paySlip.EmployeeNumber,
+					Email = paySlip.Email,
+					DateOfBirth = paySlip.DateOfBirth,
+					DateOfJoining = paySlip.DateOfJoining,
+					GenderName = paySlip.GenderName,
+					DesignationName = paySlip.DesignationName,
+					BranchName = paySlip.BranchName,
+
+					TaxNumber = paySlip.TaxNumber,
+					ESINo = paySlip.ESINo,
+					PFNo = paySlip.PFNo,
+					UANNo = paySlip.UANNo,
+
+					PayrollMonth = paySlip.PayrollMonth,
+					PayrollYear = paySlip.PayrollYear,
+					PayrollMonthName = paySlip.PayrollMonthName,
+					FinancialYearStart = paySlip.FinancialYearStart,
+
+					BasicSalary = paySlip.BasicSalary,
+					SalarySlab = paySlip.SalarySlab,
+					SalaryEarned = paySlip.SalaryEarned,
+					Gross = paySlip.Gross,
+					TotalIncome = paySlip.TotalIncome,
+					TotalDeduction = paySlip.TotalDeduction,
+					TakeHomePay = paySlip.TakeHomePay,
+
+					DaysPayable = paySlip.DaysPayable,
+					PresentDays = paySlip.PresentDays,
+					LossPayDays = paySlip.LossPayDays,
+					OverTimeDays = paySlip.OverTimeDays,
+
+					IsPerDayWagesEmployee = paySlip.IsPerDayWagesEmployee,
+					PerDayWages = paySlip.PerDayWages,
+					PerDayOverTimeWages = paySlip.PerDayOverTimeWages,
+					OvertimeSalary = paySlip.OvertimeSalary,
+
+					BankName = paySlip.BankName,
+					BankAccountNumber = MaskBankAccount(paySlip.BankAccountNumber),
+					IFSCCode = paySlip.IFSCCode,
+					BankBranchName = paySlip.BankBranchName,
+
+					TenantId = paySlip.TenantId,
+					TenantName = paySlip.TenantName,
+					Currency = paySlip.Currency,
+					Logo = paySlip.Logo
+				};
+
+				// 🔥 ADD THIS (IMPORTANT)
+				var incomes = await _paySlipRepository.GetPaySlipIncomesAsync(paySlip.Id);
+				var deductions = await _paySlipRepository.GetPaySlipDeductionsAsync(paySlip.Id);
+
+				detail.Earnings = incomes.ToList();
+				detail.Deductions = deductions.ToList();
+
+				var fileName = $"PaySlip_{paySlip.EmployeeName}_{paySlip.PayrollMonthName}_{paySlip.PayrollYear}.json";
+
+				return new PaySlipDownloadResponse
+				{
+					Success = true,
+					Message = PaySlipMessages.PaySlipDownloadedSuccessfully,
+					FileContent = null,
+					FileName = fileName,
+					ContentType = "application/json",
+					PaySlipData = detail   // ✅ RETURN DETAIL, NOT paySlip
+				};
+			}
             catch (Exception ex)
             {
                 _logger.LogError(ex, LogMessages.PaySlip.ErrorDownloadingPaySlip);
@@ -436,6 +503,68 @@ namespace MobileWebApi.Services
 				_logger.LogError(ex, "Error fetching Provident Fund");
 
 				return new PaySlipResponse
+				{
+					Success = false,
+					Message = ex.Message
+				};
+			}
+		}
+		public async Task<MonthlyPaymentSummaryResponse>
+	GetMonthlyPaymentSummaryAsync(MonthlyPaymentSummaryRequest request)
+		{
+			try
+			{
+				if (request.UserId <= 0)
+				{
+					return new MonthlyPaymentSummaryResponse
+					{
+						Success = false,
+						Message = "UserId is required"
+					};
+				}
+
+				var (employeeId, tenantId) =
+					await _paySlipRepository
+						.GetEmployeeIdAndTenantByUserIdAsync(request.UserId);
+
+				if (!employeeId.HasValue || !tenantId.HasValue)
+				{
+					return new MonthlyPaymentSummaryResponse
+					{
+						Success = false,
+						Message = "Employee not found"
+					};
+				}
+
+				var summary =
+					await _paySlipRepository
+						.GetMonthlyPaymentSummaryAsync(
+							employeeId.Value,
+							tenantId.Value,
+							request.Month,
+							request.Year);
+
+				if (summary == null)
+				{
+					return new MonthlyPaymentSummaryResponse
+					{
+						Success = false,
+						Message = "No payroll data found"
+					};
+				}
+
+				return new MonthlyPaymentSummaryResponse
+				{
+					Success = true,
+					Message = "Monthly summary fetched successfully",
+					Data = summary
+				};
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error fetching monthly payment summary");
+
+				return new MonthlyPaymentSummaryResponse
 				{
 					Success = false,
 					Message = ex.Message

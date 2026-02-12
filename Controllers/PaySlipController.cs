@@ -299,6 +299,39 @@ namespace MobileWebApi.Controllers
 
 			return BadRequest(result);
 		}
+		[HttpGet("monthly-summary")]
+		public async Task<IActionResult> GetMonthlyPaymentSummary(
+	[FromQuery] int user,
+	[FromQuery] int month,
+	[FromQuery] int year)
+		{
+			int validatedUserId;
+
+			try
+			{
+				validatedUserId = GetValidatedUserId(user);
+			}
+			catch
+			{
+				return UserAccessDenied();
+			}
+
+			var request = new MonthlyPaymentSummaryRequest
+			{
+				UserId = validatedUserId,
+				Month = month,
+				Year = year
+			};
+
+			var result = await _paySlipService
+				.GetMonthlyPaymentSummaryAsync(request);
+
+			if (result.Success)
+				return Ok(result);
+
+			return BadRequest(result);
+		}
 	}
+
 }
 

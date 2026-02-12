@@ -96,5 +96,57 @@ namespace MobileWebApi.Repositories
 			return ((decimal?)result.MyShare ?? 0,
 					(decimal?)result.EmployerShare ?? 0);
 		}
+		public async Task<MonthlyPaymentSummary?> GetMonthlyPaymentSummaryAsync(
+	int employeeId,
+	int tenantId,
+	int month,
+	int year)
+		{
+			using var conn = _context.CreateConnection();
+
+			var param = new
+			{
+				EmployeeId = employeeId,
+				TenantId = tenantId,
+				Month = month,
+				Year = year
+			};
+
+			var summaryQuery = _queryProvider.Get("GetMonthlyPayrollSummary");
+			var incomeQuery = _queryProvider.Get("GetMonthlyPayrollIncomes");
+			var deductionQuery = _queryProvider.Get("GetMonthlyPayrollDeductions");
+
+			var summary = await conn.QueryFirstOrDefaultAsync<MonthlyPaymentSummary>(summaryQuery, param);
+
+			if (summary == null)
+				return null;
+
+			var incomes = await conn.QueryAsync<IncomeItem>(incomeQuery, param);
+			var deductions = await conn.QueryAsync<DeductionItem>(deductionQuery, param);
+
+			summary.Incomes = incomes.ToList();
+			summary.Deductions = deductions.ToList();
+
+			return summary;
+		}
+		public async Task<IEnumerable<PaySlipLineItem>> GetPaySlipIncomesAsync(int paySlipId)
+		{
+			using var conn = _context.CreateConnection();
+			string query = _queryProvider.Get("GetPaySlipIncomes");
+
+			return await conn.QueryAsync<PaySlipLineItem>(
+				query,
+				new { PaySlipId = paySlipId });
+		}
+
+		public async Task<IEnumerable<PaySlipLineItem>> GetPaySlipDeductionsAsync(int paySlipId)
+		{
+			using var conn = _context.CreateConnection();
+			string query = _queryProvider.Get("GetPaySlipDeductions");
+
+			return await conn.QueryAsync<PaySlipLineItem>(
+				query,
+				new { PaySlipId = paySlipId });
+		}
 	}
 }

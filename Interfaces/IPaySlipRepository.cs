@@ -24,5 +24,10 @@ namespace MobileWebApi.Interfaces
         /// </summary>
         Task<(int? EmployeeId, int? TenantId)> GetEmployeeIdAndTenantByUserIdAsync(int userId);
 		Task<(decimal MyShare, decimal EmployerShare)>GetEmployeeProvidentFundSummaryAsync(int employeeId, int tenantId);
+		Task<MonthlyPaymentSummary?> GetMonthlyPaymentSummaryAsync(int employeeId,int tenantId,int month,int year);
+
+
+		Task<IEnumerable<PaySlipLineItem>> GetPaySlipIncomesAsync(int paySlipId);
+		Task<IEnumerable<PaySlipLineItem>> GetPaySlipDeductionsAsync(int paySlipId);
 	}
 }
