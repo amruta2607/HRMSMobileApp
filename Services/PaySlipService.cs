@@ -571,5 +571,132 @@ namespace MobileWebApi.Services
 				};
 			}
 		}
+		public async Task<PaySlipDownloadResponse>DownloadPaySlipByMonthYearAsync(PaySlipDownloadByMonthYearRequest request)
+		{
+			try
+			{
+				if (request.UserId <= 0)
+				{
+					return new PaySlipDownloadResponse
+					{
+						Success = false,
+						Message = "UserId is required"
+					};
+				}
+
+				var (employeeId, tenantId) =
+					await _paySlipRepository
+						.GetEmployeeIdAndTenantByUserIdAsync(request.UserId);
+
+				if (!employeeId.HasValue || !tenantId.HasValue)
+				{
+					return new PaySlipDownloadResponse
+					{
+						Success = false,
+						Message = "Employee not found"
+					};
+				}
+
+				// 🔥 IMPORTANT CHANGE
+				var paySlip =
+					await _paySlipRepository
+						.GetPaySlipByEmployeeMonthYearAsync(
+							employeeId.Value,
+							tenantId.Value,
+							request.Month,
+							request.Year);
+
+				if (paySlip == null)
+				{
+					return new PaySlipDownloadResponse
+					{
+						Success = false,
+						Message = "PaySlip not found"
+					};
+				}
+
+				// Build detailed payslip
+				var detail = new PaySlipDetail
+				{
+					Id = paySlip.Id,
+					PayrollId = paySlip.PayrollId,
+					EmployeeId = paySlip.EmployeeId,
+
+					EmployeeName = paySlip.EmployeeName,
+					EmployeeNumber = paySlip.EmployeeNumber,
+					Email = paySlip.Email,
+					DateOfBirth = paySlip.DateOfBirth,
+					DateOfJoining = paySlip.DateOfJoining,
+					GenderName = paySlip.GenderName,
+					DesignationName = paySlip.DesignationName,
+					BranchName = paySlip.BranchName,
+
+					TaxNumber = paySlip.TaxNumber,
+					ESINo = paySlip.ESINo,
+					PFNo = paySlip.PFNo,
+					UANNo = paySlip.UANNo,
+
+					PayrollMonth = paySlip.PayrollMonth,
+					PayrollYear = paySlip.PayrollYear,
+					PayrollMonthName = paySlip.PayrollMonthName,
+					FinancialYearStart = paySlip.FinancialYearStart,
+
+					BasicSalary = paySlip.BasicSalary,
+					SalarySlab = paySlip.SalarySlab,
+					SalaryEarned = paySlip.SalaryEarned,
+					Gross = paySlip.Gross,
+					TotalIncome = paySlip.TotalIncome,
+					TotalDeduction = paySlip.TotalDeduction,
+					TakeHomePay = paySlip.TakeHomePay,
+
+					DaysPayable = paySlip.DaysPayable,
+					PresentDays = paySlip.PresentDays,
+					LossPayDays = paySlip.LossPayDays,
+					OverTimeDays = paySlip.OverTimeDays,
+
+					IsPerDayWagesEmployee = paySlip.IsPerDayWagesEmployee,
+					PerDayWages = paySlip.PerDayWages,
+					PerDayOverTimeWages = paySlip.PerDayOverTimeWages,
+					OvertimeSalary = paySlip.OvertimeSalary,
+
+					BankName = paySlip.BankName,
+					BankAccountNumber = MaskBankAccount(paySlip.BankAccountNumber),
+					IFSCCode = paySlip.IFSCCode,
+					BankBranchName = paySlip.BankBranchName,
+
+					TenantId = paySlip.TenantId,
+					TenantName = paySlip.TenantName,
+					Currency = paySlip.Currency,
+					Logo = paySlip.Logo
+				};
+
+				// Fetch earnings & deductions
+				var incomes = await _paySlipRepository
+					.GetPaySlipIncomesAsync(paySlip.Id);
+
+				var deductions = await _paySlipRepository
+					.GetPaySlipDeductionsAsync(paySlip.Id);
+
+				detail.Earnings = incomes.ToList();
+				detail.Deductions = deductions.ToList();
+
+				return new PaySlipDownloadResponse
+				{
+					Success = true,
+					Message = "PaySlip fetched successfully",
+					PaySlipData = detail
+				};
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error downloading payslip by month/year");
+
+				return new PaySlipDownloadResponse
+				{
+					Success = false,
+					Message = ex.Message
+				};
+			}
+		}
 	}
 }
