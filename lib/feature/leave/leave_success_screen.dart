@@ -33,7 +33,6 @@ class LeaveSuccessScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Spacer(),
               // Success Icon
               Image.asset(
                 "img/success_check.png",
@@ -67,8 +66,7 @@ class LeaveSuccessScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
 
-              const Spacer(),
-
+              SizedBox(height: 30 * scale),
               // Button
               AppPrimaryButton(
                 onTap: () {
@@ -91,7 +89,7 @@ class LeaveSuccessScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(height: 30 * scale),
+
             ],
           ),
         ),

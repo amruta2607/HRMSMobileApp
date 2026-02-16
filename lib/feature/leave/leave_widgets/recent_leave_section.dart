@@ -20,9 +20,9 @@ class RecentLeaveSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scale = MediaQuery.of(context).size.width / 375;
-    final displayLeaves = showLimited && leaves.length > 3
-        ? leaves.take(3).toList()
-        : leaves;
+
+    final displayLeaves =
+    showLimited && leaves.length > 4 ? leaves.take(4).toList() : leaves;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -32,12 +32,11 @@ class RecentLeaveSection extends StatelessWidget {
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 20 * scale),
           child: Text(
-            "Recent Leave Request",
+            "RECENT LEAVE APPLICATION",
             style: TextStyle(
               fontFamily: 'Inter',
               fontWeight: FontWeight.w600,
               fontSize: 14 * scale,
-              height: 14.07 / 14,
               color: Colors.grey,
             ),
           ),
@@ -45,44 +44,19 @@ class RecentLeaveSection extends StatelessWidget {
 
         SizedBox(height: 14 * scale),
 
-        if (showLimited)
-        // Limited mode - no Expanded
-          Column(
-            children: [
-              ...displayLeaves.map((leave) => Column(
-                children: [
-                  SizedBox(height: 4 * scale),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20 * scale),
-                    child: InkWell(
-                      onTap: () async {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => LeaveDetailsScreen(leaveData: leave),
-                          ),
-                        );
-
-                        // If leave was withdrawn, trigger refresh
-                        if (result == true) {
-                          onRefreshNeeded?.call();
-                        }
-                      },
-                      child: LeaveRequestTile(
-                        title: leave.leaveTypeName,
-                        date: _formatDateRange(leave.fromDate, leave.toDate),
-                        status: leave.leaveRequestStatusText,
-                      ),
-                    ),
-                  ),
-                ],
-              )).toList(),
-
-              // View All button (only show if more than 3 items)
-              if (leaves.length > 3 && onViewAllTap != null) ...[
-                SizedBox(height: 12 * scale),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20 * scale),
+        /// ✅ Main Scrollable Area (Prevents Overflow)
+        Expanded(
+          child: ListView.builder(
+            padding: EdgeInsets.symmetric(horizontal: 20 * scale),
+            itemCount: displayLeaves.length +
+                ((showLimited && leaves.length > 4) ? 1 : 0),
+            itemBuilder: (context, index) {
+              /// Show View All button as last item
+              if (showLimited &&
+                  leaves.length > 4 &&
+                  index == displayLeaves.length) {
+                return Padding(
+                  padding: EdgeInsets.only(top: 8 * scale),
                   child: GestureDetector(
                     onTap: onViewAllTap,
                     child: Row(
@@ -106,55 +80,44 @@ class RecentLeaveSection extends StatelessWidget {
                       ],
                     ),
                   ),
-                ),
-              ],
-            ],
-          )
-        else
-        // Full mode - use Expanded for scrolling
-          Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.symmetric(horizontal: 20 * scale),
-              itemCount: leaves.length,
-              itemBuilder: (context, index) {
-                final leave = leaves[index];
-                return Column(
-                  children: [
-                    SizedBox(height: 4 * scale),
-
-                    InkWell(
-                      onTap: () async {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => LeaveDetailsScreen(leaveData: leave),
-                          ),
-                        );
-
-                        // If leave was withdrawn, trigger refresh
-                        if (result == true) {
-                          onRefreshNeeded?.call();
-                        }
-                      },
-
-                      child: LeaveRequestTile(
-                        title: leave.leaveTypeName,
-                        date: _formatDateRange(leave.fromDate, leave.toDate),
-                        status: leave.leaveRequestStatusText,
-                      ),
-                    ),
-                  ],
                 );
-              },
-            ),
+              }
+
+              final leave = displayLeaves[index];
+
+              return Padding(
+                padding: EdgeInsets.only(bottom: 12 * scale),
+                child: InkWell(
+                  onTap: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            LeaveDetailsScreen(leaveData: leave),
+                      ),
+                    );
+
+                    if (result == true) {
+                      onRefreshNeeded?.call();
+                    }
+                  },
+                  child: LeaveRequestTile(
+                    title: leave.leaveTypeName,
+                    date: _formatDateRange(leave.fromDate, leave.toDate),
+                    status: leave.leaveRequestStatusText,
+                  ),
+                ),
+              );
+            },
           ),
+        ),
       ],
     );
   }
 
   String _formatDateRange(DateTime from, DateTime to) {
-    final start = DateFormat("dd MMM yyyy").format(from);
-    final end = DateFormat("dd MMM yyyy").format(to);
+    final start = DateFormat("dd MMM").format(from);
+    final end = DateFormat("dd MMM").format(to);
     return "$start - $end";
   }
 }
@@ -176,10 +139,7 @@ class LeaveRequestTile extends StatelessWidget {
     final scale = MediaQuery.of(context).size.width / 375;
 
     return Container(
-      constraints: BoxConstraints(
-        minHeight: 62 * scale,
-      ),
-      margin: EdgeInsets.only(bottom: 12 * scale),
+      constraints: BoxConstraints(minHeight: 62 * scale),
       padding: EdgeInsets.symmetric(
         horizontal: 16 * scale,
         vertical: 10 * scale,
@@ -187,10 +147,10 @@ class LeaveRequestTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10 * scale),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: const Color(0x59000000),
-            blurRadius: 4.5 * scale,
+            color: Color(0x59000000),
+            blurRadius: 4.5,
             offset: Offset.zero,
           ),
         ],
@@ -198,47 +158,27 @@ class LeaveRequestTile extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          /// Left Side Content
           Expanded(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14 * scale,
-                        height: 14.07 / 14,
-                        color: Colors.black,
-                      ),
-                    ),
-                    SizedBox(width: 8 * scale),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 8 * scale,
-                        vertical: 2 * scale,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(status).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4 * scale),
-                        border: Border.all(
-                          color: _getStatusColor(status),
-                          width: 1,
-                        ),
-                      ),
+                    Flexible(
                       child: Text(
-                        status,
+                        title,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w600,
-                          fontSize: 10 * scale,
-                          color: _getStatusColor(status),
+                          fontSize: 14 * scale,
+                          color: Colors.black,
                         ),
                       ),
                     ),
+                    SizedBox(width: 8 * scale),
+                    _StatusBadge(status: status, scale: scale),
                   ],
                 ),
                 SizedBox(height: 6 * scale),
@@ -248,16 +188,14 @@ class LeaveRequestTile extends StatelessWidget {
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w500,
                     fontSize: 12 * scale,
-                    height: 14.07 / 12,
                     color: Colors.black,
                   ),
                 ),
-                SizedBox(height: 6 * scale),
-
               ],
             ),
           ),
 
+          /// Right Side View Button
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -267,7 +205,6 @@ class LeaveRequestTile extends StatelessWidget {
                   fontFamily: 'Inter',
                   fontWeight: FontWeight.bold,
                   fontSize: 12 * scale,
-                  height: 14.07 / 12,
                   color: const Color(0xFF0F62FE),
                 ),
               ),
@@ -283,11 +220,48 @@ class LeaveRequestTile extends StatelessWidget {
       ),
     );
   }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final String status;
+  final double scale;
+
+  const _StatusBadge({
+    required this.status,
+    required this.scale,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _getStatusColor(status);
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: 8 * scale,
+        vertical: 2 * scale,
+      ),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4 * scale),
+        border: Border.all(color: color, width: 1),
+      ),
+      child: Text(
+        status,
+        style: TextStyle(
+          fontFamily: 'Inter',
+          fontWeight: FontWeight.w600,
+          fontSize: 10 * scale,
+          color: color,
+        ),
+      ),
+    );
+  }
 
   Color _getStatusColor(String status) {
-    if (status.toLowerCase().contains('approved')) return Colors.green;
-    if (status.toLowerCase().contains('reject')) return Colors.red;
-    if (status.toLowerCase().contains('withdraw')) return Colors.blue;
+    final lower = status.toLowerCase();
+    if (lower.contains('approved')) return Colors.green;
+    if (lower.contains('reject')) return Colors.red;
+    if (lower.contains('withdraw')) return Colors.blue;
     return Colors.orange;
   }
 }

@@ -36,4 +36,8 @@ class BaseUrls {
   static const String leaveRequests = "$base/apipunch/leave/request/get";
   static const String withdrawLeave = "$base/api/Leave/withdraw";
 
+
+  // Payroll
+  static const String providentFund = "$base/api/PaySlip/provident-fund";
+
 }

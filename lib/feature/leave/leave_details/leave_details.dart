@@ -36,7 +36,7 @@ class _LeaveDetailsScreenState extends State<LeaveDetailsScreen> {
     Color statusBorderColor = AppColors.statusApprovedBorder;
     Color statusTextColor = AppColors.statusApprovedText;
 
-    if (status.toLowerCase().contains('submit') || status.toLowerCase().contains('pending Approval')) {
+    if (status.toLowerCase().contains('submit') || status.toLowerCase().contains('pending')) {
       statusBgColor = AppColors.statusPendingBg;
       statusBorderColor = AppColors.statusPendingBorder;
       statusTextColor = AppColors.statusPendingText;

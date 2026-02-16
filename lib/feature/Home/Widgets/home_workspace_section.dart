@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/Theme/app_colors.dart';
 import '../../leave/leave_screen.dart';
+import '../../payroll/payroll_screen.dart';
 import 'workspace_card.dart';
 
 class HomeWorkspaceSection extends StatelessWidget {
@@ -19,7 +20,12 @@ class HomeWorkspaceSection extends StatelessWidget {
             subtitle: 'Slip',
             imagePath: 'img/payroll.png',
             iconBgColor: Color(0x8FAFF8CC),
-
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PayrollScreen()),
+              );
+            },
           ),
 
           WorkspaceCard(

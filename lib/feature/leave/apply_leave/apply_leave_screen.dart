@@ -122,49 +122,58 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   }
 
   void _showLeaveTypeDialog() {
+    final width = MediaQuery.of(context).size.width;
+    final scale = width / 375;
+
     showDialog(
       context: context,
+      barrierColor: Colors.black87,
       builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16), // Outer radius 16
-          ),
-          child: SizedBox(
-            width: 316, // Outer card width
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: 20,
+        return Center(
+          child: Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16 * scale),
+            elevation: 0,
+            child: Container(
+              width: width * 0.85,
+              padding: EdgeInsets.symmetric(vertical: 20 * scale),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16 * scale),
               ),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+              Padding(
+              padding:
+              EdgeInsets.symmetric(horizontal: 24 * scale),
+              child: Text(
+                "Select Leave Type:",
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18 * scale,
+                  color: const Color(0xFF0F172A),
+                ),
+              ),
+            ),
 
-                  // Title
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24),
-                    child: Text(
-                      "Select Leave Type:",
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                  ),
+            SizedBox(height: 20 * scale),
 
-                  const SizedBox(height: 20),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: _leaveTypes.map((type) {
+                    final bool isSelected =
+                        _selectedLeaveType?.leaveTypeId ==
+                            type.leaveTypeId;
 
-                  // Leave Type List
-                  ..._leaveTypes.map((type) {
                     return Padding(
-                      padding: const EdgeInsets.only(
-                        left: 24,
-                        bottom: 22,
-                        right: 24,
-
+                      padding: EdgeInsets.only(
+                        left: 24 * scale,
+                        right: 24 * scale,
+                        bottom: 14 * scale,
                       ),
                       child: GestureDetector(
                         onTap: () {
@@ -173,65 +182,86 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                           });
                           Navigator.pop(context);
                         },
-                        child: Container(
-                          width: 258,  // Inner width
-                          height: 49,  // Inner height
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 15,
+                        child: AnimatedContainer(
+                          duration:
+                          const Duration(milliseconds: 200),
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16 * scale,
+                            vertical: 16 * scale,
                           ),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10), // 10px
-                            border: Border.all(
+                            color: isSelected
+                                ? const Color(0xFFF1F5F9)
+                                : Colors.white,
+                            borderRadius:
+                            BorderRadius.circular(12 * scale),
 
-                              color: const Color(0xFF0F172A),
-                              width: 1, // 1px border
+                            border: Border.all(
+                              color:
+                              const Color(0xFF5D6063),
+                              width: 1,
                             ),
+
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black
+                                    .withOpacity(0.08),
+                                blurRadius: 8,
+                                offset:
+                                const Offset(0, 3),
+                              ),
+                            ],
                           ),
                           child: Row(
                             mainAxisAlignment:
                             MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment:
-                            CrossAxisAlignment.center,
                             children: [
-
-                              // Leave Type Name
                               Expanded(
                                 child: Text(
                                   type.leaveTypeName,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: Color(0xFF0F172A),
+                                    fontWeight:
+                                    FontWeight.w600,
+                                    fontSize:
+                                    14 * scale,
+                                    color:
+                                    const Color(
+                                        0xFF0F172A),
                                   ),
-                                  overflow: TextOverflow.ellipsis,
+                                  overflow:
+                                  TextOverflow.ellipsis,
                                 ),
                               ),
-
-                              // Remaining Days
+                              SizedBox(width: 8 * scale),
                               Text(
                                 "${type.remainingBalance} days left",
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 12,
-                                  color: Colors.black,
+                                  fontWeight:
+                                  FontWeight.w500,
+                                  fontSize:
+                                  13 * scale,
+                                  color:
+                                  const Color(
+                                      0xFF64748B),
                                 ),
                               ),
                             ],
                           ),
-
                         ),
                       ),
                     );
                   }).toList(),
-
-                  const SizedBox(height: 8),
-                ],
+                ),
               ),
             ),
-          ),
-        );
+
+          ],
+        ),
+        ),
+        ));
       },
     );
   }
@@ -428,7 +458,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                     else
                       _leaveTypeDropdown(scale),
 
-                    SizedBox(height: 28 * scale),
+                    SizedBox(height: 39 * scale),
 
                     Row(
                       children: [
@@ -633,45 +663,64 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   }
 
   Widget _dateField(
-      String label, DateTime? date, double scale, bool isStart) {
+      String label,
+      DateTime? date,
+      double scale,
+      bool isStart,
+      ) {
+    final bool hasDate = date != null;
+
     return GestureDetector(
       onTap: () => _selectDate(context, isStart),
       child: Container(
         height: 49 * scale,
         padding: EdgeInsets.symmetric(
-            horizontal: 12 * scale),
+          horizontal: 12 * scale,
+        ),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius:
-          BorderRadius.circular(10 * scale),
+          borderRadius: BorderRadius.circular(10 * scale),
           border: Border.all(
-              color: const Color(0xFF5D6063)),
+            color: const Color(0xFF5D6063),
+          ),
           boxShadow: [
             BoxShadow(
               color: const Color(0x40000000),
               blurRadius: 4 * scale,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Row(
-          mainAxisAlignment:
-          MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              date != null
-                  ? DateFormat('dd MMM yyyy')
-                  .format(date)
+              hasDate
+                  ? DateFormat('dd/MM/yyyy').format(date!)
                   : label,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+                fontSize: 14 * scale,
+                height: 1.005,
+                letterSpacing: 0,
+                color: hasDate
+                    ? const Color(0xFF0F172A) // Selected date color
+                    : const Color(0xFF0F172A), // Placeholder color
+              ),
             ),
-            Icon(Icons.calendar_today,
-                size: 18 * scale,
-                color:
-                const Color(0xFF0F172A)),
+            Icon(
+              Icons.calendar_today,
+              size: 18 * scale,
+              color: const Color(0xFF0F172A),
+            ),
           ],
         ),
       ),
     );
   }
+
 
   Widget _uploadButton(double scale) {
     return GestureDetector(

@@ -34,16 +34,16 @@ class LeaveRequestModel {
 
   factory LeaveRequestModel.fromJson(Map<String, dynamic> json) {
     return LeaveRequestModel(
-      id: json['id'] ?? 0,
+      id: (json['id'] as num?)?.toInt() ?? 0,
       number: json['number'] ?? '',
-      employeeId: json['employeeId'] ?? 0,
+      employeeId: (json['employeeId'] as num?)?.toInt() ?? 0,
       employeeName: json['employeeName'] ?? '',
-      leaveTypeId: json['leaveTypeId'] ?? 0,
+      leaveTypeId: (json['leaveTypeId'] as num?)?.toInt() ?? 0,
       leaveTypeName: json['leaveTypeName'] ?? '',
       leaveBalance: json['leaveBalance'],
       fromDate: DateTime.tryParse(json['fromDate'] ?? '') ?? DateTime.now(),
       toDate: DateTime.tryParse(json['toDate'] ?? '') ?? DateTime.now(),
-      duration: json['duration'] ?? 0,
+      duration: (json['duration'] as num?)?.toInt() ?? 0,
       description: json['description'],
       leaveRequestStatusText: json['leaveRequestStatusText'] ?? '',
       currentAction: json['currentAction'] ?? '',

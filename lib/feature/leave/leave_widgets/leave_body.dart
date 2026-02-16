@@ -71,7 +71,6 @@ class _LeaveBodyState extends State<LeaveBody> {
 
         SizedBox(height: 28 * scale),
 
-        /// Recent Leave Section
         Expanded(
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())

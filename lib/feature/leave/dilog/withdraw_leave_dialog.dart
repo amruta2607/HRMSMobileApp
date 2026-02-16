@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../Attendance/dialogs/dialog_button.dart';
 
 class WithdrawLeaveDialog extends StatefulWidget {
@@ -31,6 +32,8 @@ class _WithdrawLeaveDialogState extends State<WithdrawLeaveDialog> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: screenWidth * 0.9,
@@ -48,7 +51,7 @@ class _WithdrawLeaveDialogState extends State<WithdrawLeaveDialog> {
                     'Withdraw Leave?',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 22,
                       fontWeight: FontWeight.w700,
                       fontFamily: 'Inter',
                       color: Color(0xFF0F172A),
@@ -61,8 +64,8 @@ class _WithdrawLeaveDialogState extends State<WithdrawLeaveDialog> {
                 /// CONTENT
                 const Center(
                   child: Text(
-                    "Are you sure you want to withdraw this\nleave request?",
-                    textAlign: TextAlign.center,
+                    "Are you sure you want to withdraw this leave request?",
+                    // textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
                       fontFamily: 'Inter',
@@ -72,48 +75,59 @@ class _WithdrawLeaveDialogState extends State<WithdrawLeaveDialog> {
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
-                /// REASON LABEL
                 const Text(
-                  'Reason for withdrawl:',
+                  'Reason for withdrawal:',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: FontWeight.w600,
                     fontFamily: 'Inter',
                     color: Color(0xFF0F172A),
                   ),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 13),
 
-                /// REASON TEXT FIELD
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: const Color(0xFF0F172A),
-                      width: 1,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: TextField(
-                    controller: _reasonController,
-                    maxLines: 4,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter reason...',
-                      hintStyle: TextStyle(
-                        color: Color(0xFF94A3B8),
-                        fontSize: 14,
-                        fontFamily: 'Inter',
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.all(12),
-                    ),
-                    style: const TextStyle(
+                TextField(
+                  controller: _reasonController,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    hintText: 'Enter reason...',
+                    hintStyle: const TextStyle(
+                      color: Color(0xFF94A3B8),
                       fontSize: 14,
                       fontFamily: 'Inter',
-                      color: Color(0xFF0F172A),
                     ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF0F172A),
+                        width: 1,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF0F172A),
+                        width: 1,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF0F172A),
+                        width: 1,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.all(12),
+                  ),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontFamily: 'Inter',
+                    color: Color(0xFF0F172A),
                   ),
                 ),
 
