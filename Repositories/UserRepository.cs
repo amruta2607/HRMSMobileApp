@@ -62,27 +62,38 @@ namespace MobileWebApi.Repositories
                 new { Username = username }
             );
         }
+		public async Task<User?> GetUserByEmailAsync(string email)
+		{
+			if (string.IsNullOrWhiteSpace(email))
+				return null;
 
-        public async Task<User?> GetUserByEmailAsync(string email)
-        {
-            if (string.IsNullOrWhiteSpace(email))
-                return null;
+			string query = _queryProvider.Get("GetUserByEmail");
 
-            string query = _queryProvider.Get("GetUserByEmail");
-            if (string.IsNullOrWhiteSpace(query))
-            {
-                _logger.LogError("SQL query 'GetUserByEmail' not found in configuration");
-                throw new InvalidOperationException("SQL query 'GetUserByEmail' not found in configuration");
-            }
+			if (string.IsNullOrWhiteSpace(query))
+				throw new InvalidOperationException("SQL query 'GetUserByEmail' not found.");
 
-            using var connection = _context.CreateConnection();
-            return await connection.QueryFirstOrDefaultAsync<User>(
-                query,
-                new { Email = email }
-            );
-        }
+			using var connection = _context.CreateConnection();
+			return await connection.QueryFirstOrDefaultAsync<User>(
+				query,
+				new { Email = email.Trim() }
+			);
+		}
 
-        public async Task<User?> GetUserByMobileAsync(string mobileNumber)
+		//public async Task<User?> GetUserByEmailAsync(string email)
+		//      {
+		//          if (string.IsNullOrWhiteSpace(email))
+		//              return null;
+
+		//          string query = _queryProvider.Get("GetUserByEmail");
+
+		//          using var connection = _context.CreateConnection();
+		//          return await connection.QueryFirstOrDefaultAsync<User>(
+		//              query,
+		//              new { Email = email }
+		//          );
+		//      }
+
+		public async Task<User?> GetUserByMobileAsync(string mobileNumber)
         {
             if (string.IsNullOrWhiteSpace(mobileNumber))
                 return null;

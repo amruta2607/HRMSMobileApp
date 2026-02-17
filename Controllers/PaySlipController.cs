@@ -132,147 +132,191 @@ namespace MobileWebApi.Controllers
             return NotFound(result);
         }
 
-        /// <summary>
-        /// Get pay slip by ID using POST
-        /// POST: api/payslip/get
-        /// Note: Regular users can only see their own payslips. HR/TenantAdmin can see all.
-        /// </summary>
-        /// <param name="request">Pay slip request details</param>
-        /// <returns>Pay slip details</returns>
-        //[HttpPost("get")]
-        //public async Task<IActionResult> GetPaySlip([FromBody] PaySlipGetRequest request)
-        //{
-        //    // Validate user access - regular users can only see their own payslips
-        //    try
-        //    {
-        //        request.user = GetValidatedUserId(request.user);
-        //    }
-        //    catch (Services.TenantAccessException)
-        //    {
-        //        return UserAccessDenied();
-        //    }
+		/// <summary>
+		/// Get pay slip by ID using POST
+		/// POST: api/payslip/get
+		/// Note: Regular users can only see their own payslips. HR/TenantAdmin can see all.
+		/// </summary>
+		/// <param name="request">Pay slip request details</param>
+		/// <returns>Pay slip details</returns>
+		//[HttpPost("get")]
+		//public async Task<IActionResult> GetPaySlip([FromBody] PaySlipGetRequest request)
+		//{
+		//    // Validate user access - regular users can only see their own payslips
+		//    try
+		//    {
+		//        request.user = GetValidatedUserId(request.user);
+		//    }
+		//    catch (Services.TenantAccessException)
+		//    {
+		//        return UserAccessDenied();
+		//    }
 
-        //    Logger.LogInformation(LogMessages.PaySlip.FetchingPaySlipById, request.payslip_id);
-        //    var result = await _paySlipService.GetPaySlipByIdAsync(request.user, request.payslip_id);
+		//    Logger.LogInformation(LogMessages.PaySlip.FetchingPaySlipById, request.payslip_id);
+		//    var result = await _paySlipService.GetPaySlipByIdAsync(request.user, request.payslip_id);
 
-        //    if (result.Success)
-        //    {
-        //        return Ok(result);
-        //    }
+		//    if (result.Success)
+		//    {
+		//        return Ok(result);
+		//    }
 
-        //    return NotFound(result);
-        //}
+		//    return NotFound(result);
+		//}
 
-        /// <summary>
-        /// Download pay slip data for PDF generation
-        /// POST: api/payslip/download
-        /// Note: Regular users can only download their own payslips. HR/TenantAdmin can download all.
-        /// </summary>
-        /// <param name="request">Download request</param>
-        /// <returns>Pay slip data</returns>
-        //[HttpPost("download")]
-        //public async Task<IActionResult> DownloadPaySlip([FromBody] PaySlipDownloadRequest request)
-        //{
-        //    // Validate user access - regular users can only download their own payslips
-        //    try
-        //    {
-        //        request.user = GetValidatedUserId(request.user);
-        //    }
-        //    catch (Services.TenantAccessException)
-        //    {
-        //        return UserAccessDenied();
-        //    }
+		/// <summary>
+		/// Download pay slip data for PDF generation
+		/// POST: api/payslip/download
+		/// Note: Regular users can only download their own payslips. HR/TenantAdmin can download all.
+		/// </summary>
+		/// <param name="request">Download request</param>
+		/// <returns>Pay slip data</returns>
+		//[HttpPost("download")]
+		//public async Task<IActionResult> DownloadPaySlip([FromBody] PaySlipDownloadRequest request)
+		//{
+		//    // Validate user access - regular users can only download their own payslips
+		//    try
+		//    {
+		//        request.user = GetValidatedUserId(request.user);
+		//    }
+		//    catch (Services.TenantAccessException)
+		//    {
+		//        return UserAccessDenied();
+		//    }
 
-        //    Logger.LogInformation(LogMessages.PaySlip.DownloadingPaySlip, request.payslip_id);
-        //    var result = await _paySlipService.DownloadPaySlipAsync(request);
+		//    Logger.LogInformation(LogMessages.PaySlip.DownloadingPaySlip, request.payslip_id);
+		//    var result = await _paySlipService.DownloadPaySlipAsync(request);
 
-        //    if (result.Success)
-        //    {
-        //        // If file content exists, return as file
-        //        if (result.FileContent != null)
-        //        {
-        //            return File(result.FileContent, result.ContentType ?? "application/pdf", result.FileName);
-        //        }
-                
-        //        // Otherwise return payslip data for client-side PDF generation
-        //        return Ok(new PaySlipResponse
-        //        {
-        //            Success = true,
-        //            Message = result.Message,
-        //            Data = result.PaySlipData,
-        //            TotalRecords = 1
-        //        });
-        //    }
+		//    if (result.Success)
+		//    {
+		//        // If file content exists, return as file
+		//        if (result.FileContent != null)
+		//        {
+		//            return File(result.FileContent, result.ContentType ?? "application/pdf", result.FileName);
+		//        }
 
-        //    return NotFound(new PaySlipResponse
-        //    {
-        //        Success = false,
-        //        Message = result.Message,
-        //        Data = null,
-        //        TotalRecords = 0
-        //    });
-        //}
+		//        // Otherwise return payslip data for client-side PDF generation
+		//        return Ok(new PaySlipResponse
+		//        {
+		//            Success = true,
+		//            Message = result.Message,
+		//            Data = result.PaySlipData,
+		//            TotalRecords = 1
+		//        });
+		//    }
 
-        /// <summary>
-        /// Download pay slip data using GET method
-        /// GET: api/payslip/{id}/download
-        /// Note: Regular users can only download their own payslips. HR/TenantAdmin can download all.
-        /// </summary>
-        /// <param name="id">Pay slip ID</param>
-        /// <param name="user">User ID</param>
-        /// <param name="format">Download format (pdf/excel)</param>
-        /// <returns>Pay slip data</returns>
-        [HttpGet("{id}/download")]
-        public async Task<IActionResult> DownloadPaySlipGet(int id, [FromQuery] int user, [FromQuery] string format = "pdf")
-        {
-            // Validate user access - regular users can only download their own payslips
-            int validatedUserId;
-            try
-            {
-                validatedUserId = GetValidatedUserId(user);
-            }
-            catch (Services.TenantAccessException)
-            {
-                return UserAccessDenied();
-            }
+		//    return NotFound(new PaySlipResponse
+		//    {
+		//        Success = false,
+		//        Message = result.Message,
+		//        Data = null,
+		//        TotalRecords = 0
+		//    });
+		//}
 
-            Logger.LogInformation(LogMessages.PaySlip.DownloadingPaySlip, id);
+		/// <summary>
+		/// Download pay slip data using GET method
+		/// GET: api/payslip/{id}/download
+		/// Note: Regular users can only download their own payslips. HR/TenantAdmin can download all.
+		/// </summary>
+		/// <param name="id">Pay slip ID</param>
+		/// <param name="user">User ID</param>
+		/// <param name="format">Download format (pdf/excel)</param>
+		/// <returns>Pay slip data</returns>
+		/// <summary>
+		/// Download pay slip using Month & Year
+		/// GET: api/payslip/download?user=5&month=4&year=2025
+		/// </summary>
+		[HttpGet("download")]
+		public async Task<IActionResult> DownloadPaySlipByMonthYear(
+			[FromQuery] int user,
+			[FromQuery] int month,
+			[FromQuery] int year)
+		{
+			int validatedUserId;
 
-            var request = new PaySlipDownloadRequest
-            {
-                user = validatedUserId,
-                payslip_id = id,
-                format = format
-            };
+			try
+			{
+				validatedUserId = GetValidatedUserId(user);
+			}
+			catch
+			{
+				return UserAccessDenied();
+			}
 
-            var result = await _paySlipService.DownloadPaySlipAsync(request);
+			var request = new PaySlipDownloadByMonthYearRequest
+			{
+				UserId = validatedUserId,
+				Month = month,
+				Year = year
+			};
 
-            if (result.Success)
-            {
-                // If file content exists, return as file
-                if (result.FileContent != null)
-                {
-                    return File(result.FileContent, result.ContentType ?? "application/pdf", result.FileName);
-                }
-                
-                // Otherwise return payslip data for client-side PDF generation
-                return Ok(new PaySlipResponse
-                {
-                    Success = true,
-                    Message = result.Message,
-                    Data = result.PaySlipData,
-                    TotalRecords = 1
-                });
-            }
+			var result = await _paySlipService
+				.DownloadPaySlipByMonthYearAsync(request);
 
-            return NotFound(new PaySlipResponse
-            {
-                Success = false,
-                Message = result.Message,
-                Data = null,
-                TotalRecords = 0
-            });
-        }
-    }
+			if (result.Success)
+				return Ok(result);
+
+			return NotFound(result);
+		}
+		/// <summary>
+		/// Get Employee Provident Fund Summary
+		/// GET: api/payslip/provident-fund?user=5
+		/// </summary>
+		[HttpGet("provident-fund")]
+		public async Task<IActionResult> GetProvidentFund([FromQuery] int user)
+		{
+			int validatedUserId;
+
+			try
+			{
+				validatedUserId = GetValidatedUserId(user);
+			}
+			catch (Services.TenantAccessException)
+			{
+				return UserAccessDenied();
+			}
+
+			var result = await _paySlipService
+				.GetProvidentFundSummaryAsync(validatedUserId);
+
+			if (result.Success)
+				return Ok(result);
+
+			return BadRequest(result);
+		}
+		[HttpGet("monthly-summary")]
+		public async Task<IActionResult> GetMonthlyPaymentSummary(
+	[FromQuery] int user,
+	[FromQuery] int month,
+	[FromQuery] int year)
+		{
+			int validatedUserId;
+
+			try
+			{
+				validatedUserId = GetValidatedUserId(user);
+			}
+			catch
+			{
+				return UserAccessDenied();
+			}
+
+			var request = new MonthlyPaymentSummaryRequest
+			{
+				UserId = validatedUserId,
+				Month = month,
+				Year = year
+			};
+
+			var result = await _paySlipService
+				.GetMonthlyPaymentSummaryAsync(request);
+
+			if (result.Success)
+				return Ok(result);
+
+			return BadRequest(result);
+		}
+	}
+
 }
 

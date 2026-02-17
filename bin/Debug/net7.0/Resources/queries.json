@@ -4,7 +4,10 @@
 
     "GetUserByUsernameOrMobile": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(u.WorkRoleId, ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.Username = @Login OR u.MobileNumber = @Login",
 
-    "GetUserByEmail": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(u.WorkRoleId, ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.Email = @Email",
+
+    "GetUserByEmail": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.Department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(CAST(u.WorkRoleId AS NVARCHAR(MAX)), ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.Email = @Email",
+
+
 
     "GetUserByMobile": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PinNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(u.WorkRoleId, ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.MobileNumber = @MobileNumber",
 
@@ -87,7 +90,8 @@
 
     "GetLeaveRequestById": "SELECT lr.Id, lr.Number, lr.EmployeeId, lr.LeaveTypeId, lr.FromDate, lr.ToDate, lr.Duration, lr.Description, lr.CancellationReason, lr.CurrentAction, lr.LeaveRequestStatus, lr.DelegatedEmployeeId, lr.TenantId AS OrganisationId, lr.InsertDate, lr.InsertUserId, lr.UpdateDate, lr.UpdateUserId, e.Name AS EmployeeName, lt.DisplayName AS LeaveTypeName FROM LeaveRequest lr LEFT JOIN Employee e ON lr.EmployeeId = e.Id LEFT JOIN LeaveTypes lt ON lr.LeaveTypeId = lt.Id WHERE lr.Id = @Id",
 
-    "GetLeaveRequests": "SELECT lr.Id, lr.Number, lr.EmployeeId, lr.LeaveTypeId, lr.FromDate, lr.ToDate, lr.Duration, lr.Description, lr.CancellationReason, lr.CurrentAction, lr.LeaveRequestStatus, lr.DelegatedEmployeeId, lr.TenantId AS OrganisationId, lr.InsertDate, lr.InsertUserId, lr.UpdateDate, lr.UpdateUserId, e.Name AS EmployeeName, lt.DisplayName AS LeaveTypeName FROM LeaveRequest lr LEFT JOIN Employee e ON lr.EmployeeId = e.Id LEFT JOIN LeaveTypes lt ON lr.LeaveTypeId = lt.Id WHERE (@OrganisationId IS NULL OR lr.TenantId = @OrganisationId) AND (@EmployeeId IS NULL OR lr.EmployeeId = @EmployeeId) AND (@LeaveTypeId IS NULL OR lr.LeaveTypeId = @LeaveTypeId) AND (@Status IS NULL OR lr.LeaveRequestStatus = @Status) ORDER BY lr.InsertDate DESC",
+    "GetLeaveRequests": "SELECT lr.Id, lr.Number, lr.EmployeeId, lr.LeaveTypeId, lr.FromDate, lr.ToDate, lr.Duration, lr.Description, lr.CancellationReason, lr.CurrentAction, lr.LeaveRequestStatus, lr.DelegatedEmployeeId, lr.TenantId AS OrganisationId, lr.InsertDate, lr.InsertUserId, lr.UpdateDate, lr.UpdateUserId, e.Name AS EmployeeName, lt.DisplayName AS LeaveTypeName FROM LeaveRequest lr LEFT JOIN Employee e ON lr.EmployeeId = e.Id LEFT JOIN LeaveTypes lt ON lr.LeaveTypeId = lt.Id WHERE (@OrganisationId IS NULL OR lr.TenantId = @OrganisationId) AND (@EmployeeId IS NULL OR lr.EmployeeId = @EmployeeId) AND (@LeaveTypeId IS NULL OR lr.LeaveTypeId = @LeaveTypeId) ORDER BY lr.InsertDate DESC",
+
 
     "GetLeaveRequestsByEmployeeId": "SELECT lr.Id, lr.Number, lr.EmployeeId, lr.LeaveTypeId, lr.FromDate, lr.ToDate, lr.Duration, lr.Description, lr.CancellationReason, lr.CurrentAction, lr.LeaveRequestStatus, lr.DelegatedEmployeeId, lr.TenantId AS OrganisationId, lr.InsertDate, lr.InsertUserId, lr.UpdateDate, lr.UpdateUserId, e.Name AS EmployeeName, lt.DisplayName AS LeaveTypeName FROM LeaveRequest lr LEFT JOIN Employee e ON lr.EmployeeId = e.Id LEFT JOIN LeaveTypes lt ON lr.LeaveTypeId = lt.Id WHERE lr.EmployeeId = @EmployeeId ORDER BY lr.InsertDate DESC",
 
@@ -144,7 +148,16 @@
     "GetPaySlipByEmployeeMonthYear": "SELECT Id, PayrollId, EmployeeId, BankAccountNumber, BankName, IFSCCode, BankBranchName, BasicSalary, TotalIncome, TotalDeduction, TakeHomePay, TenantId, Gross, EmployeeName, EmployeeNumber, Email, DateOfBirth, TaxNumber, ESINo, PFNo, UANNo, IsPerDayWagesEmployee, DateOfJoining, PerDayOverTimeWages, PayrollMonth, PayrollYear, DaysPayable, OverTimeDays, PresentDays, SalarySlab, PerDayWages, OvertimeSalary, SalaryEarned, TenantName, Currency, GenderName, DesignationName, BranchName, PayrollMonthName, FinancialYearStart, LossPayDays, Logo FROM [dbo].[vwPayrollDetailPrint] WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND PayrollMonth = @Month AND PayrollYear = @Year",
 
     "GetPaySlipFilePath": "SELECT PaySlipFilePath FROM PaySlip WHERE Id = @Id",
+    "GetEmployeeProvidentFundSummary": "SELECT SUM(CASE WHEN d.DeductionCode = 'ProvidentFundEmployee' THEN pdd.Amount ELSE 0 END) AS MyShare, SUM(CASE WHEN d.DeductionCode = 'ProvidentFundCompany' THEN pdd.Amount ELSE 0 END) AS EmployerShare FROM PayrollDetailDeduction pdd INNER JOIN PayrollDetail pd ON pd.Id = pdd.PayrollDetailId INNER JOIN Deduction d ON d.Id = pdd.DeductionId WHERE pd.EmployeeId = @EmployeeId AND pd.TenantId = @TenantId AND d.IsActive = 1 AND d.DeductionCode IN ('ProvidentFundEmployee','ProvidentFundCompany')",
 
+    "GetMonthlyPayrollSummary": "SELECT pd.BasicSalary, pd.Gross, pd.TotalIncome, pd.TotalDeduction, pd.TakeHomePay FROM PayrollDetail pd INNER JOIN Payroll p ON p.Id = pd.PayrollId WHERE pd.EmployeeId = @EmployeeId AND pd.TenantId = @TenantId AND p.PayrollMonth = @Month AND p.PayrollYear = @Year",
+
+    "GetMonthlyPayrollIncomes": "SELECT i.Name, pdi.Amount FROM PayrollDetailIncome pdi INNER JOIN Income i ON i.Id = pdi.IncomeId INNER JOIN PayrollDetail pd ON pd.Id = pdi.PayrollDetailId INNER JOIN Payroll p ON p.Id = pd.PayrollId WHERE pd.EmployeeId = @EmployeeId AND pd.TenantId = @TenantId AND p.PayrollMonth = @Month AND p.PayrollYear = @Year",
+
+    "GetMonthlyPayrollDeductions": "SELECT d.Name, d.DeductionCode, pdd.Amount FROM PayrollDetailDeduction pdd INNER JOIN Deduction d ON d.Id = pdd.DeductionId INNER JOIN PayrollDetail pd ON pd.Id = pdd.PayrollDetailId INNER JOIN Payroll p ON p.Id = pd.PayrollId WHERE pd.EmployeeId = @EmployeeId AND pd.TenantId = @TenantId AND p.PayrollMonth = @Month AND p.PayrollYear = @Year",
+    "GetPaySlipIncomes": "SELECT i.Name AS Description, pdi.Amount FROM PayrollDetailIncome pdi INNER JOIN Income i ON i.Id = pdi.IncomeId WHERE pdi.PayrollDetailId = @PaySlipId",
+
+    "GetPaySlipDeductions": "SELECT d.Name AS Description, d.DeductionCode, pdd.Amount FROM PayrollDetailDeduction pdd INNER JOIN Deduction d ON d.Id = pdd.DeductionId WHERE pdd.PayrollDetailId = @PaySlipId",
     "GetEmployeeIdAndTenantByUserId": "SELECT Id, TenantId FROM Employee WHERE SystemUserId = @UserId",
 
     "UpdatePassword": "UPDATE Users SET PasswordHash = @PasswordHash, PasswordSalt = @PasswordSalt WHERE UserId = @UserId",

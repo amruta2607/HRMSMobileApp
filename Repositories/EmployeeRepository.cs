@@ -67,14 +67,38 @@ namespace MobileWebApi.Repositories
             var rowsAffected = await connection.ExecuteAsync(query, employee);
             return rowsAffected > 0;
         }
+		public async Task<bool> UpdateEmployeePhoneAndPictureAsync(
+	int employeeId,
+	string? phone,
+	string? picture)
+		{
+			using var connection = _context.CreateConnection();
 
-        public async Task<bool> UpdateEmployeePhoneAndPictureAsync(int employeeId, string? phone, string? picture)
-        {
-            using var connection = _context.CreateConnection();
-            string query = _queries.Get("UpdateEmployeePhoneAndPicture");
-            var rowsAffected = await connection.ExecuteAsync(query, new { Id = employeeId, Phone = phone, Picture = picture });
-            return rowsAffected > 0;
-        }
+			var query = _queries.Get("UpdateEmployeePhoneAndPicture");
+			if (string.IsNullOrWhiteSpace(query))
+				throw new InvalidOperationException(
+					"SQL query 'UpdateEmployeePhoneAndPicture' not found.");
+
+			var rowsAffected = await connection.ExecuteAsync(
+				query,
+				new
+				{
+					Id = employeeId,
+					Phone = phone,
+					Picture = picture
+				});
+
+			return rowsAffected > 0;
+		}
+
+
+		//public async Task<bool> UpdateEmployeePhoneAndPictureAsync(int employeeId, string? phone, string? picture)
+  //      {
+  //          using var connection = _context.CreateConnection();
+  //          string query = _queries.Get("UpdateEmployeePhoneAndPicture");
+  //          var rowsAffected = await connection.ExecuteAsync(query, new { Id = employeeId, Phone = phone, Picture = picture });
+  //          return rowsAffected > 0;
+  //      }
 
         public async Task<bool> DeleteEmployeeAsync(int id)
         {

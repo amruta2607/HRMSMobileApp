@@ -49,9 +49,9 @@ namespace MobileWebApi.Models
     {
         public int LeaveTypeId { get; set; }
         public string? LeaveTypeName { get; set; }
-        public decimal TotalBalance { get; set; }
-        public decimal UsedBalance { get; set; }
-        public decimal RemainingBalance { get; set; }
+        public int TotalBalance { get; set; }
+       
+        public int RemainingBalance { get; set; }
     }
 }
 

@@ -28,7 +28,7 @@ namespace MobileWebApi.Interfaces
         /// <param name="webRootPath">The web root path (used as fallback if configuration is not set)</param>
         /// <param name="employeeId">The employee ID</param>
         /// <returns>Relative path of saved image (e.g., "Image/Employee/00000/00000420_xxxxx.jpg")</returns>
-        Task<string> SaveEmployeeImageAsync(IFormFile file, string webRootPath, int employeeId);
+        Task<string> SaveEmployeeImageAsync(IFormFile file, int employeeId);
     }
 }
 

@@ -52,6 +52,9 @@ namespace MobileWebApi.Services
 		{
 			try
 			{
+				// -----------------------------
+				// Validate basic input
+				// -----------------------------
 				if (request.user <= 0 || request.leave_type <= 0)
 					return Fail(LeaveMessages.InvalidRequest);
 
@@ -59,15 +62,46 @@ namespace MobileWebApi.Services
 				if (!employeeId.HasValue)
 					return Fail(LeaveMessages.EmployeeNotFoundForUser);
 
+				// -----------------------------
+				// Get configured week offs & holidays
+				// -----------------------------
+				var dayOffs = await _leaveRepository.GetTenantDayOffsAsync(request.organization ?? 0); // returns List<int> for DayOffId (1=Sunday etc.)
+				var holidays = await _leaveRepository.GetHolidaysAsync(request.organization ?? 0, request.startdate, request.enddate);
+
+				// -----------------------------
+				// Determine valid leave dates
+				// -----------------------------
+				var requestedDates = EachDate(request.startdate, request.enddate).ToList();
+
+				var invalidDates = requestedDates
+					.Where(d => dayOffs.Contains((int)d.DayOfWeek) || holidays.Any(h => h.Date.Date == d.Date))
+					.ToList();
+
+				if (invalidDates.Any())
+				{
+					var invalidDatesStr = string.Join(", ", invalidDates.Select(d => d.ToString("yyyy-MM-dd")));
+					return Fail($"Cannot apply leave on week offs or holidays: {invalidDatesStr}");
+				}
+
+				// -----------------------------
+				// Calculate leave balance & duration
+				// -----------------------------
 				var leaveBalance = await _leaveRepository.GetLeaveBalanceAsync(employeeId.Value, request.leave_type);
-				decimal availableBalance = leaveBalance?.LeaveBalanceValue ?? 0;
-				decimal duration = request.is_half_day ? 0.5m : request.duration;
+				decimal availableBalance = leaveBalance?.RemainingBalance ?? 0;
+
+				decimal duration = request.is_half_day ? 0.5m : requestedDates.Count;
 
 				if (availableBalance < duration)
 					return Fail(string.Format(LeaveMessages.InsufficientLeaveBalance, availableBalance, duration));
 
+				// -----------------------------
+				// Generate leave request number
+				// -----------------------------
 				var requestNumber = await _leaveRepository.GenerateLeaveRequestNumberAsync(request.organization ?? 0);
 
+				// -----------------------------
+				// Create leave request
+				// -----------------------------
 				var leaveRequest = new LeaveRequest
 				{
 					Number = requestNumber,
@@ -91,6 +125,9 @@ namespace MobileWebApi.Services
 
 				leaveRequest.Id = newId;
 
+				// -----------------------------
+				// Initiate approval workflow if configured
+				// -----------------------------
 				try
 				{
 					if (request.organization.HasValue)
@@ -115,6 +152,15 @@ namespace MobileWebApi.Services
 			}
 		}
 
+		// -----------------------------
+		// Helper: iterate through all dates
+		// -----------------------------
+		private IEnumerable<DateTime> EachDate(DateTime from, DateTime to)
+		{
+			for (var day = from.Date; day <= to.Date; day = day.AddDays(1))
+				yield return day;
+		}
+
 		// =====================================================
 		// GET LEAVE REQUESTS
 		// =====================================================
@@ -123,29 +169,23 @@ namespace MobileWebApi.Services
 			try
 			{
 				int? employeeId = null;
+
 				if (request.user.HasValue)
-					employeeId = await _leaveRepository.GetEmployeeIdByUserIdAsync(request.user.Value);
-
-				int? statusId = MapMobileStatusToDbStatus(request.status);
-
-				// If statusId is null, return empty result
-				if (!statusId.HasValue)
-				{
-					return new LeaveRequestResponse
-					{
-						Success = true,
-						Message = LeaveMessages.LeaveRequestsFetchedSuccessfully,
-						Data = new List<LeaveRequest>(),
-						TotalRecords = 0
-					};
-				}
+					employeeId = await _leaveRepository
+						.GetEmployeeIdByUserIdAsync(request.user.Value);
 
 				var list = (await _leaveRepository.GetLeaveRequestsAsync(
 					request.organization,
 					employeeId,
-					request.leave_type,
-					statusId
+					request.leave_type
 				)).ToList();
+
+				// ✅ Convert status ID → status text
+				foreach (var item in list)
+				{
+					item.LeaveRequestStatusText =
+						MapDbStatusIdToText((int)item.LeaveRequestStatus);
+				}
 
 				return new LeaveRequestResponse
 				{
@@ -161,6 +201,20 @@ namespace MobileWebApi.Services
 				return Fail(ex.Message);
 			}
 		}
+		private string MapDbStatusIdToText(int statusId)
+		{
+			return statusId switch
+			{
+				STATUS_ID_SUBMIT => STATUS_SUBMIT,
+				STATUS_ID_APPROVED => STATUS_APPROVED,
+				STATUS_ID_REJECTED => STATUS_REJECTED,
+				STATUS_ID_CANCELLED => STATUS_CANCELLED,
+				STATUS_ID_WITHDRAW => STATUS_WITHDRAW,
+				STATUS_ID_PENDING => STATUS_PENDING,
+				_ => "Unknown"
+			};
+		}
+
 
 
 		// =====================================================
@@ -194,9 +248,9 @@ namespace MobileWebApi.Services
 			{
 				LeaveTypeId = b.LeaveTypeId,
 				LeaveTypeName = b.LeaveTypeName,
-				TotalBalance = b.LeaveBalanceValue,
-				UsedBalance = 0m, // default, adjust if stored in DB
-				RemainingBalance = b.LeaveBalanceValue // Total - Used
+				TotalBalance = b.TotalBalance,
+			
+				RemainingBalance = b.RemainingBalance // Total - Used
 			}).ToList();
 
 			return new LeaveBalanceResponse
