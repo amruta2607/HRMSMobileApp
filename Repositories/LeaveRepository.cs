@@ -233,6 +233,34 @@ namespace MobileWebApi.Repositories
 
             return $"{prefix}0001";
         }
-    }
+		/// <summary>
+		/// Get configured week offs (DayOffId) for a tenant/organization
+		/// </summary>
+		public async Task<List<int>> GetTenantDayOffsAsync(int organisationId)
+		{
+			using var conn = _context.CreateConnection();
+			string query = _queryProvider.Get("GetTenantDayOffsByTenantId");
+
+			var result = await conn.QueryAsync<int>(query, new { TenantId = organisationId });
+			return result.ToList();
+		}
+		/// <summary>
+		/// Get holidays for a tenant between given dates
+		/// </summary>
+		public async Task<List<Holiday>> GetHolidaysAsync(int organisationId, DateTime fromDate, DateTime toDate)
+		{
+			using var conn = _context.CreateConnection();
+			string query = _queryProvider.Get("GetHolidaysByTenantIdAndDateRange");
+
+			var result = await conn.QueryAsync<Holiday>(query, new
+			{
+				TenantId = organisationId,
+				FromDate = fromDate,
+				ToDate = toDate
+			});
+
+			return result.ToList();
+		}
+	}
 }
 

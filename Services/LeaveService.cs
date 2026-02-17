@@ -52,6 +52,9 @@ namespace MobileWebApi.Services
 		{
 			try
 			{
+				// -----------------------------
+				// Validate basic input
+				// -----------------------------
 				if (request.user <= 0 || request.leave_type <= 0)
 					return Fail(LeaveMessages.InvalidRequest);
 
@@ -59,15 +62,46 @@ namespace MobileWebApi.Services
 				if (!employeeId.HasValue)
 					return Fail(LeaveMessages.EmployeeNotFoundForUser);
 
+				// -----------------------------
+				// Get configured week offs & holidays
+				// -----------------------------
+				var dayOffs = await _leaveRepository.GetTenantDayOffsAsync(request.organization ?? 0); // returns List<int> for DayOffId (1=Sunday etc.)
+				var holidays = await _leaveRepository.GetHolidaysAsync(request.organization ?? 0, request.startdate, request.enddate);
+
+				// -----------------------------
+				// Determine valid leave dates
+				// -----------------------------
+				var requestedDates = EachDate(request.startdate, request.enddate).ToList();
+
+				var invalidDates = requestedDates
+					.Where(d => dayOffs.Contains((int)d.DayOfWeek) || holidays.Any(h => h.Date.Date == d.Date))
+					.ToList();
+
+				if (invalidDates.Any())
+				{
+					var invalidDatesStr = string.Join(", ", invalidDates.Select(d => d.ToString("yyyy-MM-dd")));
+					return Fail($"Cannot apply leave on week offs or holidays: {invalidDatesStr}");
+				}
+
+				// -----------------------------
+				// Calculate leave balance & duration
+				// -----------------------------
 				var leaveBalance = await _leaveRepository.GetLeaveBalanceAsync(employeeId.Value, request.leave_type);
 				decimal availableBalance = leaveBalance?.RemainingBalance ?? 0;
-				decimal duration = request.is_half_day ? 0.5m : request.duration;
+
+				decimal duration = request.is_half_day ? 0.5m : requestedDates.Count;
 
 				if (availableBalance < duration)
 					return Fail(string.Format(LeaveMessages.InsufficientLeaveBalance, availableBalance, duration));
 
+				// -----------------------------
+				// Generate leave request number
+				// -----------------------------
 				var requestNumber = await _leaveRepository.GenerateLeaveRequestNumberAsync(request.organization ?? 0);
 
+				// -----------------------------
+				// Create leave request
+				// -----------------------------
 				var leaveRequest = new LeaveRequest
 				{
 					Number = requestNumber,
@@ -91,6 +125,9 @@ namespace MobileWebApi.Services
 
 				leaveRequest.Id = newId;
 
+				// -----------------------------
+				// Initiate approval workflow if configured
+				// -----------------------------
 				try
 				{
 					if (request.organization.HasValue)
@@ -113,6 +150,15 @@ namespace MobileWebApi.Services
 				_logger.LogError(ex, "Error creating leave request");
 				return Fail(ex.Message);
 			}
+		}
+
+		// -----------------------------
+		// Helper: iterate through all dates
+		// -----------------------------
+		private IEnumerable<DateTime> EachDate(DateTime from, DateTime to)
+		{
+			for (var day = from.Date; day <= to.Date; day = day.AddDays(1))
+				yield return day;
 		}
 
 		// =====================================================
