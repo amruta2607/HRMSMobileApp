@@ -60,7 +60,7 @@ namespace MobileWebApi.Services
 					return Fail(LeaveMessages.EmployeeNotFoundForUser);
 
 				var leaveBalance = await _leaveRepository.GetLeaveBalanceAsync(employeeId.Value, request.leave_type);
-				decimal availableBalance = leaveBalance?.LeaveBalanceValue ?? 0;
+				decimal availableBalance = leaveBalance?.RemainingBalance ?? 0;
 				decimal duration = request.is_half_day ? 0.5m : request.duration;
 
 				if (availableBalance < duration)
@@ -202,9 +202,9 @@ namespace MobileWebApi.Services
 			{
 				LeaveTypeId = b.LeaveTypeId,
 				LeaveTypeName = b.LeaveTypeName,
-				TotalBalance = b.LeaveBalanceValue,
-				UsedBalance = 0m, // default, adjust if stored in DB
-				RemainingBalance = b.LeaveBalanceValue // Total - Used
+				TotalBalance = b.TotalBalance,
+			
+				RemainingBalance = b.RemainingBalance // Total - Used
 			}).ToList();
 
 			return new LeaveBalanceResponse

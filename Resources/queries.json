@@ -97,9 +97,13 @@
 
     "UpdateLeaveRequestStatus": "UPDATE LeaveRequest SET LeaveRequestStatus = @StatusId, CurrentAction = @StatusText, UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE Id = @Id",
 
-    "GetLeaveBalanceByEmployeeId": "SELECT lb.Id, lb.EmployeeId, lb.LeaveTypeId, lb.LeaveBalance AS LeaveBalanceValue, lb.Description, lb.InsertDate, lb.InsertUserId, lb.UpdateDate, lb.UpdateUserId, lb.TenantId AS OrganisationId, lt.DisplayName AS LeaveTypeName FROM EmployeeLeave lb LEFT JOIN LeaveTypes lt ON lb.LeaveTypeId = lt.Id WHERE lb.EmployeeId = @EmployeeId",
 
-    "GetLeaveBalance": "SELECT lb.Id, lb.EmployeeId, lb.LeaveTypeId, lb.LeaveBalance AS LeaveBalanceValue, lb.Description, lb.InsertDate, lb.InsertUserId, lb.UpdateDate, lb.UpdateUserId, lb.TenantId AS OrganisationId, lt.DisplayName AS LeaveTypeName FROM EmployeeLeave lb LEFT JOIN LeaveTypes lt ON lb.LeaveTypeId = lt.Id WHERE lb.EmployeeId = @EmployeeId AND lb.LeaveTypeId = @LeaveTypeId",
+
+    "GetLeaveBalanceByEmployeeId": "SELECT el.Id, el.EmployeeId, lt.DisplayName AS LeaveTypeName, el.LeaveTypeId, lt.LeaveBalance AS TotalBalance, el.LeaveBalance AS RemainingBalance , el.TenantId AS OrganisationId FROM LeaveTypes lt INNER JOIN EmployeeLeave el ON lt.Id = el.LeaveTypeId INNER JOIN Employee e ON e.Id = el.EmployeeId WHERE el.EmployeeId = @EmployeeId",
+
+
+
+    "GetLeaveBalance": "SELECT lb.Id, lb.EmployeeId, lb.LeaveTypeId, lb.LeaveBalance AS RemainingBalance, lb.Description, lb.InsertDate, lb.InsertUserId, lb.UpdateDate, lb.UpdateUserId, lb.TenantId AS OrganisationId, lt.DisplayName AS LeaveTypeName FROM EmployeeLeave lb LEFT JOIN LeaveTypes lt ON lb.LeaveTypeId = lt.Id WHERE lb.EmployeeId = @EmployeeId AND lb.LeaveTypeId = @LeaveTypeId",
 
     "UpdateLeaveBalance": "UPDATE EmployeeLeave SET LeaveBalance = @LeaveBalance, UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE EmployeeId = @EmployeeId AND LeaveTypeId = @LeaveTypeId",
 
