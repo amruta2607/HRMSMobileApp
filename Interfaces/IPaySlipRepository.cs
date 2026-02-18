@@ -1,4 +1,5 @@
 using MobileWebApi.Models;
+using MobileWebApi.Repositories;
 
 namespace MobileWebApi.Interfaces
 {
@@ -29,5 +30,6 @@ namespace MobileWebApi.Interfaces
 
 		Task<IEnumerable<PaySlipLineItem>> GetPaySlipIncomesAsync(int paySlipId);
 		Task<IEnumerable<PaySlipLineItem>> GetPaySlipDeductionsAsync(int paySlipId);
+		Task<PaySlipWithWeekOff?> GetPaySlipWithWeekOffAsync(int employeeId, int tenantId, int month, int year);
 	}
 }

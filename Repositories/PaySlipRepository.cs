@@ -148,5 +148,75 @@ namespace MobileWebApi.Repositories
 				query,
 				new { PaySlipId = paySlipId });
 		}
+		public async Task<PaySlipWithWeekOff> GetPaySlipWithWeekOffAsync(int employeeId, int tenantId, int month, int year)
+		{
+			using var conn = _context.CreateConnection();
+
+			// 1. Fetch the basic payroll info
+			string payrollQuery = @"
+        SELECT *
+        FROM vwPayrollDetailPrint
+        WHERE EmployeeId = @EmployeeId 
+          AND TenantId = @TenantId
+          AND PayrollMonth = @Month
+          AND PayrollYear = @Year
+    ";
+
+			var payroll = await conn.QueryFirstOrDefaultAsync<PaySlipWithWeekOff>(
+				payrollQuery,
+				new { EmployeeId = employeeId, TenantId = tenantId, Month = month, Year = year }
+			);
+
+			if (payroll == null)
+				return null;
+
+			// 2. Get tenant day offs
+			string dayOffQuery = @"
+        SELECT 
+   
+    tcd.DayOffId
+FROM TenantConfiguration tc
+INNER JOIN TenantConfiguredDayOffDays tcd
+    ON tc.TenantConfigurationId = tcd.TenantConfigurationId
+WHERE tc.TenantId = @TenantId
+
+    ";
+
+			var dayOffs = (await conn.QueryAsync<int>(dayOffQuery, new { TenantId = tenantId })).ToList();
+
+			// 3. Calculate total week off days
+			payroll.TotalWeekOffDays = GetTotalWeekOffDays(dayOffs, month, year);
+
+			return payroll;
+		}
+
+		private int GetTotalWeekOffDays(List<int> dayOffIds, int month, int year)
+		{
+			var normalizedDayOffs = dayOffIds
+				.Select(NormalizeDayOfWeek)
+				.ToHashSet();
+
+			int totalDays = DateTime.DaysInMonth(year, month);
+			int count = 0;
+
+			for (int day = 1; day <= totalDays; day++)
+			{
+				int dayOfWeek = (int)new DateTime(year, month, day).DayOfWeek;
+				if (normalizedDayOffs.Contains(dayOfWeek))
+					count++;
+			}
+
+			return count;
+		}
+
+		private int NormalizeDayOfWeek(int dayOffId)
+		{
+			// DB: 1–7 (Mon–Sun)
+			// .NET: 0–6 (Sun–Sat)
+			if (dayOffId == 7)
+				return 0; // Sunday
+			return dayOffId; // Monday–Saturday
+		}
+
 	}
 }

@@ -37,7 +37,7 @@ namespace MobileWebApi.Models
         public int PayrollMonth { get; set; }
         public int PayrollYear { get; set; }
         public string? PayrollMonthName { get; set; }
-        public string? FinancialYearStart { get; set; }
+        public int FinancialYearStart { get; set; }
         public decimal Gross { get; set; }
         public decimal TotalIncome { get; set; }
         public decimal TotalDeduction { get; set; }
@@ -74,7 +74,7 @@ namespace MobileWebApi.Models
         public int PayrollMonth { get; set; }
         public int PayrollYear { get; set; }
         public string? PayrollMonthName { get; set; }
-        public string? FinancialYearStart { get; set; }
+        public int FinancialYearStart { get; set; }
         
         // Salary Details
         public decimal BasicSalary { get; set; }
@@ -90,9 +90,9 @@ namespace MobileWebApi.Models
         public decimal PresentDays { get; set; }
         public decimal LossPayDays { get; set; }
         public decimal OverTimeDays { get; set; }
-        
-        // Wages Info
-        public bool IsPerDayWagesEmployee { get; set; }
+        public decimal TotalWeekOffDays {  get; set; }
+		// Wages Info
+		public bool IsPerDayWagesEmployee { get; set; }
         public decimal PerDayWages { get; set; }
         public decimal PerDayOverTimeWages { get; set; }
         public decimal OvertimeSalary { get; set; }

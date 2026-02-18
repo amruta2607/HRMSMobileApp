@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
@@ -228,9 +228,9 @@ namespace MobileWebApi.Controllers
 		/// </summary>
 		[HttpGet("download")]
 		public async Task<IActionResult> DownloadPaySlipByMonthYear(
-			[FromQuery] int user,
-			[FromQuery] int month,
-			[FromQuery] int year)
+	[FromQuery] int user,
+	[FromQuery] int month,
+	[FromQuery] int year)
 		{
 			int validatedUserId;
 
@@ -243,6 +243,7 @@ namespace MobileWebApi.Controllers
 				return UserAccessDenied();
 			}
 
+
 			var request = new PaySlipDownloadByMonthYearRequest
 			{
 				UserId = validatedUserId,
@@ -253,10 +254,16 @@ namespace MobileWebApi.Controllers
 			var result = await _paySlipService
 				.DownloadPaySlipByMonthYearAsync(request);
 
-			if (result.Success)
-				return Ok(result);
+			if (!result.Success || result.FileContent == null)
+				return NotFound(result.Message);
 
-			return NotFound(result);
+			// 🔥 This automatically sets correct inline header
+			return File(
+				result.FileContent,
+				"application/pdf",
+				result.FileName,
+				enableRangeProcessing: true
+			);
 		}
 		/// <summary>
 		/// Get Employee Provident Fund Summary

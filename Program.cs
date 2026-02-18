@@ -13,7 +13,9 @@ using MobileWebApi.Middleware;
 using Serilog;
 using MobileWebApi.Helper;
 using MobileWebApi.Resources;
+using QuestPDF.Infrastructure;
 
+QuestPDF.Settings.License = LicenseType.Community;
 var builder = WebApplication.CreateBuilder(args);
 
 // ----------------------
