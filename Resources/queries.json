@@ -256,6 +256,7 @@
     "InsertDispute": "INSERT INTO EmployeeDispute (EmployeeId, DisputeCategoryId, DisputeDate, Description, Status, CreatedOn) VALUES (@EmployeeId, @DisputeCategoryId, @DisputeDate, @Description, @Status, @CreatedOn); SELECT CAST(SCOPE_IDENTITY() AS INT)",
 
     "GetTenantDayOffsByTenantId": "SELECT DayOffId FROM TenantConfiguredDayOffDays tdd INNER JOIN TenantConfiguration tc ON tc.TenantConfigurationId = tdd.TenantConfigurationId WHERE tc.TenantId = @TenantId",
-    "GetHolidaysByTenantIdAndDateRange": "SELECT Id, Name, Date, Description, TenantId FROM Holiday WHERE TenantId = @TenantId AND Date BETWEEN @FromDate AND @ToDate"
+    "GetHolidaysByTenantIdAndDateRange": "SELECT Id, Name, Date, Description, TenantId FROM Holiday WHERE TenantId = @TenantId AND Date BETWEEN @FromDate AND @ToDate",
+
   }
 }
