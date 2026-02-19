@@ -257,6 +257,8 @@
 
     "GetTenantDayOffsByTenantId": "SELECT DayOffId FROM TenantConfiguredDayOffDays tdd INNER JOIN TenantConfiguration tc ON tc.TenantConfigurationId = tdd.TenantConfigurationId WHERE tc.TenantId = @TenantId",
     "GetHolidaysByTenantIdAndDateRange": "SELECT Id, Name, Date, Description, TenantId FROM Holiday WHERE TenantId = @TenantId AND Date BETWEEN @FromDate AND @ToDate",
+    "GetByTenantId": "SELECT IsGeoLocationEnabled,IsGeoFencingEnabled FROM TenantConfiguration where TenantId=@TenantId",
+    "GetGeoTenantLocationByTenantId": "SELECT g.Id,g.BranchId,b.Name AS BranchName,g.Longitude,g.Latitude,g.Radius,g.IsActive,g.LocationAddress,g.TenantId AS OrganisationId FROM GeoTenantLocation  g INNER JOIN Branch b ON g.BranchId=b.Id where g.TenantId=@TenantId"
 
   }
 }

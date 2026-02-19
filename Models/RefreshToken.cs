@@ -21,6 +21,8 @@ namespace MobileWebApi.Models
         public string? Username { get; set; }
 
         public int OrganisationId { get; set; }
-    }
+		public bool IsGeoLocationEnabled { get; set; }
+		public bool IsGeoFencingEnabled { get; set; }
+	}
 }
 

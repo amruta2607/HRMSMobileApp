@@ -26,10 +26,14 @@ namespace MobileWebApi.Constants
             public const string ErrorDeletingUser = "Error deleting user with ID {UserId}";
             public const string ErrorDeactivatingUser = "Error deactivating user with ID {UserId}";
             public const string ErrorFetchingUsersByOrganisationId = "Error fetching users by OrganisationId.";
-        }
 
-        // Employee related logs
-        public static class Employee
+			public const string ErrorFetchingTenantConfigurationByOrganisationId = "Error fetching TenantConfiguration by OrganisationId.";
+
+
+		}
+
+		// Employee related logs
+		public static class Employee
         {
             public const string RetrievingEmployeeById = "Retrieving employee with ID: {Id}";
             public const string RetrievingEmployeeByUserId = "Retrieving employee for user: {UserId}";

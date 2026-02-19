@@ -23,6 +23,7 @@ namespace MobileWebApi.Controllers
         private readonly ISmsService _smsService;
         private readonly ILogger<AuthController> _logger;
         private readonly IWebHostEnvironment _environment;
+        private readonly ITenantConfigurationRepository _tenantConfigurationRepository;
 
         public AuthController(
             IUserRepository userRepository,
@@ -32,7 +33,8 @@ namespace MobileWebApi.Controllers
             IEmailService emailService,
             ISmsService smsService,
             ILogger<AuthController> logger,
-            IWebHostEnvironment environment)
+            IWebHostEnvironment environment,
+            ITenantConfigurationRepository tenantConfigurationRepository)
         {
             _userRepository = userRepository;
             _employeeRepository = employeeRepository;
@@ -42,6 +44,7 @@ namespace MobileWebApi.Controllers
             _smsService = smsService;
             _logger = logger;
             _environment = environment;
+            _tenantConfigurationRepository = tenantConfigurationRepository;
         }
 
         /// <summary>
@@ -75,8 +78,9 @@ namespace MobileWebApi.Controllers
                 _logger.LogWarning(LogMessages.Auth.LoginFailed, request.email);
                 return Unauthorized(new { Success = false, Message = AuthMessages.InvalidCredentials });
             }
-
-            var token = _tokenService.GenerateToken(user);
+			var tenantConfig = await _tenantConfigurationRepository
+		.GetByTenantIdAsync(user.OrganisationId);
+			var token = _tokenService.GenerateToken(user);
 
             _logger.LogInformation(LogMessages.Auth.LoginSuccessful, request.email);
 
@@ -88,8 +92,10 @@ namespace MobileWebApi.Controllers
                 TokenExpiry = _tokenService.GetTokenExpiry(),
                 UserId = user.UserId,
                 Username = user.Username,
-                OrganisationId=user.OrganisationId
-            };
+                OrganisationId=user.OrganisationId,
+				IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
+				IsGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false
+			};
 
             return Ok(response);
         }

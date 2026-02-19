@@ -74,6 +74,8 @@ builder.Services.AddScoped<IPaySlipService, PaySlipService>();
 
 builder.Services.AddScoped<IDisputeRepository, DisputeRepository>();
 builder.Services.AddScoped<IDisputeService, DisputeService>();
+builder.Services.AddScoped<ITenantConfigurationRepository, TenantConfigurationRepository>();
+builder.Services.AddScoped<IGeoTenantLocationRepository, GeoTenantLocationRepository>();
 
 builder.Services.AddSingleton<ISqlConnections, MobileWebApi.Data.DefaultSqlConnections>();
 builder.Services.AddScoped<IAttendanceOverviewService, AttendanceOverviewService>();
