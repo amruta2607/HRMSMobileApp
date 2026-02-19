@@ -96,6 +96,21 @@ namespace MobileWebApi.Repositories
 			return ((decimal?)result.MyShare ?? 0,
 					(decimal?)result.EmployerShare ?? 0);
 		}
+		public async Task<(int Month, int Year)?> GetLatestPayrollPeriodAsync(
+	int employeeId,
+	int tenantId)
+		{
+			using var conn = _context.CreateConnection();
+
+			var sql = _queryProvider.Get("GetLatestPayrollPeriod");
+
+			return await conn.QueryFirstOrDefaultAsync<(int Month, int Year)?>(sql, new
+			{
+				EmployeeId = employeeId,
+				TenantId = tenantId
+			});
+		}
+
 		public async Task<MonthlyPaymentSummary?> GetMonthlyPaymentSummaryAsync(
 	int employeeId,
 	int tenantId,

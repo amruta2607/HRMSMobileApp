@@ -555,6 +555,77 @@ namespace MobileWebApi.Services
 				};
 			}
 		}
+		public async Task<MonthlyPaymentSummaryResponse>
+GetLastMonthPaymentSummaryAsync(int userId)
+		{
+			try
+			{
+				if (userId <= 0)
+				{
+					return new MonthlyPaymentSummaryResponse
+					{
+						Success = false,
+						Message = "UserId is required"
+					};
+				}
+
+				var (employeeId, tenantId) =
+					await _paySlipRepository
+						.GetEmployeeIdAndTenantByUserIdAsync(userId);
+
+				if (!employeeId.HasValue || !tenantId.HasValue)
+				{
+					return new MonthlyPaymentSummaryResponse
+					{
+						Success = false,
+						Message = "Employee not found"
+					};
+				}
+
+				// ✅ LAST CALENDAR MONTH
+				var lastMonthDate = DateTime.Today.AddMonths(-1);
+				int month = lastMonthDate.Month;
+				int year = lastMonthDate.Year;
+
+				var summary =
+					await _paySlipRepository
+						.GetMonthlyPaymentSummaryAsync(
+							employeeId.Value,
+							tenantId.Value,
+							month,
+							year);
+
+				if (summary == null)
+				{
+					return new MonthlyPaymentSummaryResponse
+					{
+						Success = false,
+						Message = "No payroll data found for last month"
+					};
+				}
+
+				return new MonthlyPaymentSummaryResponse
+				{
+					Success = true,
+					Message = "Last month payroll fetched successfully",
+					PayrollMonth = month,
+					PayrollYear = year,
+					Data = summary
+				};
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error fetching last month payroll");
+
+				return new MonthlyPaymentSummaryResponse
+				{
+					Success = false,
+					Message = ex.Message
+				};
+			}
+		}
+
+
 		public async Task<PaySlipDownloadResponse> DownloadPaySlipByMonthYearAsync(
 			PaySlipDownloadByMonthYearRequest request)
 		{

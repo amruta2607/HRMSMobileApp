@@ -157,6 +157,8 @@
     "GetMonthlyPayrollSummary": "SELECT pd.BasicSalary, pd.Gross, pd.TotalIncome, pd.TotalDeduction, pd.TakeHomePay FROM PayrollDetail pd INNER JOIN Payroll p ON p.Id = pd.PayrollId WHERE pd.EmployeeId = @EmployeeId AND pd.TenantId = @TenantId AND p.PayrollMonth = @Month AND p.PayrollYear = @Year",
 
     "GetMonthlyPayrollIncomes": "SELECT i.Name, pdi.Amount FROM PayrollDetailIncome pdi INNER JOIN Income i ON i.Id = pdi.IncomeId INNER JOIN PayrollDetail pd ON pd.Id = pdi.PayrollDetailId INNER JOIN Payroll p ON p.Id = pd.PayrollId WHERE pd.EmployeeId = @EmployeeId AND pd.TenantId = @TenantId AND p.PayrollMonth = @Month AND p.PayrollYear = @Year",
+    "GetLatestPayrollPeriod": "SELECT TOP 1 p.PayrollMonth AS Month, p.PayrollYear AS Year FROM Payroll p INNER JOIN PayrollDetail pd ON pd.PayrollId = p.Id WHERE pd.EmployeeId = @EmployeeId AND pd.TenantId = @TenantId ORDER BY p.PayrollYear DESC, p.PayrollMonth DESC",
+
 
     "GetMonthlyPayrollDeductions": "SELECT d.Name, d.DeductionCode, pdd.Amount FROM PayrollDetailDeduction pdd INNER JOIN Deduction d ON d.Id = pdd.DeductionId INNER JOIN PayrollDetail pd ON pd.Id = pdd.PayrollDetailId INNER JOIN Payroll p ON p.Id = pd.PayrollId WHERE pd.EmployeeId = @EmployeeId AND pd.TenantId = @TenantId AND p.PayrollMonth = @Month AND p.PayrollYear = @Year",
     "GetPaySlipIncomes": "SELECT i.Name AS Description, pdi.Amount FROM PayrollDetailIncome pdi INNER JOIN Income i ON i.Id = pdi.IncomeId WHERE pdi.PayrollDetailId = @PaySlipId",

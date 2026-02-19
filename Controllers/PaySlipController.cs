@@ -6,131 +6,131 @@ using MobileWebApi.Constants;
 
 namespace MobileWebApi.Controllers
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    [Authorize]
-    public class PaySlipController : TenantBaseController
-    {
-        private readonly IPaySlipService _paySlipService;
+	[Route("api/[controller]")]
+	[ApiController]
+	[Authorize]
+	public class PaySlipController : TenantBaseController
+	{
+		private readonly IPaySlipService _paySlipService;
 
-        public PaySlipController(
-            IPaySlipService paySlipService, 
-            ITenantContext tenantContext,
-            ILogger<PaySlipController> logger)
-            : base(tenantContext, logger)
-        {
-            _paySlipService = paySlipService;
-        }
+		public PaySlipController(
+			IPaySlipService paySlipService,
+			ITenantContext tenantContext,
+			ILogger<PaySlipController> logger)
+			: base(tenantContext, logger)
+		{
+			_paySlipService = paySlipService;
+		}
 
-        /// <summary>
-        /// Get list of pay slips for a user
-        /// POST: api/payslip/list
-        /// Note: Regular users can only see their own payslips. HR/TenantAdmin can see all.
-        /// </summary>
-        /// <param name="request">Filter parameters from mobile app</param>
-        /// <returns>List of pay slips</returns>
-        //[HttpPost("list")]
-        //public async Task<IActionResult> GetPaySlips([FromBody] PaySlipListRequest request)
-        //{
-        //    // Validate user access - regular users can only see their own payslips
-        //    try
-        //    {
-        //        request.user = GetValidatedUserId(request.user);
-        //    }
-        //    catch (Services.TenantAccessException)
-        //    {
-        //        return UserAccessDenied();
-        //    }
+		/// <summary>
+		/// Get list of pay slips for a user
+		/// POST: api/payslip/list
+		/// Note: Regular users can only see their own payslips. HR/TenantAdmin can see all.
+		/// </summary>
+		/// <param name="request">Filter parameters from mobile app</param>
+		/// <returns>List of pay slips</returns>
+		//[HttpPost("list")]
+		//public async Task<IActionResult> GetPaySlips([FromBody] PaySlipListRequest request)
+		//{
+		//    // Validate user access - regular users can only see their own payslips
+		//    try
+		//    {
+		//        request.user = GetValidatedUserId(request.user);
+		//    }
+		//    catch (Services.TenantAccessException)
+		//    {
+		//        return UserAccessDenied();
+		//    }
 
-        //    Logger.LogInformation(LogMessages.PaySlip.FetchingPaySlips, request.user);
-        //    var result = await _paySlipService.GetPaySlipsAsync(request);
+		//    Logger.LogInformation(LogMessages.PaySlip.FetchingPaySlips, request.user);
+		//    var result = await _paySlipService.GetPaySlipsAsync(request);
 
-        //    if (result.Success)
-        //    {
-        //        return Ok(result);
-        //    }
+		//    if (result.Success)
+		//    {
+		//        return Ok(result);
+		//    }
 
-        //    return BadRequest(result);
-        //}
+		//    return BadRequest(result);
+		//}
 
-        /// <summary>
-        /// Get list of pay slips using GET method with query parameters
-        /// GET: api/payslip
-        /// Note: Regular users can only see their own payslips. HR/TenantAdmin can see all.
-        /// </summary>
-        [HttpGet]
-        public async Task<IActionResult> GetPaySlipsGet(
-            [FromQuery] int user,
-            [FromQuery] int? organization = null,
-            [FromQuery] int? year = null,
-            [FromQuery] int? month = null)
-        {
-            // Validate tenant access - use user's org if not specified
-            var validatedOrgId = GetValidatedOrganisationId(organization);
-            
-            // Validate user access - regular users can only see their own payslips
-            int validatedUserId;
-            try
-            {
-                validatedUserId = GetValidatedUserId(user);
-            }
-            catch (Services.TenantAccessException)
-            {
-                return UserAccessDenied();
-            }
-            
-            Logger.LogInformation(LogMessages.PaySlip.FetchingPaySlips, validatedUserId);
+		/// <summary>
+		/// Get list of pay slips using GET method with query parameters
+		/// GET: api/payslip
+		/// Note: Regular users can only see their own payslips. HR/TenantAdmin can see all.
+		/// </summary>
+		[HttpGet]
+		public async Task<IActionResult> GetPaySlipsGet(
+			[FromQuery] int user,
+			[FromQuery] int? organization = null,
+			[FromQuery] int? year = null,
+			[FromQuery] int? month = null)
+		{
+			// Validate tenant access - use user's org if not specified
+			var validatedOrgId = GetValidatedOrganisationId(organization);
 
-            var request = new PaySlipListRequest
-            {
-                user = validatedUserId,
-                organization = validatedOrgId,
-                year = year,
-                month = month
-            };
+			// Validate user access - regular users can only see their own payslips
+			int validatedUserId;
+			try
+			{
+				validatedUserId = GetValidatedUserId(user);
+			}
+			catch (Services.TenantAccessException)
+			{
+				return UserAccessDenied();
+			}
 
-            var result = await _paySlipService.GetPaySlipsAsync(request);
+			Logger.LogInformation(LogMessages.PaySlip.FetchingPaySlips, validatedUserId);
 
-            if (result.Success)
-            {
-                return Ok(result);
-            }
+			var request = new PaySlipListRequest
+			{
+				user = validatedUserId,
+				organization = validatedOrgId,
+				year = year,
+				month = month
+			};
 
-            return BadRequest(result);
-        }
+			var result = await _paySlipService.GetPaySlipsAsync(request);
 
-        /// <summary>
-        /// Get detailed pay slip by ID
-        /// GET: api/payslip/{id}
-        /// Note: Regular users can only see their own payslips. HR/TenantAdmin can see all.
-        /// </summary>
-        /// <param name="id">Pay slip ID</param>
-        /// <param name="user">User ID</param>
-        /// <returns>Pay slip details</returns>
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetPaySlipById(int id, [FromQuery] int user)
-        {
-            // Validate user access - regular users can only see their own payslips
-            int validatedUserId;
-            try
-            {
-                validatedUserId = GetValidatedUserId(user);
-            }
-            catch (Services.TenantAccessException)
-            {
-                return UserAccessDenied();
-            }
+			if (result.Success)
+			{
+				return Ok(result);
+			}
 
-            Logger.LogInformation(LogMessages.PaySlip.FetchingPaySlipById, id);
-            var result = await _paySlipService.GetPaySlipByIdAsync(validatedUserId, id);
+			return BadRequest(result);
+		}
 
-            if (result.Success)
-            {
-                return Ok(result);
-            }
+		/// <summary>
+		/// Get detailed pay slip by ID
+		/// GET: api/payslip/{id}
+		/// Note: Regular users can only see their own payslips. HR/TenantAdmin can see all.
+		/// </summary>
+		/// <param name="id">Pay slip ID</param>
+		/// <param name="user">User ID</param>
+		/// <returns>Pay slip details</returns>
+		[HttpGet("{id}")]
+		public async Task<IActionResult> GetPaySlipById(int id, [FromQuery] int user)
+		{
+			// Validate user access - regular users can only see their own payslips
+			int validatedUserId;
+			try
+			{
+				validatedUserId = GetValidatedUserId(user);
+			}
+			catch (Services.TenantAccessException)
+			{
+				return UserAccessDenied();
+			}
 
-            return NotFound(result);
-        }
+			Logger.LogInformation(LogMessages.PaySlip.FetchingPaySlipById, id);
+			var result = await _paySlipService.GetPaySlipByIdAsync(validatedUserId, id);
+
+			if (result.Success)
+			{
+				return Ok(result);
+			}
+
+			return NotFound(result);
+		}
 
 		/// <summary>
 		/// Get pay slip by ID using POST
@@ -322,8 +322,32 @@ namespace MobileWebApi.Controllers
 				return Ok(result);
 
 			return BadRequest(result);
-		}
-	}
+			}
+			[HttpGet("last-month-payroll")]
+			public async Task<IActionResult> GetLastMonthPayroll([FromQuery] int user)
+			{
+				int validatedUserId;
 
-}
+				try
+				{
+					validatedUserId = GetValidatedUserId(user);
+				}
+				catch
+				{
+					return UserAccessDenied();
+				}
+
+				var result =
+					await _paySlipService
+						.GetLastMonthPaymentSummaryAsync(validatedUserId);
+
+				if (result.Success)
+					return Ok(result);
+
+				return BadRequest(result);
+			}
+
+		}
+
+	}
 

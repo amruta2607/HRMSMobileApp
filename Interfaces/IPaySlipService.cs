@@ -17,6 +17,8 @@ namespace MobileWebApi.Interfaces
 		Task<PaySlipDownloadResponse> DownloadPaySlipByMonthYearAsync(
 			PaySlipDownloadByMonthYearRequest request);
 		Task<PaySlipWithWeekOff?> GetPaySlipAsync(int employeeId, int tenantId, int month, int year);
+		Task<MonthlyPaymentSummaryResponse>GetLastMonthPaymentSummaryAsync(int userId);
+
 	}
 }
 
