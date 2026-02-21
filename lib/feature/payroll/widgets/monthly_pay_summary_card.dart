@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
 
+import 'package:intl/intl.dart';
+
+import '../model/monthly_summary_model.dart';
+
 class MonthlyPaySummaryCard extends StatefulWidget {
   final double scale;
-  final String amount;
+  final MonthlySummaryModel? data;
+  final bool isLoading;
+  final DateTime monthYear;
 
   const MonthlyPaySummaryCard({
     super.key,
     required this.scale,
-    required this.amount,
+    this.data,
+    this.isLoading = false,
+    required this.monthYear,
   });
 
   @override
@@ -18,6 +26,31 @@ class MonthlyPaySummaryCard extends StatefulWidget {
 class _MonthlyPaySummaryCardState extends State<MonthlyPaySummaryCard> {
   bool isExpanded = false;
 
+  String _formatAmount(double amount) {
+    // Convert to string to avoid floating point math issues
+    String str = amount.toString();
+    if (str.contains('.')) {
+      List<String> parts = str.split('.');
+      String whole = parts[0];
+      String decimal = parts[1];
+
+      // Truncate to 2 decimal places
+      if (decimal.length > 2) {
+        decimal = decimal.substring(0, 2);
+      }
+
+      // Remove trailing zeros from decimal part if any
+      if (decimal == "00" || decimal == "0") {
+        return whole;
+      } else if (decimal.endsWith('0')) {
+        return "$whole.${decimal.substring(0, 1)}";
+      }
+
+      return "$whole.$decimal";
+    }
+    return str;
+  }
+
   Widget _row(String title, String value, double scale,
       {bool bold = false}) {
     return Padding(
@@ -25,13 +58,15 @@ class _MonthlyPaySummaryCardState extends State<MonthlyPaySummaryCard> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontWeight:
-              bold ? FontWeight.w600 : FontWeight.w400,
-              fontSize: 14 * scale,
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontWeight:
+                bold ? FontWeight.w600 : FontWeight.w400,
+                fontSize: 14 * scale,
+              ),
             ),
           ),
           Text(
@@ -51,6 +86,7 @@ class _MonthlyPaySummaryCardState extends State<MonthlyPaySummaryCard> {
   @override
   Widget build(BuildContext context) {
     final scale = widget.scale;
+    final data = widget.data;
 
     return Container(
       width: double.infinity,
@@ -81,7 +117,7 @@ class _MonthlyPaySummaryCardState extends State<MonthlyPaySummaryCard> {
               MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "Monthly Pay Summary",
+                  "Monthly Pay Summary ",
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w600,
@@ -101,8 +137,12 @@ class _MonthlyPaySummaryCardState extends State<MonthlyPaySummaryCard> {
           SizedBox(height: 12 * scale),
 
           /// Main Amount
-          Text(
-            widget.amount,
+          widget.isLoading
+              ? const CircularProgressIndicator()
+              : Text(
+            data != null
+                ? "₹${_formatAmount(data!.takeHomePay)}"
+                : "₹0",
             style: TextStyle(
               fontFamily: 'Inter',
               fontWeight: FontWeight.w700,
@@ -110,29 +150,28 @@ class _MonthlyPaySummaryCardState extends State<MonthlyPaySummaryCard> {
             ),
           ),
 
-          if (isExpanded) ...[
+          if (isExpanded && data != null) ...[
             SizedBox(height: 20 * scale),
 
             /// Earnings
-            _row("Basic Salary", "₹50,000", scale),
-            _row("House Rent Allowance", "₹20,000", scale),
-            _row("Travel Allowance", "₹5,000", scale),
-            _row("Bonus", "₹10,000", scale),
+            ...data!.incomes.map((income) => _row(
+                income.name, "₹${_formatAmount(income.amount)}", scale)),
 
             SizedBox(height: 8 * scale),
             Divider(),
-            _row("Total Earnings", "₹85,000", scale, bold: true),
+            _row("Total Earnings", "₹${_formatAmount(data!.gross)}", scale,
+                bold: true),
 
             SizedBox(height: 16 * scale),
 
             /// Deductions
-            _row("Provident Fund", "₹9,000", scale),
-            _row("Income Tax", "₹12,750", scale),
-            _row("Professional Tax", "₹3,000", scale),
+            ...data!.deductions.map((deduction) => _row(deduction.name,
+                "₹${_formatAmount(deduction.amount)}", scale)),
 
             SizedBox(height: 8 * scale),
             Divider(),
-            _row("Total Deductions", "₹24,750", scale,
+            _row("Total Deductions", "₹${_formatAmount(data!.totalDeduction)}",
+                scale,
                 bold: true),
           ],
         ],

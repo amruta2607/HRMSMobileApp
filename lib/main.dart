@@ -5,6 +5,7 @@ import 'package:overlay_support/overlay_support.dart';
 
 import 'core/Theme/app_colors.dart';
 import 'core/Utils/services/ navigation_service.dart';
+import 'core/Utils/services/notification_service.dart';
 import 'firebase_options.dart';
 import 'feature/Profile/controller/profile_controller.dart';
 import 'feature/Splash/splash_screen.dart';
@@ -16,6 +17,8 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  await NotificationService.initialize();
 
   runApp(
     MultiProvider(

@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
+import 'package:geolocator/geolocator.dart';
+import '../../../../feature/Attendance/model/geofencing_model.dart';
 import '../../../../feature/Attendance/model/attendance_punch_in_out_model.dart';
 import '../../../../feature/Attendance/model/weekoverview.dart';
 import '../../../../feature/Home/model/attendance_status_model.dart';
@@ -394,4 +396,53 @@ class AttendanceService {
     }
   }
 
+  // ===================================================
+  // GEOFENCING
+  // ===================================================
+  static Future<GeofencingModel?> getGeofencingDetails() async {
+    try {
+      final token = await TokenStorage.getToken();
+      if (token == null) return null;
+
+      final uri = Uri.parse(BaseUrls.geofencingByTenant);
+      print(' GEOFENCING API URL => $uri');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'accept': '*/*',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print(' GEOFENCING STATUS => ${response.statusCode}');
+      print(' GEOFENCING RESPONSE => ${response.body}');
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        return GeofencingModel.fromJson(decoded);
+      }
+    } catch (e) {
+      print(' GEOFENCING ERROR => $e');
+    }
+    return null;
+  }
+
+  static bool isWithinRadius({
+    required double currentLat,
+    required double currentLng,
+    required double branchLat,
+    required double branchLng,
+    required double radius,
+  }) {
+    final distanceInMeters = Geolocator.distanceBetween(
+      currentLat,
+      currentLng,
+      branchLat,
+      branchLng,
+    );
+
+    print(' DISTANCE: $distanceInMeters meters, RADIUS: $radius meters');
+    return distanceInMeters <= radius;
+  }
 }

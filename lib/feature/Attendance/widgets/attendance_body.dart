@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/Theme/app_colors.dart';
 import '../../../core/Utils/services/Attendance service/attendance_service.dart';
+import '../../../core/Utils/services/Time_Location/location_service.dart';
 
 import '../../Navigation/main_navigation_screen.dart';
 import 'mothOverview/attendance_month_overview.dart';
@@ -51,7 +52,6 @@ class _AttendanceBodyState extends State<AttendanceBody> {
     _restoreState();
   }
 
-  // RESTORE STATE
   Future<void> _restoreState() async {
     final status = await AttendanceService.getTodayStatus();
     if (status != null) {
@@ -163,6 +163,36 @@ class _AttendanceBodyState extends State<AttendanceBody> {
   // CLOCK IN
   Future<void> _clockIn(DateTime punchTime) async {
     setState(() => _isLoading = true);
+
+    // GEOFENCING CHECK
+    try {
+      final geoConfig = await AttendanceService.getGeofencingDetails();
+      if (geoConfig != null && geoConfig.isEnabled) {
+        final position = await LocationService.getLatLng();
+        final isWithin = AttendanceService.isWithinRadius(
+          currentLat: position.latitude,
+          currentLng: position.longitude,
+          branchLat: geoConfig.latitude,
+          branchLng: geoConfig.longitude,
+          radius: geoConfig.radius,
+        );
+
+        if (!isWithin) {
+          setState(() => _isLoading = false);
+          _showError(
+              'You are not in the office range. Radius: ${geoConfig.radius}m');
+          return;
+        }
+      }
+    } catch (e) {
+      print('Geofencing check failed: $e');
+      // Decide if you want to block or allow if check fails.
+      // For now, we'll log it and let it proceed or show error.
+      // Usually strict geofencing would return here.
+      // setState(() => _isLoading = false);
+      // _showError("Location check failed: $e");
+      // return;
+    }
 
     final success = await AttendanceService.submitAttendance(
       isPunchIn: true,

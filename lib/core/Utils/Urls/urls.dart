@@ -20,6 +20,7 @@ class BaseUrls {
       "$base/apipunch/attendance/get-attendance-summery";
 
   static const String attendanceStatus = "$base/api/attendance/status";
+  static const String geofencingByTenant = "$base/api/geofencing/by-tenant";
 
 
   // PROFILE
@@ -39,5 +40,11 @@ class BaseUrls {
 
   // Payroll
   static const String providentFund = "$base/api/PaySlip/provident-fund";
+  static const String monthlySummary = "$base/api/PaySlip/monthly-summary";
+
+  // Pay Slip
+  static const String paySlipList = "$base/api/PaySlip";
+  static const String downloadPaySlip = "$base/api/PaySlip/download";
+
 
 }

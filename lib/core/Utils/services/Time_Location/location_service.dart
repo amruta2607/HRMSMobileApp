@@ -5,10 +5,10 @@ class LocationService {
   static String? _cachedLocation;
   static Position? _cachedPosition;
 
-  static Future<bool> ensurePermissionGranted() async {
+  static Future<bool> ensurePermissionGranted({bool requestIfDenied = true}) async {
     LocationPermission permission = await Geolocator.checkPermission();
 
-    if (permission == LocationPermission.denied) {
+    if (permission == LocationPermission.denied && requestIfDenied) {
       permission = await Geolocator.requestPermission();
     }
 
@@ -38,13 +38,18 @@ class LocationService {
     return true;
   }
 
-  static Future<String> getLocation({bool forceRefresh = false}) async {
+  static Future<String> getLocation({
+    bool forceRefresh = false,
+    bool requestPermissionIfDenied = true,
+  }) async {
     try {
       if (_cachedLocation != null && !forceRefresh) {
         return _cachedLocation!;
       }
 
-      final permissionGranted = await ensurePermissionGranted();
+      final permissionGranted = await ensurePermissionGranted(
+        requestIfDenied: requestPermissionIfDenied,
+      );
       if (!permissionGranted) {
         return 'Permission denied';
       }
@@ -83,8 +88,13 @@ class LocationService {
   }
 
 
-  static Future<Position> getLatLng({bool forceRefresh = false}) async {
-    final permissionGranted = await ensurePermissionGranted();
+  static Future<Position> getLatLng({
+    bool forceRefresh = false,
+    bool requestPermissionIfDenied = true,
+  }) async {
+    final permissionGranted = await ensurePermissionGranted(
+      requestIfDenied: requestPermissionIfDenied,
+    );
     if (!permissionGranted) {
       throw Exception('Permission denied');
     }

@@ -65,6 +65,7 @@ class DisputeScreen extends StatelessWidget {
                           fontSize: 18 * scale,
                           fontWeight: FontWeight.w700,
                           color: AppColors.textDark,
+
                         ),
                       ),
                     ],

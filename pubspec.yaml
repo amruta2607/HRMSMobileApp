@@ -30,6 +30,8 @@ dependencies:
   overlay_support: ^2.1.0
   cupertino_icons: ^1.0.8
   file_picker: ^8.0.0
+  path_provider: ^2.1.2
+  open_file: ^3.3.2
 
 dev_dependencies:
   flutter_test:

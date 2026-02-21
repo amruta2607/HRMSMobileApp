@@ -55,7 +55,10 @@ class _AttendanceHeaderState extends State<AttendanceHeader>
   void _refreshLocation() {
     LocationService.clearCache();
     setState(() {
-      _locationFuture = LocationService.getLocation(forceRefresh: true);
+      _locationFuture = LocationService.getLocation(
+        forceRefresh: true,
+        requestPermissionIfDenied: false, // Don't annoy user if hidden/resuming
+      );
     });
   }
 

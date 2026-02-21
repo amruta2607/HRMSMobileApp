@@ -39,17 +39,17 @@ class _HomeScreenState extends State<HomeScreen>
     if (state == AppLifecycleState.resumed) {
       LocationService.clearCache();
       _permissionChecked = false;
-      _checkLocationPermission();
+      _checkLocationPermission(requestIfDenied: false);
     }
   }
 
-  Future<void> _checkLocationPermission() async {
+  Future<void> _checkLocationPermission({bool requestIfDenied = true}) async {
     if (_permissionChecked) return;
     _permissionChecked = true;
 
     // 1️⃣ Permission
     final permissionGranted =
-    await LocationService.ensurePermissionGranted();
+    await LocationService.ensurePermissionGranted(requestIfDenied: requestIfDenied);
 
     if (!permissionGranted && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
