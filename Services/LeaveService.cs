@@ -82,6 +82,19 @@ namespace MobileWebApi.Services
 					var invalidDatesStr = string.Join(", ", invalidDates.Select(d => d.ToString("yyyy-MM-dd")));
 					return Fail($"Cannot apply leave on week offs or holidays: {invalidDatesStr}");
 				}
+				// -----------------------------
+				// Prevent duplicate / overlapping leave
+				// -----------------------------
+				var hasOverlap = await _leaveRepository.HasOverlappingLeaveAsync(
+					employeeId.Value,
+					request.startdate,
+					request.enddate
+				);
+
+				if (hasOverlap)
+				{
+					return Fail("Leave already requested for this date.");
+				}
 
 				// -----------------------------
 				// Calculate leave balance & duration

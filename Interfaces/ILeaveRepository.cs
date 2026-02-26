@@ -10,9 +10,15 @@ namespace MobileWebApi.Interfaces
         Task<IEnumerable<LeaveRequest>> GetLeaveRequestsAsync(int? organisationId, int? employeeId, int? leaveTypeId);
         Task<IEnumerable<LeaveRequest>> GetLeaveRequestsByEmployeeIdAsync(int employeeId);
         Task<bool> UpdateLeaveRequestStatusAsync(int id, int statusId, string statusText, int updateUserId);
-        
-        // Leave Balance operations
-        Task<IEnumerable<LeaveBalance>> GetLeaveBalanceByEmployeeIdAsync(int employeeId);
+		Task<bool> HasOverlappingLeaveAsync(
+			int employeeId,
+			DateTime fromDate,
+			DateTime toDate
+		);
+
+
+		// Leave Balance operations
+		Task<IEnumerable<LeaveBalance>> GetLeaveBalanceByEmployeeIdAsync(int employeeId);
         Task<LeaveBalance?> GetLeaveBalanceAsync(int employeeId, int leaveTypeId);
         Task<bool> UpdateLeaveBalanceAsync(int employeeId, int leaveTypeId, decimal newBalance, int updateUserId);
         

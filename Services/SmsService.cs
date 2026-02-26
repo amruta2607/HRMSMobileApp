@@ -164,71 +164,82 @@ namespace MobileWebApi.Services
             }
         }
 
-        private async Task<bool> SendViaMsg91(string mobileNumber, string otp)
-        {
-            if (_smsSettings.Msg91 == null || 
-                string.IsNullOrEmpty(_smsSettings.Msg91.ApiKey))
-            {
-                _logger.LogError(LogMessages.Sms.Msg91SettingsNotConfigured);
-                return false;
-            }
+		private async Task<bool> SendViaMsg91(string mobileNumber, string otp)
+		{
+			if (_smsSettings.Msg91 == null ||
+				string.IsNullOrEmpty(_smsSettings.Msg91.ApiKey) ||
+				string.IsNullOrEmpty(_smsSettings.Msg91.TemplateId))
+			{
+				_logger.LogError(LogMessages.Sms.Msg91SettingsNotConfigured);
+				return false;
+			}
 
-            try
-            {
-                using var httpClient = new HttpClient();
-                httpClient.Timeout = TimeSpan.FromSeconds(30);
+			try
+			{
+				using var httpClient = new HttpClient
+				{
+					Timeout = TimeSpan.FromSeconds(30)
+				};
 
-                // MSG91 OTP API endpoint
-                var apiKey = _smsSettings.Msg91.ApiKey;
-                var senderId = _smsSettings.Msg91.SenderId ?? "OTPSMS";
-                var message = $"Your OTP for login is {otp}. Valid for 5 minutes. Do not share this OTP with anyone.";
-                
-                // Format: +91XXXXXXXXXX (country code + 10 digits)
-                var formattedMobile = $"+91{mobileNumber}";
+				// MSG91 OTP v5 endpoint
+				var url = "https://control.msg91.com/api/v5/otp";
 
-                // MSG91 SendOTP API (Method 1: Simple GET request)
-                var url = $"https://control.msg91.com/api/sendotp.php?authkey={Uri.EscapeDataString(apiKey)}&mobile={Uri.EscapeDataString(formattedMobile)}&message={Uri.EscapeDataString(message)}&sender={Uri.EscapeDataString(senderId)}&otp={Uri.EscapeDataString(otp)}&otp_expiry=5";
+				// Headers
+				httpClient.DefaultRequestHeaders.Add("authkey", _smsSettings.Msg91.ApiKey);
+				httpClient.DefaultRequestHeaders.Accept.Add(
+					new MediaTypeWithQualityHeaderValue("application/json"));
 
-                _logger.LogInformation(LogMessages.Sms.SendingSmsViaMsg91, MaskMobileNumber(mobileNumber));
+				// Payload
+				var payload = new
+				{
+					mobile = $"91{mobileNumber}",
+					otp = otp,
+					otp_expiry = 5,
+					template_id = _smsSettings.Msg91.TemplateId
+				};
 
-                var response = await httpClient.GetAsync(url);
-                var responseContent = await response.Content.ReadAsStringAsync();
+				var content = new StringContent(
+					JsonSerializer.Serialize(payload),
+					Encoding.UTF8,
+					"application/json");
 
-                if (response.IsSuccessStatusCode)
-                {
-                    // MSG91 returns JSON or plain text response
-                    // Check if response contains "success" or "OTP sent"
-                    if (responseContent.Contains("success", StringComparison.OrdinalIgnoreCase) ||
-                        responseContent.Contains("OTP sent", StringComparison.OrdinalIgnoreCase) ||
-                        responseContent.Contains("\"type\":\"success\"", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _logger.LogInformation(LogMessages.Sms.Msg91SmsSentSuccessfully, 
-                            MaskMobileNumber(mobileNumber), responseContent);
-                        return true;
-                    }
-                    else
-                    {
-                        _logger.LogWarning(LogMessages.Sms.Msg91ApiReturnedSuccessButFailure, 
-                            responseContent);
-                        return false;
-                    }
-                }
-                else
-                {
-                    _logger.LogError(LogMessages.Sms.Msg91ApiReturnedError, 
-                        response.StatusCode, responseContent);
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, LogMessages.Sms.ExceptionWhileSendingSmsViaMsg91, 
-                    MaskMobileNumber(mobileNumber));
-                return false;
-            }
-        }
+				_logger.LogInformation(
+					LogMessages.Sms.SendingSmsViaMsg91,
+					MaskMobileNumber(mobileNumber));
 
-        private static string MaskMobileNumber(string mobileNumber)
+				var response = await httpClient.PostAsync(url, content);
+				var responseContent = await response.Content.ReadAsStringAsync();
+
+				if (response.IsSuccessStatusCode &&
+					responseContent.Contains("\"type\":\"success\"", StringComparison.OrdinalIgnoreCase))
+				{
+					_logger.LogInformation(
+						LogMessages.Sms.Msg91SmsSentSuccessfully,
+						MaskMobileNumber(mobileNumber),
+						responseContent);
+
+					return true;
+				}
+
+				_logger.LogError(
+					LogMessages.Sms.Msg91ApiReturnedError,
+					response.StatusCode,
+					responseContent);
+
+				return false;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(
+					ex,
+					LogMessages.Sms.ExceptionWhileSendingSmsViaMsg91,
+					MaskMobileNumber(mobileNumber));
+
+				return false;
+			}
+		}
+
+		private static string MaskMobileNumber(string mobileNumber)
         {
             if (string.IsNullOrEmpty(mobileNumber) || mobileNumber.Length <= 4)
                 return "****";

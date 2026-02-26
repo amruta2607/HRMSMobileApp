@@ -261,6 +261,21 @@ namespace MobileWebApi.Repositories
 
 			return result.ToList();
 		}
+		public async Task<bool> HasOverlappingLeaveAsync(
+	int employeeId,
+	DateTime fromDate,
+	DateTime toDate)
+		{
+			using var conn = _context.CreateConnection();
+			string query = _queryProvider.Get("CheckOverlappingLeave");
+
+			return await conn.ExecuteScalarAsync<bool>(query, new
+			{
+				EmployeeId = employeeId,
+				FromDate = fromDate,
+				ToDate = toDate
+			});
+		}
 	}
 }
 
