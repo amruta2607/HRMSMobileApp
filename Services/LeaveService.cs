@@ -1,4 +1,4 @@
-﻿using MobileWebApi.Constants;
+using MobileWebApi.Constants;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using Microsoft.Extensions.Logging;
@@ -65,13 +65,16 @@ namespace MobileWebApi.Services
 				// -----------------------------
 				// Get configured week offs & holidays
 				// -----------------------------
+				var fromDate = request.startdate.Date;
+				var toDate = request.enddate.Date;
+
 				var dayOffs = await _leaveRepository.GetTenantDayOffsAsync(request.organization ?? 0); // returns List<int> for DayOffId (1=Sunday etc.)
-				var holidays = await _leaveRepository.GetHolidaysAsync(request.organization ?? 0, request.startdate, request.enddate);
+				var holidays = await _leaveRepository.GetHolidaysAsync(request.organization ?? 0, fromDate, toDate);
 
 				// -----------------------------
 				// Determine valid leave dates
 				// -----------------------------
-				var requestedDates = EachDate(request.startdate, request.enddate).ToList();
+				var requestedDates = EachDate(fromDate, toDate).ToList();
 
 				var invalidDates = requestedDates
 					.Where(d => dayOffs.Contains((int)d.DayOfWeek) || holidays.Any(h => h.Date.Date == d.Date))
@@ -87,13 +90,13 @@ namespace MobileWebApi.Services
 				// -----------------------------
 				var hasOverlap = await _leaveRepository.HasOverlappingLeaveAsync(
 					employeeId.Value,
-					request.startdate,
-					request.enddate
+					fromDate,
+					toDate
 				);
 
 				if (hasOverlap)
 				{
-					return Fail("Leave already requested for this date.");
+					return Fail(LeaveMessages.LeaveAlreadyAppliedForSelectedDate);
 				}
 
 				// -----------------------------
@@ -121,12 +124,12 @@ namespace MobileWebApi.Services
 					EmployeeId = employeeId.Value,
 					LeaveTypeId = request.leave_type,
 					LeaveBalance = availableBalance,
-					FromDate = request.startdate,
-					ToDate = request.enddate,
+					FromDate = fromDate,
+					ToDate = toDate,
 					Duration = duration,
 					Description = request.reason,
 					CurrentAction = STATUS_SUBMIT,
-					LeaveRequestStatus = STATUS_ID_SUBMIT,
+					LeaveRequestStatus = STATUS_ID_PENDING,
 					OrganisationId = request.organization,
 					InsertUserId = request.user,
 					InsertDate = DateTime.Now

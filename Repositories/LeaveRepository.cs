@@ -262,9 +262,9 @@ namespace MobileWebApi.Repositories
 			return result.ToList();
 		}
 		public async Task<bool> HasOverlappingLeaveAsync(
-	int employeeId,
-	DateTime fromDate,
-	DateTime toDate)
+			int employeeId,
+			DateTime fromDate,
+			DateTime toDate)
 		{
 			using var conn = _context.CreateConnection();
 			string query = _queryProvider.Get("CheckOverlappingLeave");
@@ -272,8 +272,8 @@ namespace MobileWebApi.Repositories
 			return await conn.ExecuteScalarAsync<bool>(query, new
 			{
 				EmployeeId = employeeId,
-				FromDate = fromDate,
-				ToDate = toDate
+				FromDate = fromDate.Date,
+				ToDate = toDate.Date
 			});
 		}
 	}
