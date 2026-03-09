@@ -276,6 +276,21 @@ namespace MobileWebApi.Repositories
 				ToDate = toDate.Date
 			});
 		}
+
+		public async Task<string?> GetLastLeaveRequestNumberAsync(string today, int organisationId)
+		{
+			using var conn = _context.CreateConnection();
+			string query = _queryProvider.Get("GetLastLeaveRequestNumber");
+
+			
+
+			return await conn.QueryFirstOrDefaultAsync<string>(query,
+				new
+				{
+					Today = today,
+					TenantId = organisationId
+				});
+		}
 	}
 }
 

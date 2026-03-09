@@ -113,8 +113,7 @@ namespace MobileWebApi.Services
 				// -----------------------------
 				// Generate leave request number
 				// -----------------------------
-				var requestNumber = await _leaveRepository.GenerateLeaveRequestNumberAsync(request.organization ?? 0);
-
+				var requestNumber = await GenerateLeaveRequestNumberAsync(request.organization ?? 0);
 				// -----------------------------
 				// Create leave request
 				// -----------------------------
@@ -338,5 +337,26 @@ namespace MobileWebApi.Services
 
 		private LeaveRequestResponse Success(string message, object? data = null) =>
 			new LeaveRequestResponse { Success = true, Message = message, Data = data, TotalRecords = 1 };
+		private async Task<string> GenerateLeaveRequestNumberAsync(int organisationId)
+		{
+			var today = DateTime.Now.ToString("yyyyMMdd");
+
+			var lastNumber = await _leaveRepository
+				.GetLastLeaveRequestNumberAsync(today, organisationId);
+
+			int nextSequence = 1;
+
+			if (!string.IsNullOrEmpty(lastNumber))
+			{
+				var seqPart = lastNumber.Substring(lastNumber.Length - 4);
+
+				if (int.TryParse(seqPart, out int seq))
+				{
+					nextSequence = seq + 1;
+				}
+			}
+
+			return $"LVR/{today}{nextSequence:D4}";
+		}
 	}
 }
