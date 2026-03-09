@@ -341,110 +341,110 @@ namespace MobileWebApi.Controllers
             });
         }
 
-        /// <summary>
-        /// Helper method to verify OTP and login
-        /// </summary>
-        private async Task<IActionResult> VerifyOtpAndLogin(string normalizedMobile, string otp)
-        {
-            // Validate OTP format (6 digits)
-            if (otp.Length != 6 || !otp.All(char.IsDigit))
-            {
-                return BadRequest(new MobileLoginResponse
-                {
-                    success = false,
-                        message = OtpMessages.InvalidOtpFormat
-                });
-            }
+		/// <summary>
+		/// Helper method to verify OTP and login
+		/// </summary>
+		private async Task<IActionResult> VerifyOtpAndLogin(string normalizedMobile, string otp)
+		{
+			// Validate OTP format (6 digits)
+			if (otp.Length != 6 || !otp.All(char.IsDigit))
+			{
+				return BadRequest(new
+				{
+					Success = false,
+					Message = OtpMessages.InvalidOtpFormat
+				});
+			}
 
-            _logger.LogInformation(LogMessages.Otp.OtpVerificationAttempt, MaskMobileNumber(normalizedMobile));
+			_logger.LogInformation(LogMessages.Otp.OtpVerificationAttempt, MaskMobileNumber(normalizedMobile));
 
-            // Check if user exists in Users table by MobileNumber
-            var user = await _userRepository.GetUserByMobileAsync(normalizedMobile);
+			// Check if user exists in Users table by MobileNumber
+			var user = await _userRepository.GetUserByMobileAsync(normalizedMobile);
 
-            if (user == null || !user.IsActive)
-            {
-                _logger.LogWarning(LogMessages.AuthAdditional.MobileNumberNotRegistered, MaskMobileNumber(normalizedMobile));
-                return BadRequest(new MobileLoginResponse
-                {
-                    success = false,
-                        message = OtpMessages.MobileNumberNotRegistered
-                });
-            }
+			if (user == null || !user.IsActive)
+			{
+				_logger.LogWarning(LogMessages.AuthAdditional.MobileNumberNotRegistered, MaskMobileNumber(normalizedMobile));
+				return BadRequest(new
+				{
+					Success = false,
+					Message = OtpMessages.MobileNumberNotRegistered
+				});
+			}
 
-            // Validate OTP
-            bool isValidOtp = _otpService.ValidateMobileOtp(normalizedMobile, otp);
+			// Validate OTP
+			bool isValidOtp = _otpService.ValidateMobileOtp(normalizedMobile, otp);
 
-            if (!isValidOtp)
-            {
-                _logger.LogWarning(LogMessages.Otp.InvalidOtpForMobile, MaskMobileNumber(normalizedMobile));
-                return BadRequest(new MobileLoginResponse
-                {
-                    success = false,
-                        message = OtpMessages.InvalidOrExpiredOtp
-                });
-            }
+			if (!isValidOtp)
+			{
+				_logger.LogWarning(LogMessages.Otp.InvalidOtpForMobile, MaskMobileNumber(normalizedMobile));
+				return BadRequest(new
+				{
+					Success = false,
+					Message = OtpMessages.InvalidOrExpiredOtp
+				});
+			}
 
-            // Get Employee using SystemUserId from Users table
-            Employee? employee = null;
-            if (user.UserId > 0)
-            {
-                employee = await _employeeRepository.GetEmployeebyUserIdAsync(user.UserId);
-            }
+			// Get Employee using SystemUserId from Users table
+			Employee? employee = null;
 
-            // Use Employee data if available, otherwise use User data
-            int employeeId = employee?.Id ?? 0;
-            int tenantId = employee?.OrganisationId ?? user.OrganisationId;
-            string name = employee?.Name ?? 
-                         (!string.IsNullOrEmpty(employee?.FirstName) 
-                            ? $"{employee?.FirstName} {employee?.LastName}".Trim()
-                            : user.DisplayName ?? user.Username);
+			if (user.UserId > 0)
+			{
+				employee = await _employeeRepository.GetEmployeebyUserIdAsync(user.UserId);
+			}
 
-            // Verify Employee is active if Employee record exists
-            if (employee != null && !employee.IsEmployeeActive)
-            {
-                _logger.LogWarning(LogMessages.AuthAdditional.EmployeeInactiveForMobile, 
-                    MaskMobileNumber(normalizedMobile), employee.Id);
-                return BadRequest(new MobileLoginResponse
-                {
-                    success = false,
-                        message = OtpMessages.EmployeeAccountInactive
-                });
-            }
+			// Use Employee data if available, otherwise use User data
+			int employeeId = employee?.Id ?? 0;
+			int tenantId = employee?.OrganisationId ?? user.OrganisationId;
 
-            // Generate JWT token for employee/user
-            string token = _tokenService.GenerateTokenForEmployee(
-                employeeId,
-                tenantId,
-                name,
-                user.UserId
-            );
+			string name = employee?.Name ??
+						  (!string.IsNullOrEmpty(employee?.FirstName)
+							  ? $"{employee?.FirstName} {employee?.LastName}".Trim()
+							  : user.DisplayName ?? user.Username);
 
-            // Remove OTP from cache after successful verification (already done in ValidateMobileOtp)
-            _otpService.RemoveMobileOtp(normalizedMobile);
+			// Verify Employee is active if Employee record exists
+			if (employee != null && !employee.IsEmployeeActive)
+			{
+				_logger.LogWarning(LogMessages.AuthAdditional.EmployeeInactiveForMobile,
+					MaskMobileNumber(normalizedMobile), employee.Id);
 
-            _logger.LogInformation(LogMessages.Otp.OtpVerifiedSuccessfully, 
-                MaskMobileNumber(normalizedMobile), user.UserId, employeeId);
+				return BadRequest(new
+				{
+					Success = false,
+					Message = OtpMessages.EmployeeAccountInactive
+				});
+			}
 
-            return Ok(new MobileLoginResponse
-            {
-                success = true,
-                message = OtpMessages.LoginSuccessful,
-                token = token,
-                user = new UserData
-                {
-                    employeeId = employeeId,
-                    tenantId = tenantId,
-                    name = name
-                },
-                otpSent = false
-            });
-        }
+			// Get Tenant Configuration
+			var tenantConfig = await _tenantConfigurationRepository
+				.GetByTenantIdAsync(tenantId);
 
-        /// <summary>
-        /// Logout - Terminates the user session and invalidates authentication credentials/tokens
-        /// POST: api/auth/logout
-        /// </summary>
-        [Authorize]
+			// Generate JWT token
+			var token = _tokenService.GenerateToken(user);
+
+			// Remove OTP from cache
+			_otpService.RemoveMobileOtp(normalizedMobile);
+
+			_logger.LogInformation(LogMessages.Otp.OtpVerifiedSuccessfully,
+				MaskMobileNumber(normalizedMobile), user.UserId, employeeId);
+
+			return Ok(new TokenWithRefreshResponse
+			{
+				Success = true,
+				Message = AuthMessages.TokenGenerated,
+				Token = token,
+				TokenExpiry = _tokenService.GetTokenExpiry(),
+				UserId = user.UserId,
+				Username = user.Username,
+				OrganisationId = tenantId,
+				IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
+				IsGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false
+			});
+		}
+		/// <summary>
+		/// Logout - Terminates the user session and invalidates authentication credentials/tokens
+		/// POST: api/auth/logout
+		/// </summary>
+		[Authorize]
         [HttpPost("logout")]
         public async Task<IActionResult> Logout()
         {

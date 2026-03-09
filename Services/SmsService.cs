@@ -37,21 +37,19 @@ namespace MobileWebApi.Services
 
                 bool result = false;
 
-                switch (_smsSettings.Provider.ToLower())
-                {
-                    case "twilio":
-                        result = await SendViaTwilio(mobileNumber, otp);
-                        break;
-                    case "msg91":
-                        result = await SendViaMsg91(mobileNumber, otp);
-                        break;
-                    case "stub":
-                    default:
-                        result = await SendViaStub(mobileNumber, otp);
-                        break;
-                }
+				switch (_smsSettings.Provider.ToLower())
+				{
+					
+					case "web": // new provider
+						result = await SendViaWebSms(mobileNumber, otp);
+						break;
+					case "stub":
+					default:
+						result = await SendViaStub(mobileNumber, otp);
+						break;
+				}
 
-                if (result)
+				if (result)
                 {
                     _logger.LogInformation(LogMessages.Otp.SmsOtpSentSuccessfully, MaskMobileNumber(mobileNumber));
                 }
@@ -69,8 +67,47 @@ namespace MobileWebApi.Services
                 return false;
             }
         }
+		private async Task<bool> SendViaWebSms(string mobileNumber, string otp)
+		{
+			var s = _smsSettings.WebSms;
 
-        private async Task<bool> SendViaStub(string mobileNumber, string otp)
+			try
+			{
+				using var httpClient = new HttpClient();
+
+				var text = s.MessageTemplate.Replace("{#var#}", otp);
+
+				// Encode message
+				text = Uri.EscapeDataString(text);
+
+				var url = $"{s.BaseUrl}?user={s.Username}" +
+						  $"&password={s.Password}" +
+						  $"&senderid={s.SenderId}" +
+						  $"&channel={s.Channel}" +
+						  $"&DCS=0" +
+						  $"&flashsms=0" +
+						  $"&number={mobileNumber}" +
+						  $"&text={text}" +
+						  $"&route={s.Route}" +
+						  $"&peid={s.Peid}" +
+						  $"&DLTTemplateId={s.DltTemplateId}";
+
+				var response = await httpClient.GetAsync(url);
+
+				var body = await response.Content.ReadAsStringAsync();
+
+				_logger.LogInformation("SMS Response: {Body}", body);
+
+				return response.IsSuccessStatusCode;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "SMS sending failed");
+				return false;
+			}
+		}
+
+		private async Task<bool> SendViaStub(string mobileNumber, string otp)
         {
             // STUB IMPLEMENTATION - Log OTP instead of sending
             _logger.LogInformation(LogMessages.Otp.StubModeSmsOtp, 
@@ -239,12 +276,20 @@ namespace MobileWebApi.Services
 			}
 		}
 
-		private static string MaskMobileNumber(string mobileNumber)
-        {
-            if (string.IsNullOrEmpty(mobileNumber) || mobileNumber.Length <= 4)
-                return "****";
+		//private static string MaskMobileNumber(string mobileNumber)
+  //      {
+  //          if (string.IsNullOrEmpty(mobileNumber) || mobileNumber.Length <= 4)
+  //              return "****";
 
-            return new string('*', mobileNumber.Length - 4) + mobileNumber[^4..];
-        }
-    }
+  //          return new string('*', mobileNumber.Length - 4) + mobileNumber[^4..];
+		//}
+		private static string MaskMobileNumber(string mobile)
+		{
+			if (mobile.Length < 4)
+				return "****";
+
+			return mobile.Substring(0, 2) + "******" + mobile.Substring(mobile.Length - 2);
+		}
+	}
+	
 }
