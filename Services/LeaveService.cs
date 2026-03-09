@@ -15,23 +15,35 @@ namespace MobileWebApi.Services
 		// -----------------------------
 		// Status strings
 		// -----------------------------
+		// -----------------------------
+		// Status strings
+		// -----------------------------
 		private const string STATUS_SUBMIT = "Submit";
 		private const string STATUS_APPROVED = "Approved";
 		private const string STATUS_REJECTED = "Rejected";
-		private const string STATUS_CANCELLED = "Cancelled";
 		private const string STATUS_WITHDRAW = "Withdrawn";
+		private const string STATUS_CANCELLED = "Canceled";
 		private const string STATUS_PENDING = "Pending";
+		private const string STATUS_PENDING_FOR_APPROVAL = "Pending For Approval";
+		private const string STATUS_CANCELLATION_APPROVED = "Cancellation Approved";
+		private const string STATUS_CANCELLATION_REJECTED = "Cancellation Rejected";
 
 
+		// -----------------------------
+		// Status IDs in DB
+		// -----------------------------
 		// -----------------------------
 		// Status IDs in DB
 		// -----------------------------
 		private const int STATUS_ID_SUBMIT = 1;
 		private const int STATUS_ID_APPROVED = 2;
 		private const int STATUS_ID_REJECTED = 3;
-		private const int STATUS_ID_CANCELLED = 5;
 		private const int STATUS_ID_WITHDRAW = 4;
+		private const int STATUS_ID_CANCELLED = 5;
 		private const int STATUS_ID_PENDING = 6;
+		private const int STATUS_ID_PENDING_FOR_APPROVAL = 7;
+		private const int STATUS_ID_CANCELLATION_APPROVED = 8;
+		private const int STATUS_ID_CANCELLATION_REJECTED = 9;
 
 		public LeaveService(
 			ILeaveRepository leaveRepository,
@@ -223,9 +235,12 @@ namespace MobileWebApi.Services
 				STATUS_ID_SUBMIT => STATUS_SUBMIT,
 				STATUS_ID_APPROVED => STATUS_APPROVED,
 				STATUS_ID_REJECTED => STATUS_REJECTED,
-				STATUS_ID_CANCELLED => STATUS_CANCELLED,
 				STATUS_ID_WITHDRAW => STATUS_WITHDRAW,
+				STATUS_ID_CANCELLED => STATUS_CANCELLED,
 				STATUS_ID_PENDING => STATUS_PENDING,
+				STATUS_ID_PENDING_FOR_APPROVAL => STATUS_PENDING_FOR_APPROVAL,
+				STATUS_ID_CANCELLATION_APPROVED => STATUS_CANCELLATION_APPROVED,
+				STATUS_ID_CANCELLATION_REJECTED => STATUS_CANCELLATION_REJECTED,
 				_ => "Unknown"
 			};
 		}
