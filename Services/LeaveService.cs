@@ -347,6 +347,47 @@ namespace MobileWebApi.Services
 			};
 		}
 
+		// =====================================================
+		// GET LEAVE HISTORY
+		// =====================================================
+		public async Task<LeaveHistoryResponse> GetLeaveHistoryAsync(int userId)
+		{
+			try
+			{
+				var targetYear = DateTime.Now.Year;
+
+				var employeeId = await _leaveRepository.GetEmployeeIdByUserIdAsync(userId);
+				if (!employeeId.HasValue)
+					return new LeaveHistoryResponse
+					{
+						Success = false,
+						Message = LeaveMessages.EmployeeNotFoundForUser
+					};
+
+				var history = (await _leaveRepository.GetLeaveHistoryAsync(employeeId.Value, targetYear)).ToList();
+
+				var leavesAvailed = history.Count(h => h.Status == STATUS_APPROVED);
+
+				return new LeaveHistoryResponse
+				{
+					Success = true,
+					Message = "Leave history fetched successfully",
+					LeavesAvailed = leavesAvailed,
+					Year = targetYear,
+					Data = history
+				};
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "GetLeaveHistoryAsync failed");
+				return new LeaveHistoryResponse
+				{
+					Success = false,
+					Message = ex.Message
+				};
+			}
+		}
+
 		private LeaveRequestResponse Fail(string message) =>
 			new LeaveRequestResponse { Success = false, Message = message };
 

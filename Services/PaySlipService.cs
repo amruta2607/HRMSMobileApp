@@ -1,4 +1,4 @@
-﻿using Azure.Core;
+using Azure.Core;
 using Microsoft.EntityFrameworkCore;
 using MobileWebApi.Constants;
 using MobileWebApi.Data;
@@ -762,6 +762,78 @@ GetLastMonthPaymentSummaryAsync(int userId)
 				_logger.LogError(ex, "Error downloading payslip by month/year");
 
 				return new PaySlipDownloadResponse
+				{
+					Success = false,
+					Message = ex.Message
+				};
+			}
+		}
+
+		public async Task<PaySlipYearsResponse> GetPaySlipYearsAsync(int userId)
+		{
+			try
+			{
+				var employee = await _employeeRepository.GetEmployeebyUserIdAsync(userId);
+				if (employee == null)
+				{
+					return new PaySlipYearsResponse
+					{
+						Success = false,
+						Message = "Employee not found"
+					};
+				}
+
+				int currentYear = DateTime.Now.Year;
+				var years = new[] { currentYear, currentYear - 1, currentYear - 2 }.ToList();
+
+				return new PaySlipYearsResponse
+				{
+					Success = true,
+					Message = "Years fetched successfully",
+					Years = years
+				};
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error fetching payslip years");
+				return new PaySlipYearsResponse
+				{
+					Success = false,
+					Message = ex.Message
+				};
+			}
+		}
+
+		public async Task<PaySlipMonthsResponse> GetPaySlipMonthsByYearAsync(int userId, int year)
+		{
+			try
+			{
+				var (employeeId, tenantId) = await _paySlipRepository.GetEmployeeIdAndTenantByUserIdAsync(userId);
+
+				if (!employeeId.HasValue || !tenantId.HasValue)
+				{
+					return new PaySlipMonthsResponse
+					{
+						Success = false,
+						Message = "Employee not found"
+					};
+				}
+
+				var months = (await _paySlipRepository.GetPaySlipMonthsByYearAsync(
+					employeeId.Value, tenantId.Value, year)).ToList();
+
+				return new PaySlipMonthsResponse
+				{
+					Success = true,
+					Message = "Months fetched successfully",
+					Year = year,
+					Months = months
+				};
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error fetching payslip months for year {Year}", year);
+				return new PaySlipMonthsResponse
 				{
 					Success = false,
 					Message = ex.Message

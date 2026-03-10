@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
@@ -52,6 +52,39 @@ namespace MobileWebApi.Controllers
 
 		//    return BadRequest(result);
 		//}
+
+		/// <summary>
+		/// Get available years for payslip dropdown (from employee join date to current year)
+		/// GET: api/payslip/years
+		/// </summary>
+		[HttpGet("years")]
+		public async Task<IActionResult> GetPaySlipYears()
+		{
+			var userId = CurrentUserId;
+			if (!userId.HasValue)
+				return Unauthorized(new { Success = false, Message = "User not authenticated" });
+
+			var result = await _paySlipService.GetPaySlipYearsAsync(userId.Value);
+			return result.Success ? Ok(result) : BadRequest(result);
+		}
+
+		/// <summary>
+		/// Get months that have payslips for the selected year
+		/// GET: api/payslip/months?year=2026
+		/// </summary>
+		[HttpGet("months")]
+		public async Task<IActionResult> GetPaySlipMonths([FromQuery] int year)
+		{
+			var userId = CurrentUserId;
+			if (!userId.HasValue)
+				return Unauthorized(new { Success = false, Message = "User not authenticated" });
+
+			if (year < 2000 || year > DateTime.Now.Year)
+				return BadRequest(new { Success = false, Message = "Invalid year" });
+
+			var result = await _paySlipService.GetPaySlipMonthsByYearAsync(userId.Value, year);
+			return result.Success ? Ok(result) : BadRequest(result);
+		}
 
 		/// <summary>
 		/// Get list of pay slips using GET method with query parameters

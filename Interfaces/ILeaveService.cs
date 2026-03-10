@@ -39,7 +39,7 @@ namespace MobileWebApi.Interfaces
         /// </summary>
         Task<LeaveBalanceResponse> GetLeaveBalanceAsync(int userId, int? organization);
 		Task<LeaveRequestResponse> WithdrawLeaveRequestAsync(int id, int userId, string? reason);
-
+		Task<LeaveHistoryResponse> GetLeaveHistoryAsync(int userId);
 	}
 }
 

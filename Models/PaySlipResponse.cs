@@ -161,4 +161,25 @@ namespace MobileWebApi.Models
         public decimal LossPayDays { get; set; }
         public decimal OverTimeDays { get; set; }
     }
+
+    public class PaySlipYearsResponse
+    {
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+        public List<int>? Years { get; set; }
+    }
+
+    public class PaySlipMonthsResponse
+    {
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+        public int Year { get; set; }
+        public List<PaySlipMonthItem>? Months { get; set; }
+    }
+
+    public class PaySlipMonthItem
+    {
+        public int Month { get; set; }
+        public string? MonthName { get; set; }
+    }
 }

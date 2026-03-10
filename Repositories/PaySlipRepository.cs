@@ -233,5 +233,23 @@ WHERE tc.TenantId = @TenantId
 			return dayOffId; // Monday–Saturday
 		}
 
+		public async Task<IEnumerable<PaySlipMonthItem>> GetPaySlipMonthsByYearAsync(int employeeId, int tenantId, int year)
+		{
+			using var conn = _context.CreateConnection();
+			string query = _queryProvider.Get("GetPaySlipMonthsByYear");
+
+			var months = await conn.QueryAsync<int>(query, new
+			{
+				EmployeeId = employeeId,
+				TenantId = tenantId,
+				Year = year
+			});
+
+			return months.Select(m => new PaySlipMonthItem
+			{
+				Month = m,
+				MonthName = $"{new DateTime(year, m, 1):MMMM} {year}"
+			});
+		}
 	}
 }

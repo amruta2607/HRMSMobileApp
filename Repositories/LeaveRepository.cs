@@ -282,14 +282,46 @@ namespace MobileWebApi.Repositories
 			using var conn = _context.CreateConnection();
 			string query = _queryProvider.Get("GetLastLeaveRequestNumber");
 
-			
-
 			return await conn.QueryFirstOrDefaultAsync<string>(query,
 				new
 				{
 					Today = today,
 					TenantId = organisationId
 				});
+		}
+
+		public async Task<IEnumerable<LeaveHistoryItem>> GetLeaveHistoryAsync(int employeeId, int year)
+		{
+			using var conn = _context.CreateConnection();
+			string query = _queryProvider.Get("GetLeaveHistory");
+
+			var rows = await conn.QueryAsync<(DateTime LeaveDate, string LeaveType, string Reason, int LeaveRequestStatus)>(
+				query, new { EmployeeId = employeeId, Year = year });
+
+			return rows.Select(r => new LeaveHistoryItem
+			{
+				LeaveDate = r.LeaveDate,
+				LeaveType = r.LeaveType,
+				Reason = r.Reason,
+				Status = MapStatusIdToText(r.LeaveRequestStatus)
+			});
+		}
+
+		private static string MapStatusIdToText(int statusId)
+		{
+			return statusId switch
+			{
+				1 => "Submit",
+				2 => "Approved",
+				3 => "Rejected",
+				4 => "Withdrawn",
+				5 => "Canceled",
+				6 => "Pending",
+				7 => "Pending For Approval",
+				8 => "Cancellation Approved",
+				9 => "Cancellation Rejected",
+				_ => "Unknown"
+			};
 		}
 	}
 }

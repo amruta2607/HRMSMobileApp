@@ -31,5 +31,6 @@ namespace MobileWebApi.Interfaces
 		Task<IEnumerable<PaySlipLineItem>> GetPaySlipIncomesAsync(int paySlipId);
 		Task<IEnumerable<PaySlipLineItem>> GetPaySlipDeductionsAsync(int paySlipId);
 		Task<PaySlipWithWeekOff?> GetPaySlipWithWeekOffAsync(int employeeId, int tenantId, int month, int year);
+		Task<IEnumerable<PaySlipMonthItem>> GetPaySlipMonthsByYearAsync(int employeeId, int tenantId, int year);
 	}
 }

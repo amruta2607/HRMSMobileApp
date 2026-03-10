@@ -172,6 +172,30 @@ namespace MobileWebApi.Controllers
 		}
 
 		/// <summary>
+		/// Get leave history for the logged-in user (current year)
+		/// GET: api/leave/history
+		/// </summary>
+		[HttpGet("history")]
+		public async Task<IActionResult> GetLeaveHistory()
+		{
+			var userId = CurrentUserId;
+			if (!userId.HasValue)
+			{
+				return Unauthorized(new { Success = false, Message = "User not authenticated" });
+			}
+
+			Logger.LogInformation("Fetching leave history for user {UserId}", userId.Value);
+			var result = await _leaveService.GetLeaveHistoryAsync(userId.Value);
+
+			if (result.Success)
+			{
+				return Ok(result);
+			}
+
+			return BadRequest(result);
+		}
+
+		/// <summary>
 		/// Get leave balance for an employee
 		/// GET: api/leave/balance/?user=10
 		/// Note: Regular users can only see their own leave balance. HR/TenantAdmin can see all.
