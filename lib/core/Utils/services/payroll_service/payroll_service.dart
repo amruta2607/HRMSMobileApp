@@ -135,6 +135,62 @@ class PayrollService {
       return null;
     }
   }
+
+  static Future<LastMonthPayrollModel?> getLastMonthPayroll() async {
+    try {
+      final token = await TokenStorage.getToken();
+      if (token == null) {
+        print(' PAYROLL SERVICE: Token is NULL');
+        return null;
+      }
+
+      final userId = await _getUserId();
+      if (userId == null) {
+        print(' PAYROLL SERVICE: userId is NULL');
+        return null;
+      }
+
+      final uri = Uri.parse('${BaseUrls.lastMonthPayroll}?user=$userId');
+
+      print(' LAST MONTH PAYROLL API URL => $uri');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'accept': '*/*',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print(' LAST MONTH PAYROLL STATUS => ${response.statusCode}');
+      print(' LAST MONTH PAYROLL RESPONSE => ${response.body}');
+
+      if (response.statusCode == 401) {
+        print(' PAYROLL SERVICE: Token expired, logging out');
+        await TokenStorage.logoutAndNavigate();
+        return null;
+      }
+
+      if (response.statusCode != 200) {
+        print(' PAYROLL SERVICE: Non-200 status');
+        return null;
+      }
+
+      final decoded = jsonDecode(response.body);
+
+      if (decoded['success'] == true) {
+        return LastMonthPayrollModel.fromJson(decoded);
+      } else {
+        print(' PAYROLL SERVICE: API returned success=false');
+        return null;
+      }
+    } catch (e, s) {
+      print(' PAYROLL SERVICE ERROR => $e');
+      print(' STACKTRACE => $s');
+      return null;
+    }
+  }
+
   /// Returns the most recent PaySlipModel available for the user.
   /// Tries current year first, then falls back to the previous year.
   static Future<PaySlipModel?> getLatestPaySlip() async {
@@ -257,6 +313,59 @@ class PayrollService {
       print(' PAYROLL SERVICE ERROR (downloadPaySlip) => $e');
       print(' STACKTRACE => $s');
       return false;
+    }
+  }
+
+  static Future<List<int>?> getPaySlipYears() async {
+    try {
+      final token = await TokenStorage.getToken();
+      if (token == null) return null;
+
+      final response = await http.get(
+        Uri.parse(BaseUrls.paySlipYears),
+        headers: {
+          'accept': '*/*',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded['success'] == true) {
+          return List<int>.from(decoded['years']);
+        }
+      }
+      return null;
+    } catch (e) {
+      print(' PAYROLL SERVICE ERROR (getPaySlipYears) => $e');
+      return null;
+    }
+  }
+
+  static Future<List<PaySlipMonthModel>?> getPaySlipMonths(int year) async {
+    try {
+      final token = await TokenStorage.getToken();
+      if (token == null) return null;
+
+      final response = await http.get(
+        Uri.parse('${BaseUrls.paySlipMonths}?year=$year'),
+        headers: {
+          'accept': '*/*',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded['success'] == true) {
+          final List<dynamic> data = decoded['months'];
+          return data.map((json) => PaySlipMonthModel.fromJson(json)).toList();
+        }
+      }
+      return null;
+    } catch (e) {
+      print(' PAYROLL SERVICE ERROR (getPaySlipMonths) => $e');
+      return null;
     }
   }
 }

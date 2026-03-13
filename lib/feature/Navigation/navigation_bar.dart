@@ -45,26 +45,30 @@ class CustomNavigationBar extends StatelessWidget {
             onTap: () => onChanged(0),
           ),
           _NavItem(
-            imagePath: 'img/TaskNav.png',
-            label: 'Tasks',
+            imagePath: 'img/alert.png',
+            label: 'Alerts',
             active: currentIndex == 1,
             scale: scale,
             onTap: () => onChanged(1),
           ),
+
           _NavItem(
-            imagePath: 'img/NotificationNav.png',
-            label: 'Notifications',
+            imagePath: 'img/AttendanceNav.png',
+            label: 'Attendance',
             active: currentIndex == 2,
             scale: scale,
             onTap: () => onChanged(2),
           ),
+
           _NavItem(
-            imagePath: 'img/AttendanceNav.png',
-            label: 'Attendance',
+            imagePath: 'img/menu.png',
+            label: 'Menu',
             active: currentIndex == 3,
             scale: scale,
             onTap: () => onChanged(3),
           ),
+
+
         ],
       ),
     );

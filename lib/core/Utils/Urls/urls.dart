@@ -41,10 +41,20 @@ class BaseUrls {
   // Payroll
   static const String providentFund = "$base/api/PaySlip/provident-fund";
   static const String monthlySummary = "$base/api/PaySlip/monthly-summary";
+  static const String lastMonthPayroll = "$base/api/PaySlip/last-month-payroll";
 
   // Pay Slip
   static const String paySlipList = "$base/api/PaySlip";
+  static const String paySlipYears = "$base/api/PaySlip/years";
+  static const String paySlipMonths = "$base/api/PaySlip/months";
   static const String downloadPaySlip = "$base/api/PaySlip/download";
 
 
+// Holidays
+  static const String holidays = "$base/apipunch/holidays/get-holidays";
+
+  // Alerts
+  static const String alerts = "$base/api/Alert/user";
+  static const String approveAlert = "$base/api/Alert/approve-request";
+  static const String rejectAlert = "$base/api/Alert/reject-request";
 }

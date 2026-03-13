@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../Home/home_screen.dart';
-import '../Profile/profile_screen.dart';
 import '../Attendance/attendance_screen.dart';
+import 'package:altroz/feature/Alerts/alerts_screen.dart';
 import 'navigation_bar.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -13,8 +13,7 @@ class MainNavigationScreen extends StatefulWidget {
   });
 
   @override
-  State<MainNavigationScreen> createState() =>
-      _MainNavigationScreenState();
+  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
@@ -28,14 +27,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   final List<Widget> _screens = const [
     HomeScreen(),
-    SizedBox(), // Tasks placeholder
-    SizedBox(), // Notifications placeholder
+    AlertsScreen(),
     AttendanceScreen(),
+    Center(child: Text("Menu Screen")),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,

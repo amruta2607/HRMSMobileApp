@@ -38,3 +38,19 @@ class PaySlipModel {
     );
   }
 }
+class PaySlipMonthModel {
+  final int month;
+  final String monthName;
+
+  PaySlipMonthModel({
+    required this.month,
+    required this.monthName,
+  });
+
+  factory PaySlipMonthModel.fromJson(Map<String, dynamic> json) {
+    return PaySlipMonthModel(
+      month: json['month'] ?? 0,
+      monthName: json['monthName'] ?? '',
+    );
+  }
+}

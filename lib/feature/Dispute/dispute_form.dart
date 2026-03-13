@@ -97,8 +97,13 @@ class _DisputeFormState extends State<DisputeForm> {
 
       setState(() => _isLoading = false);
 
+      final msg = e.toString();
+      final isOnePerDay = msg.contains('one dispute') || msg.contains('already exists');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
+        SnackBar(
+          content: Text(isOnePerDay ? 'Only one dispute can be submitted per day' : msg.replaceFirst(RegExp(r'^Exception:\s*'), '')),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }

@@ -79,7 +79,7 @@ class LeaveService {
     }
   }
 
-  static Future<bool> submitLeaveApplication({
+  static Future<Map<String, dynamic>> submitLeaveApplication({
     required int leaveTypeId,
     required DateTime startDate,
     required DateTime endDate,
@@ -92,7 +92,7 @@ class LeaveService {
       final token = await TokenStorage.getToken();
       if (token == null) {
         print(' APPLY LEAVE: Token is NULL');
-        return false;
+        return {'success': false, 'message': 'Authentication token is missing'};
       }
 
       final userId = await _getUserId();
@@ -100,7 +100,7 @@ class LeaveService {
 
       if (userId == null || orgId == null) {
         print(' APPLY LEAVE: userId or orgId is NULL');
-        return false;
+        return {'success': false, 'message': 'User ID or Organization ID is missing'};
       }
 
       String attachmentString = "string"; // Default as per curl example if empty?
@@ -146,26 +146,29 @@ class LeaveService {
 
       if (response.statusCode == 401) {
         await TokenStorage.logoutAndNavigate();
-        return false;
+        return {'success': false, 'message': 'Session expired. Please login again.'};
       }
+
+      final decoded = jsonDecode(response.body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final decoded = jsonDecode(response.body);
-
         if (decoded is Map<String, dynamic>) {
           if (decoded.containsKey('success')) {
-            return decoded['success'] == true;
+            return {
+              'success': decoded['success'] == true,
+              'message': decoded['message'] ?? 'Leave applied successfully',
+            };
           }
         }
-        return true;
+        return {'success': true, 'message': 'Leave applied successfully'};
       }
 
-      return false;
+      return {'success': false, 'message': decoded['message'] ?? 'Failed with status ${response.statusCode}'};
 
     } catch (e, s) {
       print(' APPLY LEAVE ERROR => $e');
       print(' STACKTRACE => $s');
-      return false;
+      return {'success': false, 'message': 'An unexpected error occurred: $e'};
     }
   }
 

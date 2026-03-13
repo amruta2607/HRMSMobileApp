@@ -55,3 +55,22 @@ class SummaryItem {
     );
   }
 }
+class LastMonthPayrollModel {
+  final MonthlySummaryModel data;
+  final int payrollMonth;
+  final int payrollYear;
+
+  LastMonthPayrollModel({
+    required this.data,
+    required this.payrollMonth,
+    required this.payrollYear,
+  });
+
+  factory LastMonthPayrollModel.fromJson(Map<String, dynamic> json) {
+    return LastMonthPayrollModel(
+      data: MonthlySummaryModel.fromJson(json['data'] ?? {}),
+      payrollMonth: json['payrollMonth'] ?? 0,
+      payrollYear: json['payrollYear'] ?? 0,
+    );
+  }
+}

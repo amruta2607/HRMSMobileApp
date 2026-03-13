@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/Utils/services/payroll_service/payroll_service.dart';
+import '../all_payslips_screen/all_payslips_screen.dart';
 import '../model/pay_slip_model.dart';
 import 'package:intl/intl.dart';
 
@@ -187,8 +188,12 @@ class _RecentPaySlipsSectionState extends State<RecentPaySlipsSection> {
             alignment: Alignment.centerRight,
             child: InkWell(
               onTap: () {
-                // Navigate to full payslip screen - To be implemented or out of scope for now
-                // For now just show a snackbar or nothing
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AllPayslipsScreen(),
+                  ),
+                );
               },
               child: Row(
                 mainAxisSize: MainAxisSize.min,

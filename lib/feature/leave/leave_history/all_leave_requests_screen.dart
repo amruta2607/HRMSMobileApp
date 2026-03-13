@@ -5,6 +5,7 @@ import '../../Navigation/navigation_bar.dart';
 import '../../Reuse_Widgets/header_bg.dart';
 import '../../../core/Utils/services/leave_service/leave_service.dart';
 import '../model/leave_reuest_model.dart';
+import 'all_leaves_table.dart';
 
 class AllLeaveRequestsScreen extends StatefulWidget {
   const AllLeaveRequestsScreen({
@@ -102,23 +103,40 @@ class _AllLeaveRequestsScreenState extends State<AllLeaveRequestsScreen> {
 
             /// Content
             Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _leaves.isEmpty
-                  ? Center(
-                child: Text(
-                  "No leave application found",
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14 * scale,
-                    color: Colors.grey,
+              child: SingleChildScrollView(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _leaves.isEmpty
+                    ? Center(
+                  child: Text(
+                    "No leave application found",
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14 * scale,
+                      color: Colors.grey,
+                    ),
                   ),
+                )
+                    : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(20 * scale, 24 * scale, 20 * scale, 16 * scale),
+                      child: Text(
+                        "ALL LEAVES:",
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14 * scale,
+                          color: const Color(0xFF94A3B8),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    AllLeavesTable(leaves: _leaves),
+                    SizedBox(height: 24 * scale),
+                  ],
                 ),
-              )
-                  : RecentLeaveSection(
-                leaves: _leaves,
-                showLimited: false,
-                onRefreshNeeded: _loadLeaves,
               ),
             ),
           ],

@@ -123,145 +123,131 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
 
   void _showLeaveTypeDialog() {
     final width = MediaQuery.of(context).size.width;
+    final height = MediaQuery.of(context).size.height;
     final scale = width / 375;
 
     showDialog(
       context: context,
-      barrierColor: Colors.black87,
-      builder: (context) {
-        return Center(
+      useRootNavigator: true,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.6),
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.symmetric(horizontal: 24 * scale),
           child: Material(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16 * scale),
-            elevation: 0,
+            elevation: 24,
+            clipBehavior: Clip.antiAlias,
             child: Container(
               width: width * 0.85,
+              constraints: BoxConstraints(maxHeight: height * 0.6),
               padding: EdgeInsets.symmetric(vertical: 20 * scale),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16 * scale),
-              ),
               child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-              Padding(
-              padding:
-              EdgeInsets.symmetric(horizontal: 24 * scale),
-              child: Text(
-                "Select Leave Type:",
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 18 * scale,
-                  color: const Color(0xFF0F172A),
-                ),
-              ),
-            ),
-
-            SizedBox(height: 20 * scale),
-
-            Flexible(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: _leaveTypes.map((type) {
-                    final bool isSelected =
-                        _selectedLeaveType?.leaveTypeId ==
-                            type.leaveTypeId;
-
-                    return Padding(
-                      padding: EdgeInsets.only(
-                        left: 24 * scale,
-                        right: 24 * scale,
-                        bottom: 14 * scale,
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24 * scale),
+                    child: Text(
+                      "Select Leave Type:",
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18 * scale,
+                        color: const Color(0xFF0F172A),
                       ),
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedLeaveType = type;
-                          });
-                          Navigator.pop(context);
-                        },
-                        child: AnimatedContainer(
-                          duration:
-                          const Duration(milliseconds: 200),
-                          width: double.infinity,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16 * scale,
-                            vertical: 16 * scale,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? const Color(0xFFF1F5F9)
-                                : Colors.white,
-                            borderRadius:
-                            BorderRadius.circular(12 * scale),
+                    ),
+                  ),
+                  SizedBox(height: 20 * scale),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: _leaveTypes.map((type) {
+                          final bool isSelected =
+                              _selectedLeaveType?.leaveTypeId ==
+                                  type.leaveTypeId;
 
-                            border: Border.all(
-                              color:
-                              const Color(0xFF5D6063),
-                              width: 1,
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              left: 24 * scale,
+                              right: 24 * scale,
+                              bottom: 14 * scale,
                             ),
-
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black
-                                    .withOpacity(0.08),
-                                blurRadius: 8,
-                                offset:
-                                const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisAlignment:
-                            MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  type.leaveTypeName,
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontWeight:
-                                    FontWeight.w600,
-                                    fontSize:
-                                    14 * scale,
-                                    color:
-                                    const Color(
-                                        0xFF0F172A),
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedLeaveType = type;
+                                });
+                                Navigator.pop(dialogContext);
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                width: double.infinity,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 16 * scale,
+                                  vertical: 16 * scale,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? const Color(0xFFF1F5F9)
+                                      : Colors.white,
+                                  borderRadius:
+                                  BorderRadius.circular(12 * scale),
+                                  border: Border.all(
+                                    color: const Color(0xFF5D6063),
+                                    width: 1,
                                   ),
-                                  overflow:
-                                  TextOverflow.ellipsis,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        type.leaveTypeName,
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14 * scale,
+                                          color: const Color(0xFF0F172A),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8 * scale),
+                                    Text(
+                                      "${type.remainingBalance} days left",
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 13 * scale,
+                                        color: const Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              SizedBox(width: 8 * scale),
-                              Text(
-                                "${type.remainingBalance} days left",
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontWeight:
-                                  FontWeight.w500,
-                                  fontSize:
-                                  13 * scale,
-                                  color:
-                                  const Color(
-                                      0xFF64748B),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                            ),
+                          );
+                        }).toList(),
                       ),
-                    );
-                  }).toList(),
-                ),
+                    ),
+                  ),
+                ],
               ),
             ),
-
-          ],
-        ),
-        ),
-        ));
+          ),
+        );
       },
     );
   }
@@ -346,7 +332,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
     int duration =
         _endDate!.difference(_startDate!).inDays + 1;
 
-    final success =
+    final response =
     await LeaveService.submitLeaveApplication(
       leaveTypeId: _selectedLeaveType!.leaveTypeId,
       startDate: _startDate!,
@@ -361,12 +347,18 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
       _isSubmitting = false;
     });
 
-    if (success) {
+    if (!mounted) return;
+
+    if (response['success'] == true) {
       Navigator.push(
         context,
         MaterialPageRoute(
             builder: (context) =>
             const LeaveSuccessScreen()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response['message'] ?? "Failed to apply leave")),
       );
     }
   }

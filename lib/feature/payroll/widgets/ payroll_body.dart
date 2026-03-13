@@ -34,32 +34,20 @@ class _PayrollBodyState extends State<PayrollBody> {
     _loadMonthlySummaryFromLastPayroll();
   }
 
-  /// Fetches the latest available payslip for this user (across years),
-  /// then loads the monthly summary for that specific month/year.
   Future<void> _loadMonthlySummaryFromLastPayroll() async {
     setState(() => _isSummaryLoading = true);
 
     try {
-      // Get the user's most recent available payslip
-      final latestSlip = await PayrollService.getLatestPaySlip();
+      final lastMonthData = await PayrollService.getLastMonthPayroll();
 
-      if (latestSlip != null) {
-        _lastPayrollDate = DateTime(latestSlip.payrollYear, latestSlip.payrollMonth);
-
-        final summary = await PayrollService.getMonthlySummary(
-          month: latestSlip.payrollMonth,
-          year: latestSlip.payrollYear,
-        );
-
-        if (mounted) {
+      if (mounted) {
+        if (lastMonthData != null) {
           setState(() {
-            _monthlySummary = summary;
+            _monthlySummary = lastMonthData.data;
+            _lastPayrollDate = DateTime(lastMonthData.payrollYear, lastMonthData.payrollMonth);
             _isSummaryLoading = false;
           });
-        }
-      } else {
-        // No payslips found at all
-        if (mounted) {
+        } else {
           setState(() {
             _monthlySummary = null;
             _lastPayrollDate = DateTime.now();

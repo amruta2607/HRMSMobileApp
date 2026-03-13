@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../core/Theme/app_colors.dart';
 import '../../core/Utils/services/Time_Location/location_service.dart';
+import 'Widgets/home_up_next_section.dart';
 import 'widgets/home_header_section.dart';
 import 'widgets/home_workspace_section.dart';
-import 'widgets/home_up_next_section.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
