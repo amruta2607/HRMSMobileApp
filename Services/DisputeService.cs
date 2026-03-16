@@ -63,7 +63,7 @@ namespace MobileWebApi.Services
 				return new DisputeCategoryResponse
 				{
 					Success = true,
-					Message = "Dispute categories fetched successfully",
+					Message = DisputeMessages.DisputeCategoriesFetchedSuccessfully,
 					Data = categoryList
 				};
 			}
@@ -74,7 +74,7 @@ namespace MobileWebApi.Services
 				return new DisputeCategoryResponse
 				{
 					Success = false,
-					Message = "Something went wrong. Please contact the administration team.",
+					Message = GeneralMessages.SomethingWentWrongContactAdmin,
 					Data = null
 				};
 			}
@@ -92,7 +92,7 @@ namespace MobileWebApi.Services
 					return new DisputeSubmitResponse
 					{
 						Success = false,
-						Message = "Employee not found for the given user",
+						Message = DisputeMessages.EmployeeNotFoundForGivenUser,
 						Data = null
 					};
 				}
@@ -111,7 +111,7 @@ namespace MobileWebApi.Services
 					return new DisputeSubmitResponse
 					{
 						Success = false,
-						Message = "Invalid dispute date. Please provide a valid date (e.g., 2026-03-03)",
+						Message = DisputeMessages.InvalidDisputeDate,
 						Data = null
 					};
 				}
@@ -122,7 +122,7 @@ namespace MobileWebApi.Services
 					return new DisputeSubmitResponse
 					{
 						Success = false,
-						Message = "Dispute date cannot be a future date",
+						Message = DisputeMessages.DisputeDateCannotBeFuture,
 						Data = null
 					};
 				}
@@ -133,7 +133,7 @@ namespace MobileWebApi.Services
 					return new DisputeSubmitResponse
 					{
 						Success = false,
-						Message = "Description is required",
+						Message = DisputeMessages.DescriptionRequired,
 						Data = null
 					};
 				}
@@ -146,7 +146,7 @@ namespace MobileWebApi.Services
 					return new DisputeSubmitResponse
 					{
 						Success = false,
-						Message = "Employee not found",
+						Message = DisputeMessages.EmployeeNotFound,
 						Data = null
 					};
 				}
@@ -161,7 +161,7 @@ namespace MobileWebApi.Services
 					return new DisputeSubmitResponse
 					{
 						Success = false,
-						Message = "Only one dispute can be submitted per day. A dispute for this date already exists",
+						Message = DisputeMessages.OnlyOneDisputePerDay,
 						Data = null
 					};
 				}
@@ -199,7 +199,7 @@ namespace MobileWebApi.Services
 					return new DisputeSubmitResponse
 					{
 						Success = true,
-						Message = "Dispute submitted successfully",
+						Message = DisputeMessages.DisputeSubmittedSuccessfully,
 						Data = disputeDto
 					};
 				}
@@ -207,7 +207,7 @@ namespace MobileWebApi.Services
 				return new DisputeSubmitResponse
 				{
 					Success = false,
-					Message = "Failed to submit dispute",
+					Message = DisputeMessages.FailedToSubmitDispute,
 					Data = null
 				};
 			}
@@ -218,7 +218,7 @@ namespace MobileWebApi.Services
 				return new DisputeSubmitResponse
 				{
 					Success = false,
-					Message = "Something went wrong. Please contact the administration team.",
+					Message = GeneralMessages.SomethingWentWrongContactAdmin,
 					Data = null
 				};
 			}

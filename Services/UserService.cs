@@ -48,7 +48,7 @@ namespace MobileWebApi.Services
                 return new UserServiceResponse
                 {
                     Success = false,
-                    Message = $"Something went wrong. Please contact the administration team. (Error Code: {ExceptionCodes.User.GetUserById})",
+                    Message = string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.User.GetUserById),
                     Data = null
                 };
             }
@@ -83,7 +83,7 @@ namespace MobileWebApi.Services
                 return new UserServiceResponse
                 {
                     Success = false,
-                    Message = $"Something went wrong. Please contact the administration team. (Error Code: {ExceptionCodes.User.GetUserByLogin})",
+                    Message = string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.User.GetUserByLogin),
                     Data = null
                 };
             }
@@ -111,7 +111,7 @@ namespace MobileWebApi.Services
                 return new UserListResponse
                 {
                     Success = false,
-                    Message = $"Something went wrong. Please contact the administration team. (Error Code: {ExceptionCodes.User.GetAllUsers})",
+                    Message = string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.User.GetAllUsers),
                     Data = null,
                     TotalRecords = 0
                 };
@@ -178,7 +178,7 @@ namespace MobileWebApi.Services
                 return new UserServiceResponse
                 {
                     Success = false,
-                    Message = $"Something went wrong. Please contact the administration team. (Error Code: {ExceptionCodes.User.CreateUser})",
+                    Message = string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.User.CreateUser),
                     Data = null
                 };
             }
@@ -226,7 +226,7 @@ namespace MobileWebApi.Services
                 return new UserServiceResponse
                 {
                     Success = false,
-                    Message = $"Something went wrong. Please contact the administration team. (Error Code: {ExceptionCodes.User.UpdateUser})",
+                    Message = string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.User.UpdateUser),
                     Data = null
                 };
             }
@@ -273,7 +273,7 @@ namespace MobileWebApi.Services
                 return new UserServiceResponse
                 {
                     Success = false,
-                    Message = $"Something went wrong. Please contact the administration team. (Error Code: {ExceptionCodes.User.DeleteUser})",
+                    Message = string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.User.DeleteUser),
                     Data = null
                 };
             }
@@ -333,7 +333,7 @@ namespace MobileWebApi.Services
                 return new UserServiceResponse
                 {
                     Success = false,
-                    Message = $"Something went wrong. Please contact the administration team. (Error Code: {ExceptionCodes.User.DeactivateUser})",
+                    Message = string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.User.DeactivateUser),
                     Data = null
                 };
             }

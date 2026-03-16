@@ -272,7 +272,7 @@
     "MobileDashboard_GetLatestTrainings": "SELECT TOP 5 Id,Name,StartDate,EndDate,Description,Location FROM Training WHERE TenantId = @TenantId ORDER BY StartDate DESC",
     "MobileDashboard_GetLatestAnnouncements": "SELECT TOP 5 Id, Name, Message, Date FROM Announcement WHERE TenantId = @TenantId ORDER BY Date DESC",
     "MobileDashboard_GetLatestEvents": "SELECT TOP 5 Id,Name,StartDate,EndDate,Description,Location FROM Event WHERE TenantId = @TenantId ORDER BY StartDate DESC",
-    "MobileDashboard_GetLatestHolidays": "SELECT TOP 5 Id, Name,Description Date FROM Holiday WHERE TenantId = @TenantId ORDER BY Date DESC"
+    "MobileDashboard_GetLatestHolidays": "SELECT TOP 5 Id, Name,Description,Date FROM Holiday WHERE TenantId = @TenantId ORDER BY Date DESC"
 
   }
 }

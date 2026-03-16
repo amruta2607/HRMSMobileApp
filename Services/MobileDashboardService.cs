@@ -32,7 +32,12 @@ namespace MobileWebApi.Services
                 using IDbConnection conn = _context.CreateConnection();
                 var sql = _queries.Get("MobileDashboard_GetLatestTrainings");
                 var result = await conn.QueryAsync<TrainingDto>(sql, new { TenantId = tenantId });
-                return result.ToList();
+
+                var today = DateTime.Today;
+                return result
+                    .Where(t => t.EndDate.Date >= today)
+                    .OrderBy(t => t.StartDate)
+                    .ToList();
             }
             catch (Exception ex)
             {
@@ -48,7 +53,12 @@ namespace MobileWebApi.Services
                 using IDbConnection conn = _context.CreateConnection();
                 var sql = _queries.Get("MobileDashboard_GetLatestAnnouncements");
                 var result = await conn.QueryAsync<AnnouncementDto>(sql, new { TenantId = tenantId });
-                return result.ToList();
+
+                var today = DateTime.Today;
+                return result
+                    .Where(a => a.Date.Date >= today)
+                    .OrderBy(a => a.Date)
+                    .ToList();
             }
             catch (Exception ex)
             {
@@ -64,7 +74,12 @@ namespace MobileWebApi.Services
                 using IDbConnection conn = _context.CreateConnection();
                 var sql = _queries.Get("MobileDashboard_GetLatestEvents");
                 var result = await conn.QueryAsync<EventDto>(sql, new { TenantId = tenantId });
-                return result.ToList();
+
+                var today = DateTime.Today;
+                return result
+                    .Where(e => e.EndDate.Date >= today)
+                    .OrderBy(e => e.StartDate)
+                    .ToList();
             }
             catch (Exception ex)
             {
@@ -80,7 +95,12 @@ namespace MobileWebApi.Services
                 using IDbConnection conn = _context.CreateConnection();
                 var sql = _queries.Get("MobileDashboard_GetLatestHolidays");
                 var result = await conn.QueryAsync<HolidayDto>(sql, new { TenantId = tenantId });
-                return result.ToList();
+
+                var today = DateTime.Today;
+                return result
+                    .Where(h => h.Date.Date >= today)
+                    .OrderBy(h => h.Date)
+                    .ToList();
             }
             catch (Exception ex)
             {

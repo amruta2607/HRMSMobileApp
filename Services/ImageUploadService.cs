@@ -1,3 +1,4 @@
+using MobileWebApi.Constants;
 using MobileWebApi.Interfaces;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
@@ -61,7 +62,7 @@ public class ImageUploadService : IImageUploadService
 		var thumbPath = Path.Combine(uploadDir, $"{employeeId:D8}_{random}_t.jpg");
 		CreateThumbnail(fullPath, thumbPath);
 
-		_logger.LogInformation("Employee image saved: {Path}", fullPath);
+		_logger.LogInformation(LogMessages.ImageUpload.ImageSavedSuccessfully, fullPath);
 
 		// Return relative path for DB
 		return $"Image/Employee/{folderName}/{fileName}";

@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+@using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MobileWebApi.Constants;
 using MobileWebApi.Interfaces;
@@ -33,7 +33,7 @@ namespace MobileWebApi.Controllers
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error fetching latest events for mobile dashboard.");
+                Logger.LogError(ex, LogMessages.MobileDashboard.ErrorFetchingLatestEvents);
                 return StatusCode(StatusCodes.Status500InternalServerError, new
                 {
                     message = GeneralMessages.UnexpectedError

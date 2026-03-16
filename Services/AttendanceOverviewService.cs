@@ -62,7 +62,7 @@ namespace MobileWebApi.Services
                     return new AttendanceOverviewResponse
                     {
                         Success = false,
-                        Message = "No employee found for the specified UserId.",
+                        Message = EmployeeMessages.EmployeeNotFoundForUserId,
                         Data = null
                     };
                 }

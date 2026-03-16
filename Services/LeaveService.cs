@@ -168,7 +168,7 @@ namespace MobileWebApi.Services
 				}
 				catch (Exception ex)
 				{
-					_logger.LogWarning(ex, "Approval workflow not configured");
+					_logger.LogWarning(ex, LogMessages.ApprovalWorkflow.ApprovalWorkflowNotConfigured);
 				}
 
 				return Success(LeaveMessages.LeaveRequestSubmittedSuccessfully, new { Id = newId, Number = requestNumber });
@@ -176,7 +176,7 @@ namespace MobileWebApi.Services
 			catch (Exception ex)
 			{
 				_logger.LogException(ExceptionCodes.Leave.CreateLeaveRequest, nameof(CreateLeaveRequestAsync), ex, request.user);
-				return Fail($"Something went wrong. Please contact the administration team. (Error Code: {ExceptionCodes.Leave.CreateLeaveRequest})");
+				return Fail(string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.Leave.CreateLeaveRequest));
 			}
 		}
 
@@ -226,7 +226,7 @@ namespace MobileWebApi.Services
 			catch (Exception ex)
 			{
 				_logger.LogException(ExceptionCodes.Leave.GetLeaveRequests, nameof(GetLeaveRequestsAsync), ex, request.user);
-				return Fail($"Something went wrong. Please contact the administration team. (Error Code: {ExceptionCodes.Leave.GetLeaveRequests})");
+				return Fail(string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.Leave.GetLeaveRequests));
 			}
 		}
 		private string MapDbStatusIdToText(int statusId)
@@ -372,7 +372,7 @@ namespace MobileWebApi.Services
 				return new LeaveHistoryResponse
 				{
 					Success = true,
-					Message = "Leave history fetched successfully",
+					Message = LeaveMessages.LeaveHistoryFetchedSuccessfully,
 					LeavesAvailed = leavesAvailed,
 					Year = targetYear,
 					Data = history
@@ -384,7 +384,7 @@ namespace MobileWebApi.Services
 				return new LeaveHistoryResponse
 				{
 					Success = false,
-					Message = $"Something went wrong. Please contact the administration team. (Error Code: {ExceptionCodes.Leave.GetLeaveHistory})"
+					Message = string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.Leave.GetLeaveHistory)
 				};
 			}
 		}

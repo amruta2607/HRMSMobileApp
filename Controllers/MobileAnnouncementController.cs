@@ -33,7 +33,7 @@ namespace MobileWebApi.Controllers
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error fetching latest announcements for mobile dashboard.");
+                Logger.LogError(ex, LogMessages.MobileDashboard.ErrorFetchingLatestAnnouncements);
                 return StatusCode(StatusCodes.Status500InternalServerError, new
                 {
                     message = GeneralMessages.UnexpectedError

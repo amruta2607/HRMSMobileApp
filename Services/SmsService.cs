@@ -94,9 +94,9 @@ namespace MobileWebApi.Services
 
 				var response = await httpClient.GetAsync(url);
 
-				var body = await response.Content.ReadAsStringAsync();
+                var body = await response.Content.ReadAsStringAsync();
 
-				_logger.LogInformation("SMS Response: {Body}", body);
+                _logger.LogInformation(LogMessages.Sms.SmsResponseBody, body);
 
 				return response.IsSuccessStatusCode;
 			}

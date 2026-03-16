@@ -113,7 +113,7 @@ namespace MobileWebApi.Controllers
 
             if (request.Id <= 0)
             {
-                Logger.LogWarning("Invalid holiday ID");
+                Logger.LogWarning(LogMessages.HolidayAdditional.InvalidHolidayIdLog);
                 return BadRequest(new { Success = false, Message = HolidayMessages.InvalidHolidayId });
             }
 

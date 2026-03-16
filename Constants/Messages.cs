@@ -54,6 +54,7 @@ namespace MobileWebApi.Constants
         // Error messages
         public const string UserNotFound = "User not found.";
         public const string InvalidUserId = "Invalid user id.";
+        public const string UserIdRequired = "User ID is required.";
         public const string UsernameRequired = "Username is required.";
         public const string PasswordRequired = "Password is required.";
         public const string InvalidUserIdForUpdate = "Invalid User Id.";
@@ -107,6 +108,8 @@ namespace MobileWebApi.Constants
         public const string ErrorDeletingEmployee = "Error deleting employee: {0}";
         public const string ErrorDeactivatingEmployee = "Error deactivating employee: {0}";
         public const string EmployeeNotFoundForUserId = "No employee found for the specified UserId.";
+        public const string EmployeeNotFoundForGivenUser = "Employee not found for the given user.";
+        public const string PhoneOrPictureRequiredForUpdate = "At least one field (Phone or Picture) must be provided for update.";
     }
 
     /// <summary>
@@ -179,6 +182,7 @@ namespace MobileWebApi.Constants
         public const string LeaveRequestRejectedSuccessfully = "Leave request rejected successfully.";
         public const string LeaveRequestCancelledSuccessfully = "Leave request cancelled successfully.";
         public const string LeaveBalanceFetchedSuccessfully = "Leave balance fetched successfully.";
+        public const string LeaveHistoryFetchedSuccessfully = "Leave history fetched successfully.";
 
         // Error messages
         public const string UserIdRequired = "User ID is required.";
@@ -268,14 +272,23 @@ namespace MobileWebApi.Constants
         public const string PaySlipsFetchedSuccessfully = "Pay slips fetched successfully.";
         public const string PaySlipFetchedSuccessfully = "Pay slip fetched successfully.";
         public const string PaySlipDownloadedSuccessfully = "Pay slip downloaded successfully.";
+        public const string ProvidentFundFetchedSuccessfully = "Provident Fund fetched successfully.";
+        public const string MonthlySummaryFetchedSuccessfully = "Monthly summary fetched successfully.";
+        public const string LastMonthPayrollFetchedSuccessfully = "Last month payroll fetched successfully.";
+        public const string YearsFetchedSuccessfully = "Years fetched successfully.";
+        public const string MonthsFetchedSuccessfully = "Months fetched successfully.";
 
         // Error messages
         public const string UserIdRequired = "User ID is required.";
         public const string PaySlipIdRequired = "Pay slip ID is required.";
         public const string EmployeeNotFoundForUser = "Employee not found for the given user.";
+        public const string EmployeeNotFound = "Employee not found.";
         public const string PaySlipNotFound = "Pay slip not found.";
         public const string PaySlipFileNotFound = "Pay slip file not found.";
         public const string UnauthorizedAccess = "You are not authorized to access this pay slip.";
+        public const string NoPayrollDataFound = "No payroll data found.";
+        public const string NoPayrollDataFoundForLastMonth = "No payroll data found for last month.";
+        public const string PdfGenerationFailed = "PDF generation failed.";
 
         // Error templates
         public const string ErrorFetchingPaySlips = "Error fetching pay slips: {0}";
@@ -380,6 +393,7 @@ namespace MobileWebApi.Constants
         public const string RequestBodyCannotBeNull = "Request body cannot be null.";
         public const string RequestCannotBeNull = "Request cannot be null.";
         public const string SomethingWentWrongContactAdmin = "Something went wrong. Please contact the administration team.";
+        public const string SomethingWentWrongWithCode = "Something went wrong. Please contact the administration team. (Error Code: {0})";
     }
 
     /// <summary>
@@ -457,6 +471,23 @@ namespace MobileWebApi.Constants
         public const string ErrorUpdatingHoliday = "Error updating holiday: {0}";
         public const string ErrorDeletingHoliday = "Error deleting holiday: {0}";
         public const string ErrorCreatingBulkHolidays = "Error creating bulk holidays: {0}";
+        public const string OrganizationIdRequiredWithUserId = "Organization ID is required. Please provide either organization_id or user_id parameter.";
+    }
+
+    /// <summary>
+    /// Dispute related messages
+    /// </summary>
+    public static class DisputeMessages
+    {
+        public const string DisputeCategoriesFetchedSuccessfully = "Dispute categories fetched successfully.";
+        public const string EmployeeNotFoundForGivenUser = "Employee not found for the given user.";
+        public const string InvalidDisputeDate = "Invalid dispute date. Please provide a valid date (e.g., 2026-03-03).";
+        public const string DisputeDateCannotBeFuture = "Dispute date cannot be a future date.";
+        public const string DescriptionRequired = "Description is required.";
+        public const string EmployeeNotFound = "Employee not found.";
+        public const string OnlyOneDisputePerDay = "Only one dispute can be submitted per day. A dispute for this date already exists.";
+        public const string DisputeSubmittedSuccessfully = "Dispute submitted successfully.";
+        public const string FailedToSubmitDispute = "Failed to submit dispute.";
     }
 
     /// <summary>

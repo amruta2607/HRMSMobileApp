@@ -469,7 +469,7 @@ namespace MobileWebApi.Services
                     return new PersonalDetailServiceResponse
                     {
                         Success = false,
-                        Message = "Employee not found for the given user",
+                        Message = EmployeeMessages.EmployeeNotFoundForGivenUser,
                         Data = null
                     };
                 }
@@ -481,7 +481,7 @@ namespace MobileWebApi.Services
                     return new PersonalDetailServiceResponse
                     {
                         Success = false,
-                        Message = "UserId is required.",
+                        Message = UserMessages.UserIdRequired,
                         Data = null
                     };
                 }
@@ -504,7 +504,7 @@ namespace MobileWebApi.Services
                     return new PersonalDetailServiceResponse
                     {
                         Success = false,
-                        Message = "At least one field (Phone or Picture) must be provided for update.",
+                        Message = EmployeeMessages.PhoneOrPictureRequiredForUpdate,
                         Data = null
                     };
                 }
@@ -570,7 +570,7 @@ namespace MobileWebApi.Services
                     return new PersonalDetailServiceResponse
                     {
                         Success = false,
-                        Message = "Employee not found for the given user",
+                        Message = EmployeeMessages.EmployeeNotFoundForGivenUser,
                         Data = null
                     };
                 }

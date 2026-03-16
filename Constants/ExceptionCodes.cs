@@ -2,10 +2,34 @@ namespace MobileWebApi.Constants
 {
     /// <summary>
     /// Centralized exception codes for all modules.
-    /// Each public constant should be unique and map to a specific method.
+    /// Each public constant should be unique and map to a specific method or layer.
     /// </summary>
     public static class ExceptionCodes
     {
+        // General
+        public const string UnknownError = "ERR000";
+
+        // Repository layer (generic)
+        public static class Repository
+        {
+            public const string DatabaseError = "REP001";
+            public const string NotFound = "REP002";
+        }
+
+        // Service layer (generic)
+        public static class Service
+        {
+            public const string ProcessingError = "SER001";
+            public const string ValidationError = "SER002";
+        }
+
+        // Controller layer (generic)
+        public static class Controller
+        {
+            public const string BadRequest = "CON001";
+            public const string UnhandledError = "CON002";
+        }
+
         // Employee module (EmployeeService)
         public static class Employee
         {

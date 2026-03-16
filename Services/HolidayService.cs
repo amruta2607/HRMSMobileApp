@@ -123,7 +123,7 @@ namespace MobileWebApi.Services
                         return new HolidayResponse
                         {
                             Success = false,
-                            Message = "User not found.",
+                            Message = UserMessages.UserNotFound,
                             Data = null,
                             TotalRecords = 0
                         };
@@ -138,7 +138,7 @@ namespace MobileWebApi.Services
                     return new HolidayResponse
                     {
                         Success = false,
-                        Message = "Organization ID is required. Please provide either organization_id or user_id parameter.",
+                        Message = HolidayMessages.OrganizationIdRequiredWithUserId,
                         Data = null,
                         TotalRecords = 0
                     };

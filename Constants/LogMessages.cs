@@ -107,6 +107,7 @@ namespace MobileWebApi.Constants
             public const string ErrorGettingAttendanceStatus = "Error getting attendance status for employee {EmployeeId} on date {Date}";
             public const string GettingAttendanceOverview = "Getting attendance overview for employee {EmployeeId}, tenant {TenantId}, from {FromDate} to {ToDate}";
             public const string ErrorFetchingAttendanceOverview = "Error fetching attendance overview for employee {EmployeeId}";
+            public const string InvalidDateForOperation = "Invalid date for {OperationType}: Requested date {RequestDate} does not match today's date {TodayDate}";
         }
 
         // Leave related logs
@@ -228,6 +229,12 @@ namespace MobileWebApi.Constants
             public const string ErrorFetchingPaySlips = "Error fetching pay slips";
             public const string ErrorFetchingPaySlipById = "Error fetching pay slip by ID";
             public const string ErrorDownloadingPaySlip = "Error downloading pay slip";
+            public const string ErrorFetchingProvidentFund = "Error fetching Provident Fund";
+            public const string ErrorFetchingMonthlyPaymentSummary = "Error fetching monthly payment summary";
+            public const string ErrorFetchingLastMonthPayroll = "Error fetching last month payroll";
+            public const string ErrorDownloadingPaySlipByMonthYear = "Error downloading payslip by month/year";
+            public const string ErrorFetchingPaySlipYears = "Error fetching payslip years";
+            public const string ErrorFetchingPaySlipMonthsForYear = "Error fetching payslip months for year {Year}";
         }
 
         // General logs
@@ -354,6 +361,7 @@ namespace MobileWebApi.Constants
             public const string ApprovalWorkflowInitiated = "Approval workflow initiated for leave request {LeaveRequestId}. EventId: {EventId}";
             public const string FailedToInitiateWorkflow = "Failed to initiate approval workflow for leave request {LeaveRequestId}: {Message}";
             public const string WorkflowNotConfigured = "Error initiating approval workflow for leave request {LeaveRequestId}. Workflow may not be configured.";
+            public const string ApprovalWorkflowNotConfigured = "Approval workflow not configured";
             public const string ErrorExtractingEventDetails = "Error extracting event details for event {EventId}";
             public const string ErrorUpdatingPayrollApprovalStatus = "Error updating payroll approval status for PayrollId {PayrollId} and TenantId {TenantId}";
         }
@@ -371,6 +379,15 @@ namespace MobileWebApi.Constants
             public const string ErrorUpdatingHoliday = "Error updating holiday";
             public const string ErrorDeletingHoliday = "Error deleting holiday";
             public const string ErrorCreatingBulkHolidays = "Error creating bulk holidays";
+        }
+
+        // Mobile dashboard (events/announcements/holidays) logs
+        public static class MobileDashboard
+        {
+            public const string ErrorFetchingLatestEvents = "Error fetching latest events for mobile dashboard.";
+            public const string ErrorFetchingLatestAnnouncements = "Error fetching latest announcements for mobile dashboard.";
+            public const string ErrorFetchingLatestHolidays = "Error fetching latest holidays for mobile dashboard.";
+            public const string ErrorFetchingLatestTrainings = "Error fetching latest trainings for mobile dashboard.";
         }
 
         // Dispute related logs
@@ -462,6 +479,7 @@ namespace MobileWebApi.Constants
             public const string Msg91ApiReturnedSuccessButFailure = "MSG91 API returned success status but response indicates failure. Response: {Response}";
             public const string Msg91ApiReturnedError = "MSG91 API returned error. Status: {Status}, Response: {Response}";
             public const string ExceptionWhileSendingSmsViaMsg91 = "Exception while sending SMS via MSG91 to {MobileNumber}";
+            public const string SmsResponseBody = "SMS Response: {Body}";
         }
 
         // Tenant Context related logs
@@ -499,6 +517,7 @@ namespace MobileWebApi.Constants
         {
             public const string UserNotFoundForUserId = "User not found for user_id: {UserId}";
             public const string OrganizationIdRequired = "Organization ID is required for getting holidays. Provide either organization_id or user_id parameter.";
+            public const string InvalidHolidayIdLog = "Invalid holiday ID";
         }
 
         // Middleware related logs

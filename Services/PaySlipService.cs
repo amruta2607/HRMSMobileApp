@@ -447,7 +447,7 @@ namespace MobileWebApi.Services
 					return new PaySlipResponse
 					{
 						Success = false,
-						Message = "User Id required"
+						Message = PaySlipMessages.UserIdRequired
 					};
 				}
 
@@ -459,7 +459,7 @@ namespace MobileWebApi.Services
 					return new PaySlipResponse
 					{
 						Success = false,
-						Message = "Employee not found"
+						Message = PaySlipMessages.EmployeeNotFound
 					};
 				}
 
@@ -477,19 +477,19 @@ namespace MobileWebApi.Services
 				return new PaySlipResponse
 				{
 					Success = true,
-					Message = "Provident Fund fetched successfully",
+					Message = PaySlipMessages.ProvidentFundFetchedSuccessfully,
 					Data = data,
 					TotalRecords = 1
 				};
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Error fetching Provident Fund");
+				_logger.LogError(ex, LogMessages.PaySlip.ErrorFetchingProvidentFund);
 
 				return new PaySlipResponse
 				{
 					Success = false,
-					Message = "Something went wrong. Please contact the administration team."
+					Message = GeneralMessages.SomethingWentWrongContactAdmin
 				};
 			}
 		}
@@ -503,7 +503,7 @@ namespace MobileWebApi.Services
 					return new MonthlyPaymentSummaryResponse
 					{
 						Success = false,
-						Message = "UserId is required"
+						Message = PaySlipMessages.UserIdRequired
 					};
 				}
 
@@ -516,7 +516,7 @@ namespace MobileWebApi.Services
 					return new MonthlyPaymentSummaryResponse
 					{
 						Success = false,
-						Message = "Employee not found"
+						Message = PaySlipMessages.EmployeeNotFound
 					};
 				}
 
@@ -533,25 +533,25 @@ namespace MobileWebApi.Services
 					return new MonthlyPaymentSummaryResponse
 					{
 						Success = false,
-						Message = "No payroll data found"
+						Message = PaySlipMessages.NoPayrollDataFound
 					};
 				}
 
 				return new MonthlyPaymentSummaryResponse
 				{
 					Success = true,
-					Message = "Monthly summary fetched successfully",
+					Message = PaySlipMessages.MonthlySummaryFetchedSuccessfully,
 					Data = summary
 				};
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Error fetching monthly payment summary");
+				_logger.LogError(ex, LogMessages.PaySlip.ErrorFetchingMonthlyPaymentSummary);
 
 				return new MonthlyPaymentSummaryResponse
 				{
 					Success = false,
-					Message = "Something went wrong. Please contact the administration team."
+					Message = GeneralMessages.SomethingWentWrongContactAdmin
 				};
 			}
 		}
@@ -565,7 +565,7 @@ GetLastMonthPaymentSummaryAsync(int userId)
 					return new MonthlyPaymentSummaryResponse
 					{
 						Success = false,
-						Message = "UserId is required"
+						Message = PaySlipMessages.UserIdRequired
 					};
 				}
 
@@ -578,7 +578,7 @@ GetLastMonthPaymentSummaryAsync(int userId)
 					return new MonthlyPaymentSummaryResponse
 					{
 						Success = false,
-						Message = "Employee not found"
+						Message = PaySlipMessages.EmployeeNotFound
 					};
 				}
 
@@ -600,14 +600,14 @@ GetLastMonthPaymentSummaryAsync(int userId)
 					return new MonthlyPaymentSummaryResponse
 					{
 						Success = false,
-						Message = "No payroll data found for last month"
+						Message = PaySlipMessages.NoPayrollDataFoundForLastMonth
 					};
 				}
 
 				return new MonthlyPaymentSummaryResponse
 				{
 					Success = true,
-					Message = "Last month payroll fetched successfully",
+					Message = PaySlipMessages.LastMonthPayrollFetchedSuccessfully,
 					PayrollMonth = month,
 					PayrollYear = year,
 					Data = summary
@@ -615,12 +615,12 @@ GetLastMonthPaymentSummaryAsync(int userId)
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Error fetching last month payroll");
+				_logger.LogError(ex, LogMessages.PaySlip.ErrorFetchingLastMonthPayroll);
 
 				return new MonthlyPaymentSummaryResponse
 				{
 					Success = false,
-					Message = "Something went wrong. Please contact the administration team."
+					Message = GeneralMessages.SomethingWentWrongContactAdmin
 				};
 			}
 		}
@@ -636,7 +636,7 @@ GetLastMonthPaymentSummaryAsync(int userId)
 					return new PaySlipDownloadResponse
 					{
 						Success = false,
-						Message = "UserId is required"
+						Message = PaySlipMessages.UserIdRequired
 					};
 				}
 
@@ -650,7 +650,7 @@ GetLastMonthPaymentSummaryAsync(int userId)
 					return new PaySlipDownloadResponse
 					{
 						Success = false,
-						Message = "Employee not found"
+						Message = PaySlipMessages.EmployeeNotFound
 					};
 				}
 
@@ -666,7 +666,7 @@ GetLastMonthPaymentSummaryAsync(int userId)
 					return new PaySlipDownloadResponse
 					{
 						Success = false,
-						Message = "PaySlip not found"
+						Message = PaySlipMessages.PaySlipNotFound
 					};
 				}
 
@@ -744,14 +744,14 @@ GetLastMonthPaymentSummaryAsync(int userId)
 					return new PaySlipDownloadResponse
 					{
 						Success = false,
-						Message = "PDF generation failed"
+						Message = PaySlipMessages.PdfGenerationFailed
 					};
 				}
 
 				return new PaySlipDownloadResponse
 				{
 					Success = true,
-					Message = "PaySlip downloaded successfully",
+					Message = PaySlipMessages.PaySlipDownloadedSuccessfully,
 					FileContent = pdfBytes,
 					FileName = $"PaySlip_{detail.EmployeeName}_{detail.PayrollMonthName}_{detail.PayrollYear}.pdf",
 					ContentType = "application/pdf"
@@ -759,12 +759,12 @@ GetLastMonthPaymentSummaryAsync(int userId)
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Error downloading payslip by month/year");
+				_logger.LogError(ex, LogMessages.PaySlip.ErrorDownloadingPaySlipByMonthYear);
 
 				return new PaySlipDownloadResponse
 				{
 					Success = false,
-					Message = "Something went wrong. Please contact the administration team."
+					Message = GeneralMessages.SomethingWentWrongContactAdmin
 				};
 			}
 		}
@@ -779,7 +779,7 @@ GetLastMonthPaymentSummaryAsync(int userId)
 					return new PaySlipYearsResponse
 					{
 						Success = false,
-						Message = "Employee not found"
+						Message = PaySlipMessages.EmployeeNotFound
 					};
 				}
 
@@ -789,17 +789,17 @@ GetLastMonthPaymentSummaryAsync(int userId)
 				return new PaySlipYearsResponse
 				{
 					Success = true,
-					Message = "Years fetched successfully",
+					Message = PaySlipMessages.YearsFetchedSuccessfully,
 					Years = years
 				};
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Error fetching payslip years");
+				_logger.LogError(ex, LogMessages.PaySlip.ErrorFetchingPaySlipYears);
 				return new PaySlipYearsResponse
 				{
 					Success = false,
-					Message = "Something went wrong. Please contact the administration team."
+					Message = GeneralMessages.SomethingWentWrongContactAdmin
 				};
 			}
 		}
@@ -815,7 +815,7 @@ GetLastMonthPaymentSummaryAsync(int userId)
 					return new PaySlipMonthsResponse
 					{
 						Success = false,
-						Message = "Employee not found"
+						Message = PaySlipMessages.EmployeeNotFound
 					};
 				}
 
@@ -825,18 +825,18 @@ GetLastMonthPaymentSummaryAsync(int userId)
 				return new PaySlipMonthsResponse
 				{
 					Success = true,
-					Message = "Months fetched successfully",
+					Message = PaySlipMessages.MonthsFetchedSuccessfully,
 					Year = year,
 					Months = months
 				};
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Error fetching payslip months for year {Year}", year);
+				_logger.LogError(ex, LogMessages.PaySlip.ErrorFetchingPaySlipMonthsForYear, year);
 				return new PaySlipMonthsResponse
 				{
 					Success = false,
-					Message = "Something went wrong. Please contact the administration team."
+					Message = GeneralMessages.SomethingWentWrongContactAdmin
 				};
 			}
 		}

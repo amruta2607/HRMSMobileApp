@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
@@ -56,8 +56,11 @@ namespace MobileWebApi.Controllers
 
             if (requestDate != todayDate)
             {
-                Logger.LogWarning("Invalid date for {OperationType}: Requested date {RequestDate} does not match today's date {TodayDate}",
-                    operationType, requestDate, todayDate);
+                Logger.LogWarning(
+                    LogMessages.Attendance.InvalidDateForOperation,
+                    operationType,
+                    requestDate,
+                    todayDate);
                 return BadRequest(new { Success = false, Message = "Punch in/out is allowed only for today's date." });
             }
 
