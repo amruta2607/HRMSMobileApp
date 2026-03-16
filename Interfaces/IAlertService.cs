@@ -8,6 +8,7 @@ namespace MobileWebApi.Interfaces
         Task<AlertListResponse> GetAlertsByUserIdAsync(int userId, bool? isRead = null, bool? isActive = null);
         Task<AlertListResponse> GetAlertsByOrganisationIdAsync(int organisationId, bool? isRead = null, bool? isActive = null);
         Task<AlertListResponse> GetAlertsAsync(GetAlertsRequest request);
+	        Task<AlertCountResponse> GetUnreadAlertCountByUserIdAsync(int userId);
         Task<AlertResponse> CreateAlertAsync(CreateAlertRequest request);
         Task<AlertResponse> UpdateAlertAsync(UpdateAlertRequest request);
         Task<AlertResponse> MarkAsReadAsync(int id, int? updateUserId);

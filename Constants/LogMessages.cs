@@ -116,6 +116,7 @@ namespace MobileWebApi.Constants
             public const string FetchingLeaveRequests = "Fetching leave requests";
             public const string FetchingLeaveRequestById = "Fetching leave request with ID: {Id}";
             public const string FetchingLeaveRequestsByFilter = "Fetching leave requests for user {UserId}, organization {OrganizationId}, status {Status}";
+            public const string FetchingLeaveHistory = "Fetching leave history for user: {UserId}";
             public const string ApprovingLeaveRequest = "Approving leave request with ID: {Id}";
             public const string RejectingLeaveRequest = "Rejecting leave request with ID: {Id}";
             public const string CancellingLeaveRequest = "Cancelling leave request with ID: {Id}";

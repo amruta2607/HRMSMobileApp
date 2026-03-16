@@ -105,7 +105,7 @@ namespace MobileWebApi.Services
                 return new PaySlipResponse
                 {
                     Success = false,
-                    Message = string.Format(PaySlipMessages.ErrorFetchingPaySlips, ex.Message),
+                    Message = PaySlipMessages.ErrorFetchingPaySlips,
                     Data = null,
                     TotalRecords = 0
                 };
@@ -267,7 +267,7 @@ namespace MobileWebApi.Services
                 return new PaySlipResponse
                 {
                     Success = false,
-                    Message = string.Format(PaySlipMessages.ErrorFetchingPaySlip, ex.Message),
+                    Message = PaySlipMessages.ErrorFetchingPaySlip,
                     Data = null,
                     TotalRecords = 0
                 };
@@ -489,7 +489,7 @@ namespace MobileWebApi.Services
 				return new PaySlipResponse
 				{
 					Success = false,
-					Message = ex.Message
+					Message = "Something went wrong. Please contact the administration team."
 				};
 			}
 		}
@@ -551,7 +551,7 @@ namespace MobileWebApi.Services
 				return new MonthlyPaymentSummaryResponse
 				{
 					Success = false,
-					Message = ex.Message
+					Message = "Something went wrong. Please contact the administration team."
 				};
 			}
 		}
@@ -620,7 +620,7 @@ GetLastMonthPaymentSummaryAsync(int userId)
 				return new MonthlyPaymentSummaryResponse
 				{
 					Success = false,
-					Message = ex.Message
+					Message = "Something went wrong. Please contact the administration team."
 				};
 			}
 		}
@@ -764,7 +764,7 @@ GetLastMonthPaymentSummaryAsync(int userId)
 				return new PaySlipDownloadResponse
 				{
 					Success = false,
-					Message = ex.Message
+					Message = "Something went wrong. Please contact the administration team."
 				};
 			}
 		}
@@ -799,7 +799,7 @@ GetLastMonthPaymentSummaryAsync(int userId)
 				return new PaySlipYearsResponse
 				{
 					Success = false,
-					Message = ex.Message
+					Message = "Something went wrong. Please contact the administration team."
 				};
 			}
 		}
@@ -836,7 +836,7 @@ GetLastMonthPaymentSummaryAsync(int userId)
 				return new PaySlipMonthsResponse
 				{
 					Success = false,
-					Message = ex.Message
+					Message = "Something went wrong. Please contact the administration team."
 				};
 			}
 		}

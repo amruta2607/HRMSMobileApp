@@ -1,4 +1,5 @@
 using MobileWebApi.Constants;
+using MobileWebApi.Helper;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using Microsoft.Extensions.Logging;
@@ -174,8 +175,8 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Error creating leave request");
-				return Fail(ex.Message);
+				_logger.LogException(ExceptionCodes.Leave.CreateLeaveRequest, nameof(CreateLeaveRequestAsync), ex, request.user);
+				return Fail($"Something went wrong. Please contact the administration team. (Error Code: {ExceptionCodes.Leave.CreateLeaveRequest})");
 			}
 		}
 
@@ -224,8 +225,8 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "GetLeaveRequestsAsync failed");
-				return Fail(ex.Message);
+				_logger.LogException(ExceptionCodes.Leave.GetLeaveRequests, nameof(GetLeaveRequestsAsync), ex, request.user);
+				return Fail($"Something went wrong. Please contact the administration team. (Error Code: {ExceptionCodes.Leave.GetLeaveRequests})");
 			}
 		}
 		private string MapDbStatusIdToText(int statusId)
@@ -379,11 +380,11 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "GetLeaveHistoryAsync failed");
+				_logger.LogException(ExceptionCodes.Leave.GetLeaveHistory, nameof(GetLeaveHistoryAsync), ex, userId);
 				return new LeaveHistoryResponse
 				{
 					Success = false,
-					Message = ex.Message
+					Message = $"Something went wrong. Please contact the administration team. (Error Code: {ExceptionCodes.Leave.GetLeaveHistory})"
 				};
 			}
 		}

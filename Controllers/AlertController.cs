@@ -37,6 +37,21 @@ namespace MobileWebApi.Controllers
 			return BadRequest(result);
 		}
 
+		[HttpGet("user/count")]
+		public async Task<IActionResult> GetUnreadAlertCountByUserId()
+		{
+			var userId = CurrentUserId ?? 0;
+			Logger.LogInformation(LogMessages.Alert.RetrievingAlertsForUser, userId);
+
+			var result = await _service.GetUnreadAlertCountByUserIdAsync(userId);
+			if (result.Success)
+			{
+				return Ok(result);
+			}
+
+			return BadRequest(result);
+		}
+
 
 		[HttpPut("mark-read")]
 		public async Task<IActionResult> MarkAsRead([FromBody] MarkAsReadRequest request)

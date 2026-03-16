@@ -1,6 +1,7 @@
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using MobileWebApi.Constants;
+using MobileWebApi.Helper;
 using System.Text.Json;
 
 namespace MobileWebApi.Services
@@ -79,8 +80,8 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.ApprovalWorkflow.ErrorInitiatingWorkflow);
-                return (false, string.Format(ApprovalWorkflowMessages.ErrorInitiatingWorkflow, ex.Message), 0);
+                _logger.LogException(ExceptionCodes.ApprovalWorkflow.InitiateLeaveWorkflow, nameof(InitiateLeaveRequestApprovalAsync), ex, userId);
+                return (false, ApprovalWorkflowMessages.ErrorInitiatingWorkflow, 0);
             }
         }
 

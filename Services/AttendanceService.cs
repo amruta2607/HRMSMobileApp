@@ -1,6 +1,7 @@
-﻿using MobileWebApi.Interfaces;
+using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using MobileWebApi.Constants;
+using MobileWebApi.Helper;
 
 namespace MobileWebApi.Services
 {
@@ -52,7 +53,7 @@ namespace MobileWebApi.Services
             if (!employeeId.HasValue)
             {
                 _logger.LogWarning(LogMessages.EmployeeResolution.NoEmployeeFoundForUserId, req.userId);
-                return "No employee found for the specified UserId.";
+                return EmployeeMessages.EmployeeNotFoundForUserId;
             }
 
             _logger.LogInformation(LogMessages.Attendance.ProcessingPunchIn, employeeId.Value);
@@ -97,7 +98,7 @@ namespace MobileWebApi.Services
             if (!employeeId.HasValue)
             {
                 _logger.LogWarning(LogMessages.EmployeeResolution.NoEmployeeFoundForUserId, req.userId);
-                return "No employee found for the specified UserId.";
+                return EmployeeMessages.EmployeeNotFoundForUserId;
             }
 
             _logger.LogInformation(LogMessages.Attendance.ProcessingPunchOut, employeeId.Value);
@@ -189,7 +190,7 @@ namespace MobileWebApi.Services
                         return new AttendanceReportResponse
                         {
                             Success = false,
-                            Message = "No employee found for the specified UserId.",
+                            Message = EmployeeMessages.EmployeeNotFoundForUserId,
                             Data = null,
                             TotalRecords = 0
                         };
@@ -237,11 +238,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Attendance.ErrorFetchingAttendanceReport);
+                _logger.LogException(ExceptionCodes.Attendance.GetAttendanceReport, nameof(GetAttendanceReportAsync), ex, request.UserId);
                 return new AttendanceReportResponse
                 {
                     Success = false,
-                    Message = string.Format(AttendanceMessages.ErrorFetchingAttendanceReport, ex.Message),
+                    Message = AttendanceMessages.ErrorFetchingAttendanceReport,
                     Data = null,
                     TotalRecords = 0
                 };
@@ -262,7 +263,7 @@ namespace MobileWebApi.Services
                     return new AttendanceReportResponse
                     {
                         Success = false,
-                        Message = "No employee found for the specified UserId.",
+                        Message = EmployeeMessages.EmployeeNotFoundForUserId,
                         Data = null,
                         TotalRecords = 0
                     };
@@ -294,11 +295,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Attendance.ErrorFetchingEmployeeAttendance, userId);
+                _logger.LogException(ExceptionCodes.Attendance.GetEmployeeAttendance, nameof(GetEmployeeAttendanceAsync), ex, userId);
                 return new AttendanceReportResponse
                 {
                     Success = false,
-                    Message = string.Format(AttendanceMessages.ErrorFetchingAttendanceReport, ex.Message),
+                    Message = AttendanceMessages.ErrorFetchingAttendanceReport,
                     Data = null,
                     TotalRecords = 0
                 };
@@ -334,11 +335,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Attendance.ErrorFetchingRealTimeStatus);
+                _logger.LogException(ExceptionCodes.Attendance.GetRealTimeStatus, nameof(GetRealTimeAttendanceStatusAsync), ex);
                 return new RealTimeAttendanceResponse
                 {
                     Success = false,
-                    Message = string.Format(AttendanceMessages.ErrorFetchingRealTimeAttendance, ex.Message),
+                    Message = AttendanceMessages.ErrorFetchingRealTimeAttendance,
                     Data = null,
                     TotalPunchedIn = 0,
                     TotalPunchedOut = 0,
@@ -372,11 +373,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Attendance.ErrorFetchingCurrentlyPunchedIn);
+                _logger.LogException(ExceptionCodes.Attendance.GetCurrentlyPunchedIn, nameof(GetCurrentlyPunchedInAsync), ex);
                 return new RealTimeAttendanceResponse
                 {
                     Success = false,
-                    Message = string.Format(AttendanceMessages.ErrorFetchingRealTimeAttendance, ex.Message),
+                    Message = AttendanceMessages.ErrorFetchingRealTimeAttendance,
                     Data = null,
                     TotalPunchedIn = 0,
                     TotalPunchedOut = 0,
@@ -400,7 +401,7 @@ namespace MobileWebApi.Services
                     return new CalendarAttendanceResponse
                     {
                         Success = false,
-                        Message = "No employee found for the specified UserId."
+                        Message = EmployeeMessages.EmployeeNotFoundForUserId
                     };
                 }
 
@@ -432,7 +433,7 @@ namespace MobileWebApi.Services
                     return new CalendarAttendanceResponse
                     {
                         Success = false,
-                        Message = AttendanceMessages.EmployeeNotFound
+                        Message = EmployeeMessages.EmployeeNotFound
                     };
                 }
 
@@ -523,11 +524,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Attendance.ErrorFetchingCalendarAttendance, userId);
+                _logger.LogException(ExceptionCodes.Attendance.GetCalendarAttendance, nameof(GetAttendanceByCalendarAsync), ex, userId);
                 return new CalendarAttendanceResponse
                 {
                     Success = false,
-                    Message = string.Format(AttendanceMessages.ErrorFetchingCalendarAttendance, ex.Message)
+                    Message = AttendanceMessages.ErrorFetchingCalendarAttendance
                 };
             }
         }
@@ -546,7 +547,7 @@ namespace MobileWebApi.Services
                     return new AttendanceSummaryResponse
                     {
                         Success = false,
-                        Message = "No employee found for the specified UserId."
+                        Message = EmployeeMessages.EmployeeNotFoundForUserId
                     };
                 }
 
@@ -569,7 +570,7 @@ namespace MobileWebApi.Services
                     return new AttendanceSummaryResponse
                     {
                         Success = false,
-                        Message = AttendanceMessages.EmployeeNotFound
+                        Message = EmployeeMessages.EmployeeNotFound
                     };
                 }
 
@@ -654,11 +655,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Attendance.ErrorFetchingAttendanceSummary, userId);
+                _logger.LogException(ExceptionCodes.Attendance.GetAttendanceSummary, nameof(GetAttendanceSummaryAsync), ex, userId);
                 return new AttendanceSummaryResponse
                 {
                     Success = false,
-                    Message = string.Format(AttendanceMessages.ErrorFetchingAttendanceSummary, ex.Message)
+                    Message = AttendanceMessages.ErrorFetchingAttendanceSummary
                 };
             }
         }
@@ -715,11 +716,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Attendance.ErrorFetchingAttendanceReportsForOrganisation, organisationId);
+                _logger.LogException(ExceptionCodes.Attendance.GetOrganisationReports, nameof(GetAttendanceReportsByOrganisationAsync), ex, organisationId);
                 return new AttendanceReportResponse
                 {
                     Success = false,
-                    Message = string.Format(AttendanceMessages.ErrorFetchingAttendanceReport, ex.Message),
+                    Message = AttendanceMessages.ErrorFetchingAttendanceReport,
                     Data = null,
                     TotalRecords = 0
                 };
@@ -790,11 +791,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Attendance.ErrorDeletingAttendanceRecord, id);
+                _logger.LogException(ExceptionCodes.Attendance.DeleteAttendance, nameof(DeleteAttendanceAsync), ex);
                 return new AttendanceDeleteResponse
                 {
                     Success = false,
-                    Message = $"Error deleting attendance record: {ex.Message}",
+                    Message = AttendanceMessages.FailedToDeleteAttendance,
                     Data = null
                 };
             }
@@ -814,7 +815,7 @@ namespace MobileWebApi.Services
                     return new AttendanceStatusResponse
                     {
                         Success = false,
-                        Message = "No employee found for the specified UserId.",
+                        Message = EmployeeMessages.EmployeeNotFoundForUserId,
                         Data = null
                     };
                 }
@@ -849,20 +850,20 @@ namespace MobileWebApi.Services
                     // Determine status based on punch-in/punch-out
                     if (punch.PunchIn.HasValue && punch.PunchOut.HasValue)
                     {
-                        statusData.status = "Present";
+                        statusData.status = AttendanceStatusMessages.Present;
                         statusData.punchIn = punch.PunchIn;
                         statusData.punchOut = punch.PunchOut;
                         statusData.duration = punch.Duration;
                     }
                     else if (punch.PunchIn.HasValue && !punch.PunchOut.HasValue)
                     {
-                        statusData.status = "Present"; // Present but not punched out yet
+                        statusData.status = AttendanceStatusMessages.Present; // Present but not punched out yet
                         statusData.punchIn = punch.PunchIn;
                         statusData.punchOut = null;
                     }
                     else
                     {
-                        statusData.status = "Absent"; // Record exists but no punch-in
+                        statusData.status = AttendanceStatusMessages.Absent; // Record exists but no punch-in
                     }
                 }
                 else
@@ -870,7 +871,7 @@ namespace MobileWebApi.Services
                     // Attendance not marked
                     statusData.isMarked = false;
                     statusData.isAlreadyMarked = false;
-                    statusData.status = "Not Marked";
+                    statusData.status = AttendanceStatusMessages.NotMarked;
                     statusData.punchIn = null;
                     statusData.punchOut = null;
                 }
@@ -884,11 +885,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Attendance.ErrorGettingAttendanceStatus, userId, date);
+                _logger.LogException(ExceptionCodes.Attendance.GetStatus, nameof(GetAttendanceStatusAsync), ex, userId);
                 return new AttendanceStatusResponse
                 {
                     Success = false,
-                    Message = $"Error retrieving attendance status: {ex.Message}",
+                    Message = GeneralMessages.SomethingWentWrongContactAdmin,
                     Data = null
                 };
             }

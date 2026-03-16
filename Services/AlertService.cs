@@ -1,6 +1,7 @@
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using MobileWebApi.Constants;
+using MobileWebApi.Helper;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 using System.Linq;
@@ -59,11 +60,11 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, LogMessages.Alert.ErrorRetrievingAlert, id);
+				_logger.LogException(ExceptionCodes.Alert.GetAlertById, nameof(GetAlertByIdAsync), ex);
 				return new AlertResponse
 				{
 					Success = false,
-					Message = string.Format(AlertMessages.ErrorRetrievingAlert, ex.Message),
+					Message = $"{AlertMessages.ErrorRetrievingAlert} (Error Code: {ExceptionCodes.Alert.GetAlertById})",
 					Data = null
 				};
 			}
@@ -90,14 +91,41 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, LogMessages.Alert.ErrorRetrievingAlertsForUser, userId);
+				_logger.LogException(ExceptionCodes.Alert.GetAlertsByUser, nameof(GetAlertsByUserIdAsync), ex, userId);
 				return new AlertListResponse
 				{
 					Success = false,
-					Message = string.Format(AlertMessages.ErrorRetrievingAlerts, ex.Message),
+					Message = $"{AlertMessages.ErrorRetrievingAlerts} (Error Code: {ExceptionCodes.Alert.GetAlertsByUser})",
 					Data = null,
 					TotalRecords = 0,
 					UnreadCount = 0
+				};
+			}
+		}
+
+		public async Task<AlertCountResponse> GetUnreadAlertCountByUserIdAsync(int userId)
+		{
+			try
+			{
+				_logger.LogInformation(LogMessages.Alert.RetrievingAlertsForUser, userId);
+
+				var unreadCount = await _repo.GetUnreadCountAsync(userId);
+
+				return new AlertCountResponse
+				{
+					Success = true,
+					Message = AlertMessages.AlertsRetrievedSuccessfully,
+					Count = unreadCount
+				};
+			}
+			catch (Exception ex)
+			{
+				_logger.LogException(ExceptionCodes.Alert.GetUnreadCountByUser, nameof(GetUnreadAlertCountByUserIdAsync), ex, userId);
+				return new AlertCountResponse
+				{
+					Success = false,
+					Message = $"{AlertMessages.ErrorRetrievingAlerts} (Error Code: {ExceptionCodes.Alert.GetUnreadCountByUser})",
+					Count = 0
 				};
 			}
 		}
@@ -122,11 +150,11 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, LogMessages.Alert.ErrorRetrievingAlertsForTenant, organisationId);
+				_logger.LogException(ExceptionCodes.Alert.GetAlertsByOrganisation, nameof(GetAlertsByOrganisationIdAsync), ex, organisationId);
 				return new AlertListResponse
 				{
 					Success = false,
-					Message = string.Format(AlertMessages.ErrorRetrievingAlerts, ex.Message),
+					Message = $"{AlertMessages.ErrorRetrievingAlerts} (Error Code: {ExceptionCodes.Alert.GetAlertsByOrganisation})",
 					Data = null,
 					TotalRecords = 0,
 					UnreadCount = 0
@@ -155,11 +183,11 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, LogMessages.Alert.ErrorRetrievingAlerts);
+				_logger.LogException(ExceptionCodes.Alert.GetAlerts, nameof(GetAlertsAsync), ex, request.UserId);
 				return new AlertListResponse
 				{
 					Success = false,
-					Message = string.Format(AlertMessages.ErrorRetrievingAlerts, ex.Message),
+					Message = $"{AlertMessages.ErrorRetrievingAlerts} (Error Code: {ExceptionCodes.Alert.GetAlerts})",
 					Data = null,
 					TotalRecords = 0,
 					UnreadCount = 0
@@ -195,11 +223,11 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, LogMessages.Alert.ErrorCreatingAlert);
+				_logger.LogException(ExceptionCodes.Alert.CreateAlert, nameof(CreateAlertAsync), ex, request.UserId);
 				return new AlertResponse
 				{
 					Success = false,
-					Message = string.Format(AlertMessages.ErrorCreatingAlert, ex.Message),
+					Message = $"{AlertMessages.ErrorCreatingAlert} (Error Code: {ExceptionCodes.Alert.CreateAlert})",
 					Data = null
 				};
 			}
@@ -232,11 +260,11 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, LogMessages.Alert.ErrorUpdatingAlert, request.Id);
+				_logger.LogException(ExceptionCodes.Alert.UpdateAlert, nameof(UpdateAlertAsync), ex);
 				return new AlertResponse
 				{
 					Success = false,
-					Message = string.Format(AlertMessages.ErrorUpdatingAlert, ex.Message),
+					Message = $"{AlertMessages.ErrorUpdatingAlert} (Error Code: {ExceptionCodes.Alert.UpdateAlert})",
 					Data = null
 				};
 			}
@@ -269,11 +297,11 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, LogMessages.Alert.ErrorMarkingAlertAsRead, id);
+				_logger.LogException(ExceptionCodes.Alert.MarkAsRead, nameof(MarkAsReadAsync), ex, updateUserId);
 				return new AlertResponse
 				{
 					Success = false,
-					Message = string.Format(AlertMessages.ErrorMarkingAlertAsRead, ex.Message),
+					Message = $"{AlertMessages.ErrorMarkingAlertAsRead} (Error Code: {ExceptionCodes.Alert.MarkAsRead})",
 					Data = null
 				};
 			}
@@ -295,11 +323,11 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, LogMessages.Alert.ErrorMarkingAllAlertsAsRead, userId);
+				_logger.LogException(ExceptionCodes.Alert.MarkAllAsRead, nameof(MarkAllAsReadAsync), ex, userId);
 				return new AlertResponse
 				{
 					Success = false,
-					Message = string.Format(AlertMessages.ErrorMarkingAllAlertsAsRead, ex.Message),
+					Message = $"{AlertMessages.ErrorMarkingAllAlertsAsRead} (Error Code: {ExceptionCodes.Alert.MarkAllAsRead})",
 					Data = null
 				};
 			}
@@ -331,11 +359,11 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, LogMessages.Alert.ErrorDeletingAlert, id);
+				_logger.LogException(ExceptionCodes.Alert.DeleteAlert, nameof(DeleteAlertAsync), ex);
 				return new AlertResponse
 				{
 					Success = false,
-					Message = string.Format(AlertMessages.ErrorDeletingAlert, ex.Message),
+					Message = $"{AlertMessages.ErrorDeletingAlert} (Error Code: {ExceptionCodes.Alert.DeleteAlert})",
 					Data = null
 				};
 			}
@@ -368,11 +396,11 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, LogMessages.Alert.ErrorDeactivatingAlert, id);
+				_logger.LogException(ExceptionCodes.Alert.DeactivateAlert, nameof(DeactivateAlertAsync), ex, updateUserId);
 				return new AlertResponse
 				{
 					Success = false,
-					Message = string.Format(AlertMessages.ErrorDeactivatingAlert, ex.Message),
+					Message = $"{AlertMessages.ErrorDeactivatingAlert} (Error Code: {ExceptionCodes.Alert.DeactivateAlert})",
 					Data = null
 				};
 			}
@@ -417,11 +445,11 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, LogMessages.Alert.ErrorApprovingAlert, id);
+				_logger.LogException(ExceptionCodes.Alert.ApproveAlert, nameof(ApproveAlertAsync), ex, updateUserId);
 				return new AlertResponse
 				{
 					Success = false,
-					Message = string.Format(AlertMessages.ErrorApprovingAlert, ex.Message),
+					Message = $"{AlertMessages.ErrorApprovingAlert} (Error Code: {ExceptionCodes.Alert.ApproveAlert})",
 					Data = null
 				};
 			}
@@ -466,11 +494,11 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, LogMessages.Alert.ErrorRejectingAlert, id);
+				_logger.LogException(ExceptionCodes.Alert.RejectAlert, nameof(RejectAlertAsync), ex, updateUserId);
 				return new AlertResponse
 				{
 					Success = false,
-					Message = string.Format(AlertMessages.ErrorRejectingAlert, ex.Message),
+					Message = $"{AlertMessages.ErrorRejectingAlert} (Error Code: {ExceptionCodes.Alert.RejectAlert})",
 					Data = null
 				};
 			}
@@ -521,11 +549,11 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, LogMessages.Alert.ErrorSendingApprovalNotification, request.RequesterUserId);
+				_logger.LogException(ExceptionCodes.Alert.SendApprovalNotification, nameof(SendApprovalNotificationAsync), ex, request.RequesterUserId);
 				return new AlertResponse
 				{
 					Success = false,
-					Message = string.Format(AlertMessages.ErrorSendingApprovalNotification, ex.Message),
+					Message = $"{AlertMessages.ErrorSendingApprovalNotification} (Error Code: {ExceptionCodes.Alert.SendApprovalNotification})",
 					Data = null
 				};
 			}
@@ -578,11 +606,11 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, LogMessages.Alert.ErrorSendingRejectionNotification, request.RequesterUserId);
+				_logger.LogException(ExceptionCodes.Alert.SendRejectionNotification, nameof(SendRejectionNotificationAsync), ex, request.RequesterUserId);
 				return new AlertResponse
 				{
 					Success = false,
-					Message = string.Format(AlertMessages.ErrorSendingRejectionNotification, ex.Message),
+					Message = $"{AlertMessages.ErrorSendingRejectionNotification} (Error Code: {ExceptionCodes.Alert.SendRejectionNotification})",
 					Data = null
 				};
 			}
@@ -1183,11 +1211,11 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, LogMessages.Alert.ErrorApprovingRequestFromAlert, request.AlertId);
+				_logger.LogException(ExceptionCodes.Alert.ApproveRequestFromAlert, nameof(ApproveRequestFromAlertAsync), ex, approverUserId);
 				return new AlertResponse
 				{
 					Success = false,
-					Message = string.Format(AlertWorkflowMessages.ErrorApprovingRequest, ex.Message),
+					Message = $"{AlertWorkflowMessages.ErrorApprovingRequest} (Error Code: {ExceptionCodes.Alert.ApproveRequestFromAlert})",
 					Data = null
 				};
 			}
@@ -1455,11 +1483,11 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, LogMessages.Alert.ErrorRejectingRequestFromAlert, request.AlertId);
+				_logger.LogException(ExceptionCodes.Alert.RejectRequestFromAlert, nameof(RejectRequestFromAlertAsync), ex, rejecterUserId);
 				return new AlertResponse
 				{
 					Success = false,
-					Message = string.Format(AlertWorkflowMessages.ErrorRejectingRequest, ex.Message),
+					Message = $"{AlertWorkflowMessages.ErrorRejectingRequest} (Error Code: {ExceptionCodes.Alert.RejectRequestFromAlert})",
 					Data = null
 				};
 			}

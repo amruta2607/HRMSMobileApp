@@ -267,7 +267,12 @@
 
     "GetLeaveHistory": "SELECT lr.FromDate AS LeaveDate, lt.DisplayName AS LeaveType, lr.Description AS Reason, lr.LeaveRequestStatus FROM LeaveRequest lr LEFT JOIN LeaveTypes lt ON lr.LeaveTypeId = lt.Id WHERE lr.EmployeeId = @EmployeeId AND YEAR(lr.FromDate) = @Year ORDER BY lr.FromDate DESC",
 
-    "GetPaySlipMonthsByYear": "SELECT DISTINCT PayrollMonth AS Month FROM [dbo].[vwPayrollDetailPrint] WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND PayrollYear = @Year ORDER BY PayrollMonth DESC"
+    "GetPaySlipMonthsByYear": "SELECT DISTINCT PayrollMonth AS Month FROM [dbo].[vwPayrollDetailPrint] WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND PayrollYear = @Year ORDER BY PayrollMonth DESC",
+
+    "MobileDashboard_GetLatestTrainings": "SELECT TOP 5 Id,Name,StartDate,EndDate,Description,Location FROM Training WHERE TenantId = @TenantId ORDER BY StartDate DESC",
+    "MobileDashboard_GetLatestAnnouncements": "SELECT TOP 5 Id, Name, Message, Date FROM Announcement WHERE TenantId = @TenantId ORDER BY Date DESC",
+    "MobileDashboard_GetLatestEvents": "SELECT TOP 5 Id,Name,StartDate,EndDate,Description,Location FROM Event WHERE TenantId = @TenantId ORDER BY StartDate DESC",
+    "MobileDashboard_GetLatestHolidays": "SELECT TOP 5 Id, Name,Description Date FROM Holiday WHERE TenantId = @TenantId ORDER BY Date DESC"
 
   }
 }

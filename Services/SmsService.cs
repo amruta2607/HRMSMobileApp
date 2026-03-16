@@ -1,6 +1,7 @@
 using MobileWebApi.Interfaces;
 using MobileWebApi.Constants;
 using MobileWebApi.Models;
+using MobileWebApi.Helper;
 using Microsoft.Extensions.Options;
 using System.Text;
 using System.Text.Json;
@@ -62,8 +63,7 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Otp.FailedToSendSmsOtp, 
-                    MaskMobileNumber(mobileNumber));
+                _logger.LogException(ExceptionCodes.Sms.SendOtp, nameof(SendOtpAsync), ex);
                 return false;
             }
         }
@@ -102,7 +102,7 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "SMS sending failed");
+				_logger.LogException(ExceptionCodes.Sms.SendViaWeb, nameof(SendViaWebSms), ex);
 				return false;
 			}
 		}
@@ -195,8 +195,7 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Sms.ExceptionWhileSendingSmsViaTwilio, 
-                    MaskMobileNumber(mobileNumber));
+                _logger.LogException(ExceptionCodes.Sms.SendViaTwilio, nameof(SendViaTwilio), ex);
                 return false;
             }
         }
@@ -267,11 +266,7 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(
-					ex,
-					LogMessages.Sms.ExceptionWhileSendingSmsViaMsg91,
-					MaskMobileNumber(mobileNumber));
-
+				_logger.LogException(ExceptionCodes.Sms.SendViaMsg91, nameof(SendViaMsg91), ex);
 				return false;
 			}
 		}

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Microsoft.Extensions.FileProviders;
@@ -10,6 +10,7 @@ using MobileWebApi.Repositories;
 using MobileWebApi.Services;
 using MobileWebApi.Models;
 using MobileWebApi.Middleware;
+using MobileWebApi.Swagger;
 using Serilog;
 using MobileWebApi.Helper;
 using MobileWebApi.Resources;
@@ -80,6 +81,8 @@ builder.Services.AddScoped<IGeoTenantLocationRepository, GeoTenantLocationReposi
 builder.Services.AddSingleton<ISqlConnections, MobileWebApi.Data.DefaultSqlConnections>();
 builder.Services.AddScoped<IAttendanceOverviewService, AttendanceOverviewService>();
 
+builder.Services.AddScoped<IMobileDashboardService, MobileDashboardService>();
+
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<IOtpService, OtpService>();
 
@@ -126,6 +129,8 @@ builder.Services.AddSwaggerGen(c =>
 			Array.Empty<string>()
 		}
 	});
+
+	c.OperationFilter<HideMobileDashboardResponseSchemaFilter>();
 });
 
 // ----------------------

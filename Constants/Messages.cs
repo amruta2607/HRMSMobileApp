@@ -106,6 +106,7 @@ namespace MobileWebApi.Constants
         public const string ErrorUpdatingEmployee = "Error updating employee: {0}";
         public const string ErrorDeletingEmployee = "Error deleting employee: {0}";
         public const string ErrorDeactivatingEmployee = "Error deactivating employee: {0}";
+        public const string EmployeeNotFoundForUserId = "No employee found for the specified UserId.";
     }
 
     /// <summary>
@@ -206,6 +207,7 @@ namespace MobileWebApi.Constants
         public const string ErrorRejectingLeaveRequest = "Error rejecting leave request: {0}";
         public const string ErrorCancellingLeaveRequest = "Error cancelling leave request: {0}";
         public const string ErrorFetchingLeaveBalance = "Error fetching leave balance: {0}";
+        public const string LeaveRequestIdRequired = "Leave request ID is required and must be greater than 0";
     }
 
     /// <summary>
@@ -377,6 +379,7 @@ namespace MobileWebApi.Constants
         public const string InvalidRequest = "Invalid request.";
         public const string RequestBodyCannotBeNull = "Request body cannot be null.";
         public const string RequestCannotBeNull = "Request cannot be null.";
+        public const string SomethingWentWrongContactAdmin = "Something went wrong. Please contact the administration team.";
     }
 
     /// <summary>
@@ -530,6 +533,18 @@ namespace MobileWebApi.Constants
         public const string EventApprovedMessage = "Your {0} has been approved.";
         public const string EventRejectedMessage = "Your {0} has been rejected. Reason: {1}";
         public const string EventRejectedMessageNoReason = "Your {0} has been rejected.";
+    }
+
+    /// <summary>
+    /// Attendance status text used in responses
+    /// </summary>
+    public static class AttendanceStatusMessages
+    {
+        public const string Present = "Present";
+        public const string Absent = "Absent";
+        public const string Weekend = "Weekend";
+        public const string Future = "Future";
+        public const string NotMarked = "Not Marked";
     }
 }
 

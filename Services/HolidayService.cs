@@ -1,6 +1,7 @@
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using MobileWebApi.Constants;
+using MobileWebApi.Helper;
 
 namespace MobileWebApi.Services
 {
@@ -87,11 +88,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Holiday.ErrorCreatingHoliday);
+                _logger.LogException(ExceptionCodes.Holiday.AddHoliday, nameof(AddHolidayAsync), ex, userId);
                 return new HolidayResponse
                 {
                     Success = false,
-                    Message = string.Format(HolidayMessages.ErrorCreatingHoliday, ex.Message),
+                    Message = $"{HolidayMessages.ErrorCreatingHoliday} (Error Code: {ExceptionCodes.Holiday.AddHoliday})",
                     Data = null,
                     TotalRecords = 0
                 };
@@ -172,11 +173,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Holiday.ErrorFetchingHolidays);
+                _logger.LogException(ExceptionCodes.Holiday.GetHolidaysWithFilters, nameof(GetHolidaysWithFiltersAsync), ex, userId);
                 return new HolidayResponse
                 {
                     Success = false,
-                    Message = string.Format(HolidayMessages.ErrorFetchingHolidays, ex.Message),
+                    Message = $"{HolidayMessages.ErrorFetchingHolidays} (Error Code: {ExceptionCodes.Holiday.GetHolidaysWithFilters})",
                     Data = null,
                     TotalRecords = 0
                 };
@@ -219,11 +220,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Holiday.ErrorFetchingHolidays);
+                _logger.LogException(ExceptionCodes.Holiday.GetAllHolidays, nameof(GetAllHolidaysAsync), ex);
                 return new HolidayResponse
                 {
                     Success = false,
-                    Message = string.Format(HolidayMessages.ErrorFetchingHolidays, ex.Message),
+                    Message = $"{HolidayMessages.ErrorFetchingHolidays} (Error Code: {ExceptionCodes.Holiday.GetAllHolidays})",
                     Data = null,
                     TotalRecords = 0
                 };
@@ -302,11 +303,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Holiday.ErrorUpdatingHoliday);
+                _logger.LogException(ExceptionCodes.Holiday.UpdateHoliday, nameof(UpdateHolidayAsync), ex, userId);
                 return new HolidayResponse
                 {
                     Success = false,
-                    Message = string.Format(HolidayMessages.ErrorUpdatingHoliday, ex.Message),
+                    Message = $"{HolidayMessages.ErrorUpdatingHoliday} (Error Code: {ExceptionCodes.Holiday.UpdateHoliday})",
                     Data = null,
                     TotalRecords = 0
                 };
@@ -369,11 +370,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Holiday.ErrorDeletingHoliday);
+                _logger.LogException(ExceptionCodes.Holiday.DeleteHoliday, nameof(DeleteHolidayAsync), ex);
                 return new HolidayResponse
                 {
                     Success = false,
-                    Message = string.Format(HolidayMessages.ErrorDeletingHoliday, ex.Message),
+                    Message = $"{HolidayMessages.ErrorDeletingHoliday} (Error Code: {ExceptionCodes.Holiday.DeleteHoliday})",
                     Data = null,
                     TotalRecords = 0
                 };
@@ -454,11 +455,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Holiday.ErrorCreatingBulkHolidays);
+                _logger.LogException(ExceptionCodes.Holiday.AddBulkHolidays, nameof(AddBulkHolidaysAsync), ex, userId);
                 return new HolidayResponse
                 {
                     Success = false,
-                    Message = string.Format(HolidayMessages.ErrorCreatingBulkHolidays, ex.Message),
+                    Message = $"{HolidayMessages.ErrorCreatingBulkHolidays} (Error Code: {ExceptionCodes.Holiday.AddBulkHolidays})",
                     Data = null,
                     TotalRecords = 0
                 };
@@ -549,11 +550,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Holiday.ErrorUpdatingHoliday);
+                _logger.LogException(ExceptionCodes.Holiday.UpdateHolidayDate, nameof(UpdateHolidayDateAsync), ex, userId);
                 return new HolidayResponse
                 {
                     Success = false,
-                    Message = string.Format(HolidayMessages.ErrorUpdatingHoliday, ex.Message),
+                    Message = $"{HolidayMessages.ErrorUpdatingHoliday} (Error Code: {ExceptionCodes.Holiday.UpdateHolidayDate})",
                     Data = null,
                     TotalRecords = 0
                 };

@@ -4,6 +4,7 @@ using MobileWebApi.Constants;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using MobileWebApi.Resources;
+using MobileWebApi.Helper;
 using System;
 using System.Data;
 
@@ -148,11 +149,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Attendance.ErrorFetchingAttendanceOverview, request.UserId);
+                _logger.LogException(ExceptionCodes.AttendanceOverview.GetOverview, nameof(GetAttendanceOverviewAsync), ex, request.UserId);
                 return new AttendanceOverviewResponse
                 {
                     Success = false,
-                    Message = string.Format(AttendanceMessages.ErrorFetchingAttendanceOverview, ex.Message),
+                    Message = $"Something went wrong. Please contact the administration team. (Error Code: {ExceptionCodes.AttendanceOverview.GetOverview})",
                     Data = null
                 };
             }

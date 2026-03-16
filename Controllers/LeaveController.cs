@@ -97,8 +97,8 @@ namespace MobileWebApi.Controllers
 
             if (request.Id <= 0)
             {
-                Logger.LogWarning("Invalid leave request ID");
-                return BadRequest(new { Success = false, Message = "Leave request ID is required and must be greater than 0" });
+                Logger.LogWarning(LeaveMessages.LeaveRequestIdRequired);
+                return BadRequest(new { Success = false, Message = LeaveMessages.LeaveRequestIdRequired });
             }
 
             Logger.LogInformation(LogMessages.Leave.ApprovingLeaveRequest, request.Id);
@@ -127,8 +127,8 @@ namespace MobileWebApi.Controllers
 
             if (request.Id <= 0)
             {
-                Logger.LogWarning("Invalid leave request ID");
-                return BadRequest(new { Success = false, Message = "Leave request ID is required and must be greater than 0" });
+                Logger.LogWarning(LeaveMessages.LeaveRequestIdRequired);
+                return BadRequest(new { Success = false, Message = LeaveMessages.LeaveRequestIdRequired });
             }
 
             Logger.LogInformation(LogMessages.Leave.RejectingLeaveRequest, request.Id);
@@ -153,11 +153,11 @@ namespace MobileWebApi.Controllers
 				return BadRequest(new
 				{
 					Success = false,
-					Message = "Leave request ID is required"
+                    Message = LeaveMessages.LeaveRequestIdRequired
 				});
 			}
 
-			Logger.LogInformation("Withdraw leave request {Id}", request.Id);
+            Logger.LogInformation(LogMessages.Leave.CancellingLeaveRequest, request.Id);
 
 			var result = await _leaveService.WithdrawLeaveRequestAsync(
 				request.Id,
@@ -181,10 +181,10 @@ namespace MobileWebApi.Controllers
 			var userId = CurrentUserId;
 			if (!userId.HasValue)
 			{
-				return Unauthorized(new { Success = false, Message = "User not authenticated" });
+                return Unauthorized(new { Success = false, Message = TenantAccessMessages.UserNotAuthenticated });
 			}
 
-			Logger.LogInformation("Fetching leave history for user {UserId}", userId.Value);
+            Logger.LogInformation(LogMessages.Leave.FetchingLeaveHistory, userId.Value);
 			var result = await _leaveService.GetLeaveHistoryAsync(userId.Value);
 
 			if (result.Success)

@@ -74,7 +74,7 @@ namespace MobileWebApi.Services
 				return new DisputeCategoryResponse
 				{
 					Success = false,
-					Message = $"Error fetching dispute categories: {ex.Message}",
+					Message = "Something went wrong. Please contact the administration team.",
 					Data = null
 				};
 			}
@@ -218,7 +218,7 @@ namespace MobileWebApi.Services
 				return new DisputeSubmitResponse
 				{
 					Success = false,
-					Message = $"Error submitting dispute: {ex.Message}",
+					Message = "Something went wrong. Please contact the administration team.",
 					Data = null
 				};
 			}

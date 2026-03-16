@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
@@ -55,49 +55,62 @@ namespace MobileWebApi.Controllers
         [HttpPost("login-email")]
         public async Task<IActionResult> LoginWithEmail([FromBody] EmailLoginRequest request)
         {
-            _logger.LogInformation(LogMessages.Auth.LoginAttempt, request.email);
-
-            if (string.IsNullOrWhiteSpace(request.email) || string.IsNullOrWhiteSpace(request.password))
+            try
             {
-                _logger.LogWarning(LogMessages.Auth.LoginFailed, request.email);
-                return BadRequest(new { Success = false, Message = AuthMessages.InvalidCredentials });
+                _logger.LogInformation(LogMessages.Auth.LoginAttempt, request.email);
+
+                if (string.IsNullOrWhiteSpace(request.email) || string.IsNullOrWhiteSpace(request.password))
+                {
+                    _logger.LogWarning(LogMessages.Auth.LoginFailed, request.email);
+                    return BadRequest(new { Success = false, Message = AuthMessages.InvalidCredentials });
+                }
+
+                var user = await _userRepository.GetUserByEmailAsync(request.email);
+
+                if (user == null || !user.IsActive)
+                {
+                    _logger.LogWarning(LogMessages.Auth.LoginFailed, request.email);
+                    return Unauthorized(new { Success = false, Message = UserMessages.UserNotFound });
+                }
+
+                // Validate password using the same process as Change Password and Reset Password
+                bool isPasswordValid = ValidateUserPassword(request.password, user);
+                if (!isPasswordValid)
+                {
+                    _logger.LogWarning(LogMessages.Auth.LoginFailed, request.email);
+                    return Unauthorized(new { Success = false, Message = AuthMessages.InvalidCredentials });
+                }
+
+                var tenantConfig = await _tenantConfigurationRepository
+                    .GetByTenantIdAsync(user.OrganisationId);
+                var token = _tokenService.GenerateToken(user);
+
+                _logger.LogInformation(LogMessages.Auth.LoginSuccessful, request.email);
+
+                var response = new TokenWithRefreshResponse
+                {
+                    Success = true,
+                    Message = AuthMessages.TokenGenerated,
+                    Token = token,
+                    TokenExpiry = _tokenService.GetTokenExpiry(),
+                    UserId = user.UserId,
+                    Username = user.Username,
+                    OrganisationId = user.OrganisationId,
+                    IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
+                    IsGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false
+                };
+
+                return Ok(response);
             }
-
-            var user = await _userRepository.GetUserByEmailAsync(request.email);
-
-            if (user == null || !user.IsActive)
+            catch (Exception ex)
             {
-                _logger.LogWarning(LogMessages.Auth.LoginFailed, request.email);
-                return Unauthorized(new { Success = false, Message = UserMessages.UserNotFound });
+                _logger.LogException(ExceptionCodes.Auth.LoginWithEmail, nameof(LoginWithEmail), ex);
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = GeneralMessages.SomethingWentWrongContactAdmin
+                });
             }
-
-            // Validate password using the same process as Change Password and Reset Password
-            bool isPasswordValid = ValidateUserPassword(request.password, user);
-            if (!isPasswordValid)
-            {
-                _logger.LogWarning(LogMessages.Auth.LoginFailed, request.email);
-                return Unauthorized(new { Success = false, Message = AuthMessages.InvalidCredentials });
-            }
-			var tenantConfig = await _tenantConfigurationRepository
-		.GetByTenantIdAsync(user.OrganisationId);
-			var token = _tokenService.GenerateToken(user);
-
-            _logger.LogInformation(LogMessages.Auth.LoginSuccessful, request.email);
-
-            var response = new TokenWithRefreshResponse
-            {
-                Success = true,
-                Message = AuthMessages.TokenGenerated,
-                Token = token,
-                TokenExpiry = _tokenService.GetTokenExpiry(),
-                UserId = user.UserId,
-                Username = user.Username,
-                OrganisationId=user.OrganisationId,
-				IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
-				IsGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false
-			};
-
-            return Ok(response);
         }
 
         /// <summary>
@@ -166,11 +179,11 @@ namespace MobileWebApi.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Otp.LoginMobileUnexpectedError);
+                _logger.LogException(ExceptionCodes.Auth.LoginMobile, nameof(LoginMobile), ex);
                 return StatusCode(500, new MobileLoginResponse
                 {
                     success = false,
-                    message = OtpMessages.ErrorProcessingRequest
+                    message = GeneralMessages.SomethingWentWrongContactAdmin
                 });
             }
         }
@@ -185,88 +198,100 @@ namespace MobileWebApi.Controllers
         [Obsolete("Use POST /api/auth/login-mobile with only mobileNumber to resend OTP")]
         public async Task<IActionResult> ResendOtp([FromBody] SendOtpRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.mobileNumber))
+            try
             {
-                return BadRequest(new SendOtpResponse
-                {
-                    success = false,
-                    message = OtpMessages.MobileNumberRequired
-                });
-            }
-
-            // Validate mobile number format (10 digits)
-            var normalizedMobile = NormalizeMobileNumber(request.mobileNumber);
-            if (!IsValidMobileNumber(normalizedMobile))
-            {
-                return BadRequest(new SendOtpResponse
-                {
-                    success = false,
-                    message = OtpMessages.InvalidMobileNumberFormat
-                });
-            }
-
-            _logger.LogInformation(LogMessages.Otp.ResendOtpRequest, MaskMobileNumber(normalizedMobile));
-
-            // Check if user exists in Users table by MobileNumber
-            var user = await _userRepository.GetUserByMobileAsync(normalizedMobile);
-
-            if (user == null || !user.IsActive)
-            {
-                _logger.LogWarning(LogMessages.AuthAdditional.MobileNumberNotRegistered, MaskMobileNumber(normalizedMobile));
-                return BadRequest(new SendOtpResponse
-                {
-                    success = false,
-                        message = OtpMessages.MobileNumberNotRegistered
-                });
-            }
-
-            // Generate OTP with rate limiting and resend cooldown
-            var (otp, resendAfterSeconds, canSend) = _otpService.GenerateMobileOtp(normalizedMobile);
-
-            if (!canSend)
-            {
-                if (resendAfterSeconds > 0)
+                if (string.IsNullOrWhiteSpace(request.mobileNumber))
                 {
                     return BadRequest(new SendOtpResponse
                     {
                         success = false,
-                        message = resendAfterSeconds > 3600 
-                            ? OtpMessages.MaximumOtpLimitReached
-                            : OtpMessages.PleaseWaitBeforeRequestingOtp,
-                        resendAfterSeconds = resendAfterSeconds
+                        message = OtpMessages.MobileNumberRequired
                     });
                 }
 
-                return StatusCode(500, new SendOtpResponse
+                // Validate mobile number format (10 digits)
+                var normalizedMobile = NormalizeMobileNumber(request.mobileNumber);
+                if (!IsValidMobileNumber(normalizedMobile))
                 {
-                    success = false,
+                    return BadRequest(new SendOtpResponse
+                    {
+                        success = false,
+                        message = OtpMessages.InvalidMobileNumberFormat
+                    });
+                }
+
+                _logger.LogInformation(LogMessages.Otp.ResendOtpRequest, MaskMobileNumber(normalizedMobile));
+
+                // Check if user exists in Users table by MobileNumber
+                var user = await _userRepository.GetUserByMobileAsync(normalizedMobile);
+
+                if (user == null || !user.IsActive)
+                {
+                    _logger.LogWarning(LogMessages.AuthAdditional.MobileNumberNotRegistered, MaskMobileNumber(normalizedMobile));
+                    return BadRequest(new SendOtpResponse
+                    {
+                        success = false,
+                        message = OtpMessages.MobileNumberNotRegistered
+                    });
+                }
+
+                // Generate OTP with rate limiting and resend cooldown
+                var (otp, resendAfterSeconds, canSend) = _otpService.GenerateMobileOtp(normalizedMobile);
+
+                if (!canSend)
+                {
+                    if (resendAfterSeconds > 0)
+                    {
+                        return BadRequest(new SendOtpResponse
+                        {
+                            success = false,
+                            message = resendAfterSeconds > 3600
+                                ? OtpMessages.MaximumOtpLimitReached
+                                : OtpMessages.PleaseWaitBeforeRequestingOtp,
+                            resendAfterSeconds = resendAfterSeconds
+                        });
+                    }
+
+                    return StatusCode(500, new SendOtpResponse
+                    {
+                        success = false,
                         message = OtpMessages.FailedToGenerateOtp
+                    });
+                }
+
+                // Send OTP via SMS
+                bool smsSent = await _smsService.SendOtpAsync(normalizedMobile, otp);
+
+                if (!smsSent)
+                {
+                    // Remove OTP from cache if SMS failed
+                    _otpService.RemoveMobileOtp(normalizedMobile);
+                    _logger.LogError(LogMessages.Otp.FailedToSendSmsOtp, MaskMobileNumber(normalizedMobile));
+                    return StatusCode(500, new SendOtpResponse
+                    {
+                        success = false,
+                        message = OtpMessages.FailedToSendOtp
+                    });
+                }
+
+                _logger.LogInformation(LogMessages.Otp.OtpResentSuccessfully, MaskMobileNumber(normalizedMobile));
+
+                return Ok(new SendOtpResponse
+                {
+                    success = true,
+                    message = OtpMessages.OtpSentSuccessfully,
+                    resendAfterSeconds = resendAfterSeconds
                 });
             }
-
-            // Send OTP via SMS
-            bool smsSent = await _smsService.SendOtpAsync(normalizedMobile, otp);
-
-            if (!smsSent)
+            catch (Exception ex)
             {
-                // Remove OTP from cache if SMS failed
-                _otpService.RemoveMobileOtp(normalizedMobile);
-                _logger.LogError(LogMessages.Otp.FailedToSendSmsOtp, MaskMobileNumber(normalizedMobile));
+                _logger.LogException(ExceptionCodes.Auth.ResendOtp, nameof(ResendOtp), ex);
                 return StatusCode(500, new SendOtpResponse
                 {
                     success = false,
-                        message = OtpMessages.FailedToSendOtp
+                    message = GeneralMessages.SomethingWentWrongContactAdmin
                 });
             }
-
-            _logger.LogInformation(LogMessages.Otp.OtpResentSuccessfully, MaskMobileNumber(normalizedMobile));
-
-            return Ok(new SendOtpResponse
-            {
-                success = true,
-                message = OtpMessages.OtpSentSuccessfully,
-                resendAfterSeconds = resendAfterSeconds
-            });
         }
 
         /// <summary>
@@ -274,71 +299,83 @@ namespace MobileWebApi.Controllers
         /// </summary>
         private async Task<IActionResult> SendOtpForMobile(string normalizedMobile)
         {
-            _logger.LogInformation(LogMessages.Otp.OtpSendRequest, MaskMobileNumber(normalizedMobile));
-
-            // Check if user exists in Users table by MobileNumber
-            var user = await _userRepository.GetUserByMobileAsync(normalizedMobile);
-
-            if (user == null || !user.IsActive)
+            try
             {
-                _logger.LogWarning(LogMessages.AuthAdditional.MobileNumberNotRegistered, MaskMobileNumber(normalizedMobile));
-                return BadRequest(new MobileLoginResponse
-                {
-                    success = false,
-                        message = OtpMessages.MobileNumberNotRegistered
-                });
-            }
+                _logger.LogInformation(LogMessages.Otp.OtpSendRequest, MaskMobileNumber(normalizedMobile));
 
-            // Generate OTP with rate limiting and resend cooldown
-            var (otp, resendAfterSeconds, canSend) = _otpService.GenerateMobileOtp(normalizedMobile);
+                // Check if user exists in Users table by MobileNumber
+                var user = await _userRepository.GetUserByMobileAsync(normalizedMobile);
 
-            if (!canSend)
-            {
-                if (resendAfterSeconds > 0)
+                if (user == null || !user.IsActive)
                 {
+                    _logger.LogWarning(LogMessages.AuthAdditional.MobileNumberNotRegistered, MaskMobileNumber(normalizedMobile));
                     return BadRequest(new MobileLoginResponse
                     {
                         success = false,
-                        message = resendAfterSeconds > 3600 
-                            ? OtpMessages.MaximumOtpLimitReached
-                            : OtpMessages.PleaseWaitBeforeRequestingOtp,
-                        resendAfterSeconds = resendAfterSeconds
+                        message = OtpMessages.MobileNumberNotRegistered
                     });
                 }
 
-                return StatusCode(500, new MobileLoginResponse
+                // Generate OTP with rate limiting and resend cooldown
+                var (otp, resendAfterSeconds, canSend) = _otpService.GenerateMobileOtp(normalizedMobile);
+
+                if (!canSend)
                 {
-                    success = false,
+                    if (resendAfterSeconds > 0)
+                    {
+                        return BadRequest(new MobileLoginResponse
+                        {
+                            success = false,
+                            message = resendAfterSeconds > 3600
+                                ? OtpMessages.MaximumOtpLimitReached
+                                : OtpMessages.PleaseWaitBeforeRequestingOtp,
+                            resendAfterSeconds = resendAfterSeconds
+                        });
+                    }
+
+                    return StatusCode(500, new MobileLoginResponse
+                    {
+                        success = false,
                         message = OtpMessages.FailedToGenerateOtp
+                    });
+                }
+
+                // Send OTP via SMS
+                bool smsSent = await _smsService.SendOtpAsync(normalizedMobile, otp);
+
+                if (!smsSent)
+                {
+                    // Remove OTP from cache if SMS failed
+                    _otpService.RemoveMobileOtp(normalizedMobile);
+                    _logger.LogError(LogMessages.Otp.FailedToSendSmsOtp, MaskMobileNumber(normalizedMobile));
+                    return StatusCode(500, new MobileLoginResponse
+                    {
+                        success = false,
+                        message = OtpMessages.FailedToSendOtp
+                    });
+                }
+
+                _logger.LogInformation(LogMessages.Otp.OtpSentSuccessfully, MaskMobileNumber(normalizedMobile));
+
+                // OTP should NEVER be returned in API response for security reasons
+                // OTP is sent via SMS only
+                return Ok(new MobileLoginResponse
+                {
+                    success = true,
+                    message = OtpMessages.OtpSentSuccessfullyToMobile,
+                    resendAfterSeconds = resendAfterSeconds,
+                    otpSent = true
                 });
             }
-
-            // Send OTP via SMS
-            bool smsSent = await _smsService.SendOtpAsync(normalizedMobile, otp);
-
-            if (!smsSent)
+            catch (Exception ex)
             {
-                // Remove OTP from cache if SMS failed
-                _otpService.RemoveMobileOtp(normalizedMobile);
-                _logger.LogError(LogMessages.Otp.FailedToSendSmsOtp, MaskMobileNumber(normalizedMobile));
+                _logger.LogException(ExceptionCodes.Auth.SendOtpForMobile, nameof(SendOtpForMobile), ex);
                 return StatusCode(500, new MobileLoginResponse
                 {
                     success = false,
-                        message = OtpMessages.FailedToSendOtp
+                    message = GeneralMessages.SomethingWentWrongContactAdmin
                 });
             }
-
-            _logger.LogInformation(LogMessages.Otp.OtpSentSuccessfully, MaskMobileNumber(normalizedMobile));
-
-            // OTP should NEVER be returned in API response for security reasons
-            // OTP is sent via SMS only
-            return Ok(new MobileLoginResponse
-            {
-                success = true,
-                message = OtpMessages.OtpSentSuccessfullyToMobile,
-                resendAfterSeconds = resendAfterSeconds,
-                otpSent = true
-            });
         }
 
 		/// <summary>
@@ -346,99 +383,111 @@ namespace MobileWebApi.Controllers
 		/// </summary>
 		private async Task<IActionResult> VerifyOtpAndLogin(string normalizedMobile, string otp)
 		{
-			// Validate OTP format (6 digits)
-			if (otp.Length != 6 || !otp.All(char.IsDigit))
-			{
-				return BadRequest(new
-				{
-					Success = false,
-					Message = OtpMessages.InvalidOtpFormat
-				});
-			}
+            try
+            {
+                // Validate OTP format (6 digits)
+                if (otp.Length != 6 || !otp.All(char.IsDigit))
+                {
+                    return BadRequest(new
+                    {
+                        Success = false,
+                        Message = OtpMessages.InvalidOtpFormat
+                    });
+                }
 
-			_logger.LogInformation(LogMessages.Otp.OtpVerificationAttempt, MaskMobileNumber(normalizedMobile));
+                _logger.LogInformation(LogMessages.Otp.OtpVerificationAttempt, MaskMobileNumber(normalizedMobile));
 
-			// Check if user exists in Users table by MobileNumber
-			var user = await _userRepository.GetUserByMobileAsync(normalizedMobile);
+                // Check if user exists in Users table by MobileNumber
+                var user = await _userRepository.GetUserByMobileAsync(normalizedMobile);
 
-			if (user == null || !user.IsActive)
-			{
-				_logger.LogWarning(LogMessages.AuthAdditional.MobileNumberNotRegistered, MaskMobileNumber(normalizedMobile));
-				return BadRequest(new
-				{
-					Success = false,
-					Message = OtpMessages.MobileNumberNotRegistered
-				});
-			}
+                if (user == null || !user.IsActive)
+                {
+                    _logger.LogWarning(LogMessages.AuthAdditional.MobileNumberNotRegistered, MaskMobileNumber(normalizedMobile));
+                    return BadRequest(new
+                    {
+                        Success = false,
+                        Message = OtpMessages.MobileNumberNotRegistered
+                    });
+                }
 
-			// Validate OTP
-			bool isValidOtp = _otpService.ValidateMobileOtp(normalizedMobile, otp);
+                // Validate OTP
+                bool isValidOtp = _otpService.ValidateMobileOtp(normalizedMobile, otp);
 
-			if (!isValidOtp)
-			{
-				_logger.LogWarning(LogMessages.Otp.InvalidOtpForMobile, MaskMobileNumber(normalizedMobile));
-				return BadRequest(new
-				{
-					Success = false,
-					Message = OtpMessages.InvalidOrExpiredOtp
-				});
-			}
+                if (!isValidOtp)
+                {
+                    _logger.LogWarning(LogMessages.Otp.InvalidOtpForMobile, MaskMobileNumber(normalizedMobile));
+                    return BadRequest(new
+                    {
+                        Success = false,
+                        Message = OtpMessages.InvalidOrExpiredOtp
+                    });
+                }
 
-			// Get Employee using SystemUserId from Users table
-			Employee? employee = null;
+                // Get Employee using SystemUserId from Users table
+                Employee? employee = null;
 
-			if (user.UserId > 0)
-			{
-				employee = await _employeeRepository.GetEmployeebyUserIdAsync(user.UserId);
-			}
+                if (user.UserId > 0)
+                {
+                    employee = await _employeeRepository.GetEmployeebyUserIdAsync(user.UserId);
+                }
 
-			// Use Employee data if available, otherwise use User data
-			int employeeId = employee?.Id ?? 0;
-			int tenantId = employee?.OrganisationId ?? user.OrganisationId;
+                // Use Employee data if available, otherwise use User data
+                int employeeId = employee?.Id ?? 0;
+                int tenantId = employee?.OrganisationId ?? user.OrganisationId;
 
-			string name = employee?.Name ??
-						  (!string.IsNullOrEmpty(employee?.FirstName)
-							  ? $"{employee?.FirstName} {employee?.LastName}".Trim()
-							  : user.DisplayName ?? user.Username);
+                string name = employee?.Name ??
+                              (!string.IsNullOrEmpty(employee?.FirstName)
+                                  ? $"{employee?.FirstName} {employee?.LastName}".Trim()
+                                  : user.DisplayName ?? user.Username);
 
-			// Verify Employee is active if Employee record exists
-			if (employee != null && !employee.IsEmployeeActive)
-			{
-				_logger.LogWarning(LogMessages.AuthAdditional.EmployeeInactiveForMobile,
-					MaskMobileNumber(normalizedMobile), employee.Id);
+                // Verify Employee is active if Employee record exists
+                if (employee != null && !employee.IsEmployeeActive)
+                {
+                    _logger.LogWarning(LogMessages.AuthAdditional.EmployeeInactiveForMobile,
+                        MaskMobileNumber(normalizedMobile), employee.Id);
 
-				return BadRequest(new
-				{
-					Success = false,
-					Message = OtpMessages.EmployeeAccountInactive
-				});
-			}
+                    return BadRequest(new
+                    {
+                        Success = false,
+                        Message = OtpMessages.EmployeeAccountInactive
+                    });
+                }
 
-			// Get Tenant Configuration
-			var tenantConfig = await _tenantConfigurationRepository
-				.GetByTenantIdAsync(tenantId);
+                // Get Tenant Configuration
+                var tenantConfig = await _tenantConfigurationRepository
+                    .GetByTenantIdAsync(tenantId);
 
-			// Generate JWT token
-			var token = _tokenService.GenerateToken(user);
+                // Generate JWT token
+                var token = _tokenService.GenerateToken(user);
 
-			// Remove OTP from cache
-			_otpService.RemoveMobileOtp(normalizedMobile);
+                // Remove OTP from cache
+                _otpService.RemoveMobileOtp(normalizedMobile);
 
-			_logger.LogInformation(LogMessages.Otp.OtpVerifiedSuccessfully,
-				MaskMobileNumber(normalizedMobile), user.UserId, employeeId);
+                _logger.LogInformation(LogMessages.Otp.OtpVerifiedSuccessfully,
+                    MaskMobileNumber(normalizedMobile), user.UserId, employeeId);
 
-			return Ok(new TokenWithRefreshResponse
-			{
-				Success = true,
-				Message = AuthMessages.TokenGenerated,
-				Token = token,
-				TokenExpiry = _tokenService.GetTokenExpiry(),
-				UserId = user.UserId,
-				Username = user.Username,
-				OrganisationId = tenantId,
-				IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
-				IsGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false
-			});
+                return Ok(new TokenWithRefreshResponse
+                {
+                    Success = true,
+                    Message = AuthMessages.TokenGenerated,
+                    Token = token,
+                    TokenExpiry = _tokenService.GetTokenExpiry(),
+                    UserId = user.UserId,
+                    Username = user.Username,
+                    OrganisationId = tenantId,
+                    IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
+                    IsGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ExceptionCodes.Auth.VerifyOtpAndLogin, nameof(VerifyOtpAndLogin), ex);
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = GeneralMessages.SomethingWentWrongContactAdmin
+                });
+            }
 		}
 		/// <summary>
 		/// Logout - Terminates the user session and invalidates authentication credentials/tokens
@@ -496,11 +545,11 @@ namespace MobileWebApi.Controllers
             catch (Exception ex)
             {
                 var username = User.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
-                _logger.LogError(ex, LogMessages.Auth.ErrorDuringLogout, username);
+                    _logger.LogException(ExceptionCodes.Auth.Logout, nameof(Logout), ex);
                 return StatusCode(500, new LogoutResponse
                 {
                     Success = false,
-                    Message = AuthMessages.LogoutError
+                        Message = GeneralMessages.SomethingWentWrongContactAdmin
                 });
             }
         }
@@ -512,79 +561,91 @@ namespace MobileWebApi.Controllers
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
         {
-            _logger.LogInformation(LogMessages.Auth.ForgotPasswordRequest, request.email);
-
-            if (string.IsNullOrWhiteSpace(request.email))
+            try
             {
-                return BadRequest(new ForgotPasswordResponse
-                {
-                    Success = false,
-                    Message = AuthMessages.EmailOrMobileRequired
-                });
-            }
+                _logger.LogInformation(LogMessages.Auth.ForgotPasswordRequest, request.email);
 
-            // Try to find user by email first, then by mobile number
-            var user = await _userRepository.GetUserByEmailAsync(request.email);
-            string identifier = request.email;
-
-            if (user == null)
-            {
-                // Try mobile number if email lookup failed
-                user = await _userRepository.GetUserByMobileAsync(request.email);
-                if (user != null)
+                if (string.IsNullOrWhiteSpace(request.email))
                 {
-                    identifier = user.MobileNumber ?? request.email;
+                    return BadRequest(new ForgotPasswordResponse
+                    {
+                        Success = false,
+                        Message = AuthMessages.EmailOrMobileRequired
+                    });
                 }
-            }
 
-            if (user == null || !user.IsActive)
-            {
-                return NotFound(new ForgotPasswordResponse
+                // Try to find user by email first, then by mobile number
+                var user = await _userRepository.GetUserByEmailAsync(request.email);
+                string identifier = request.email;
+
+                if (user == null)
                 {
-                    Success = false,
-                    Message = AuthMessages.UserNotFoundOrInactive
+                    // Try mobile number if email lookup failed
+                    user = await _userRepository.GetUserByMobileAsync(request.email);
+                    if (user != null)
+                    {
+                        identifier = user.MobileNumber ?? request.email;
+                    }
+                }
+
+                if (user == null || !user.IsActive)
+                {
+                    return NotFound(new ForgotPasswordResponse
+                    {
+                        Success = false,
+                        Message = AuthMessages.UserNotFoundOrInactive
+                    });
+                }
+
+                // Validate that user has an email address for sending OTP
+                if (string.IsNullOrWhiteSpace(user.Email))
+                {
+                    return BadRequest(new ForgotPasswordResponse
+                    {
+                        Success = false,
+                        Message = EmailMessages.EmailNotFoundForUser
+                    });
+                }
+
+                // Generate OTP using the identifier (email or mobile)
+                string otp = _otpService.GenerateOtp(identifier);
+                _logger.LogInformation(LogMessages.Auth.OtpGenerated, identifier);
+
+                // Send OTP via Email
+                string userName = user.Username ?? user.Email;
+                bool emailSent = await _emailService.SendForgotPasswordOtpAsync(user.Email, userName, otp);
+
+                if (!emailSent)
+                {
+                    // Remove OTP if email failed to send
+                    _otpService.RemoveOtp(identifier);
+                    _logger.LogError(LogMessages.Email.FailedToSendOtpEmail, identifier);
+
+                    return StatusCode(500, new ForgotPasswordResponse
+                    {
+                        Success = false,
+                        Message = EmailMessages.FailedToSendOtpEmail
+                    });
+                }
+
+                string maskedContact = MaskContact(user.Email);
+
+                return Ok(new ForgotPasswordResponse
+                {
+                    Success = true,
+                    Message = AuthMessages.OtpSentSuccessfully,
+                    SentTo = maskedContact
                 });
             }
-
-            // Validate that user has an email address for sending OTP
-            if (string.IsNullOrWhiteSpace(user.Email))
+            catch (Exception ex)
             {
-                return BadRequest(new ForgotPasswordResponse
-                {
-                    Success = false,
-                    Message = EmailMessages.EmailNotFoundForUser
-                });
-            }
-
-            // Generate OTP using the identifier (email or mobile)
-            string otp = _otpService.GenerateOtp(identifier);
-            _logger.LogInformation(LogMessages.Auth.OtpGenerated, identifier);
-
-            // Send OTP via Email
-            string userName = user.Username ?? user.Email;
-            bool emailSent = await _emailService.SendForgotPasswordOtpAsync(user.Email, userName, otp);
-
-            if (!emailSent)
-            {
-                // Remove OTP if email failed to send
-                _otpService.RemoveOtp(identifier);
-                _logger.LogError(LogMessages.Email.FailedToSendOtpEmail, identifier);
-                
+                _logger.LogException(ExceptionCodes.Auth.ForgotPassword, nameof(ForgotPassword), ex);
                 return StatusCode(500, new ForgotPasswordResponse
                 {
                     Success = false,
-                    Message = EmailMessages.FailedToSendOtpEmail
+                    Message = GeneralMessages.SomethingWentWrongContactAdmin
                 });
             }
-
-            string maskedContact = MaskContact(user.Email);
-
-            return Ok(new ForgotPasswordResponse
-            {
-                Success = true,
-                Message = AuthMessages.OtpSentSuccessfully,
-                SentTo = maskedContact
-            });
         }
 
         /// <summary>
@@ -593,75 +654,87 @@ namespace MobileWebApi.Controllers
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
         {
-            _logger.LogInformation(LogMessages.Auth.OtpVerificationAttempt, request.email);
-
-            // Validate request
-            if (string.IsNullOrWhiteSpace(request.email))
+            try
             {
-                return BadRequest(new { Success = false, Message = AuthMessages.EmailOrMobileRequired });
-            }
+                _logger.LogInformation(LogMessages.Auth.OtpVerificationAttempt, request.email);
 
-            if (string.IsNullOrWhiteSpace(request.otp))
-            {
-                return BadRequest(new { Success = false, Message = AuthMessages.OtpRequired });
-            }
-
-            if (string.IsNullOrWhiteSpace(request.new_password))
-            {
-                return BadRequest(new { Success = false, Message = AuthMessages.NewPasswordRequired });
-            }
-
-            // Try to find user by email first, then by mobile number
-            var user = await _userRepository.GetUserByEmailAsync(request.email);
-            string identifier = request.email;
-
-            if (user == null)
-            {
-                // Try mobile number if email lookup failed
-                user = await _userRepository.GetUserByMobileAsync(request.email);
-                if (user != null)
+                // Validate request
+                if (string.IsNullOrWhiteSpace(request.email))
                 {
-                    identifier = user.MobileNumber ?? request.email;
-                }
-            }
-
-            if (user == null || !user.IsActive)
-            {
-                return NotFound(new { Success = false, Message = AuthMessages.UserNotFoundOrInactive });
-            }
-
-            // Validate OTP
-            if (!_otpService.ValidateOtp(identifier, request.otp))
-            {
-                _logger.LogWarning(LogMessages.Auth.OtpVerificationFailed, identifier);
-                return BadRequest(new { Success = false, Message = AuthMessages.InvalidOtp });
-            }
-
-            // Generate new password hash and salt
-            string salt = PasswordHelper.GenerateSalt();
-            string passwordHash = PasswordHelper.HashPassword(request.new_password, salt);
-
-            // Update password in database
-            bool updated = await _userRepository.UpdatePasswordAsync(user.UserId, passwordHash, salt);
-
-            if (updated)
-            {
-                // Remove OTP after successful password reset
-                _otpService.RemoveOtp(identifier);
-                _logger.LogInformation(LogMessages.Auth.PasswordResetSuccessful, identifier);
-
-                // Send confirmation email
-                if (!string.IsNullOrWhiteSpace(user.Email))
-                {
-                    await _emailService.SendPasswordResetConfirmationAsync(user.Email, user.Username ?? user.Email);
+                    return BadRequest(new { Success = false, Message = AuthMessages.EmailOrMobileRequired });
                 }
 
-                return Ok(new { Success = true, Message = AuthMessages.PasswordResetSuccessful });
+                if (string.IsNullOrWhiteSpace(request.otp))
+                {
+                    return BadRequest(new { Success = false, Message = AuthMessages.OtpRequired });
+                }
+
+                if (string.IsNullOrWhiteSpace(request.new_password))
+                {
+                    return BadRequest(new { Success = false, Message = AuthMessages.NewPasswordRequired });
+                }
+
+                // Try to find user by email first, then by mobile number
+                var user = await _userRepository.GetUserByEmailAsync(request.email);
+                string identifier = request.email;
+
+                if (user == null)
+                {
+                    // Try mobile number if email lookup failed
+                    user = await _userRepository.GetUserByMobileAsync(request.email);
+                    if (user != null)
+                    {
+                        identifier = user.MobileNumber ?? request.email;
+                    }
+                }
+
+                if (user == null || !user.IsActive)
+                {
+                    return NotFound(new { Success = false, Message = AuthMessages.UserNotFoundOrInactive });
+                }
+
+                // Validate OTP
+                if (!_otpService.ValidateOtp(identifier, request.otp))
+                {
+                    _logger.LogWarning(LogMessages.Auth.OtpVerificationFailed, identifier);
+                    return BadRequest(new { Success = false, Message = AuthMessages.InvalidOtp });
+                }
+
+                // Generate new password hash and salt
+                string salt = PasswordHelper.GenerateSalt();
+                string passwordHash = PasswordHelper.HashPassword(request.new_password, salt);
+
+                // Update password in database
+                bool updated = await _userRepository.UpdatePasswordAsync(user.UserId, passwordHash, salt);
+
+                if (updated)
+                {
+                    // Remove OTP after successful password reset
+                    _otpService.RemoveOtp(identifier);
+                    _logger.LogInformation(LogMessages.Auth.PasswordResetSuccessful, identifier);
+
+                    // Send confirmation email
+                    if (!string.IsNullOrWhiteSpace(user.Email))
+                    {
+                        await _emailService.SendPasswordResetConfirmationAsync(user.Email, user.Username ?? user.Email);
+                    }
+
+                    return Ok(new { Success = true, Message = AuthMessages.PasswordResetSuccessful });
+                }
+                else
+                {
+                    _logger.LogError(LogMessages.Auth.PasswordResetFailed, identifier);
+                    return StatusCode(500, new { Success = false, Message = AuthMessages.PasswordResetFailed });
+                }
             }
-            else
+            catch (Exception ex)
             {
-                _logger.LogError(LogMessages.Auth.PasswordResetFailed, identifier);
-                return StatusCode(500, new { Success = false, Message = AuthMessages.PasswordResetFailed });
+                _logger.LogException(ExceptionCodes.Auth.ResetPassword, nameof(ResetPassword), ex);
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = GeneralMessages.SomethingWentWrongContactAdmin
+                });
             }
         }
 
@@ -777,11 +850,11 @@ namespace MobileWebApi.Controllers
             catch (Exception ex)
             {
                 var username = User.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
-                _logger.LogError(ex, LogMessages.Auth.ChangePasswordFailed, username);
+                _logger.LogException(ExceptionCodes.Auth.ChangePassword, nameof(ChangePassword), ex);
                 return StatusCode(500, new ChangePasswordResponse
                 {
                     Success = false,
-                    Message = AuthMessages.PasswordChangeFailed
+                    Message = GeneralMessages.SomethingWentWrongContactAdmin
                 });
             }
         }
