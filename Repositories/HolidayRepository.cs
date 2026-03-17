@@ -3,6 +3,7 @@ using MobileWebApi.Data;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using MobileWebApi.Resources;
+using MobileWebApi.Constants;
 
 namespace MobileWebApi.Repositories
 {
@@ -24,17 +25,27 @@ namespace MobileWebApi.Repositories
         /// </summary>
         public async Task<int> CreateHolidayAsync(Holiday holiday)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("CreateHoliday");
-
-            return await conn.ExecuteScalarAsync<int>(query, new
+            try
             {
-                holiday.Name,
-                holiday.Date,
-                holiday.Description,
-                holiday.TenantId,
-                holiday.InsertUserId
-            });
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("CreateHoliday");
+
+                return await conn.ExecuteScalarAsync<int>(query, new
+                {
+                    holiday.Name,
+                    holiday.Date,
+                    holiday.Description,
+                    holiday.TenantId,
+                    holiday.InsertUserId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(CreateHolidayAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.HolidayCreateHolidayDatabaseError}: Failed to create holiday",
+                    ex);
+            }
         }
 
         /// <summary>
@@ -42,10 +53,20 @@ namespace MobileWebApi.Repositories
         /// </summary>
         public async Task<Holiday?> GetHolidayByIdAsync(int id, int tenantId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetHolidayById");
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("GetHolidayById");
 
-            return await conn.QueryFirstOrDefaultAsync<Holiday>(query, new { Id = id, TenantId = tenantId });
+                return await conn.QueryFirstOrDefaultAsync<Holiday>(query, new { Id = id, TenantId = tenantId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetHolidayByIdAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.HolidayGetHolidayByIdDatabaseError}: Failed to fetch holiday by id",
+                    ex);
+            }
         }
 
         /// <summary>
@@ -53,10 +74,20 @@ namespace MobileWebApi.Repositories
         /// </summary>
         public async Task<IEnumerable<Holiday>> GetAllHolidaysAsync(int tenantId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetAllHolidays");
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("GetAllHolidays");
 
-            return await conn.QueryAsync<Holiday>(query, new { TenantId = tenantId });
+                return await conn.QueryAsync<Holiday>(query, new { TenantId = tenantId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetAllHolidaysAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.HolidayGetAllHolidaysDatabaseError}: Failed to fetch all holidays",
+                    ex);
+            }
         }
 
         /// <summary>
@@ -64,14 +95,24 @@ namespace MobileWebApi.Repositories
         /// </summary>
         public async Task<IEnumerable<Holiday>> GetHolidaysWithFiltersAsync(int tenantId, int? year)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetHolidaysWithFilters");
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("GetHolidaysWithFilters");
 
-            return await conn.QueryAsync<Holiday>(query, new 
-            { 
-                TenantId = tenantId,
-                Year = year
-            });
+                return await conn.QueryAsync<Holiday>(query, new
+                {
+                    TenantId = tenantId,
+                    Year = year
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetHolidaysWithFiltersAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.HolidayGetHolidaysWithFiltersDatabaseError}: Failed to fetch holidays with filters",
+                    ex);
+            }
         }
 
         /// <summary>
@@ -79,20 +120,30 @@ namespace MobileWebApi.Repositories
         /// </summary>
         public async Task<bool> UpdateHolidayAsync(Holiday holiday)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("UpdateHoliday");
-
-            var rowsAffected = await conn.ExecuteAsync(query, new
+            try
             {
-                holiday.Id,
-                holiday.Name,
-                holiday.Date,
-                holiday.Description,
-                holiday.UpdateUserId,
-                holiday.TenantId
-            });
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("UpdateHoliday");
 
-            return rowsAffected > 0;
+                var rowsAffected = await conn.ExecuteAsync(query, new
+                {
+                    holiday.Id,
+                    holiday.Name,
+                    holiday.Date,
+                    holiday.Description,
+                    holiday.UpdateUserId,
+                    holiday.TenantId
+                });
+
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(UpdateHolidayAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.HolidayUpdateHolidayDatabaseError}: Failed to update holiday",
+                    ex);
+            }
         }
 
         /// <summary>
@@ -100,16 +151,26 @@ namespace MobileWebApi.Repositories
         /// </summary>
         public async Task<bool> DeleteHolidayAsync(int id, int tenantId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("DeleteHoliday");
-
-            var rowsAffected = await conn.ExecuteAsync(query, new
+            try
             {
-                Id = id,
-                TenantId = tenantId
-            });
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("DeleteHoliday");
 
-            return rowsAffected > 0;
+                var rowsAffected = await conn.ExecuteAsync(query, new
+                {
+                    Id = id,
+                    TenantId = tenantId
+                });
+
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(DeleteHolidayAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.HolidayDeleteHolidayDatabaseError}: Failed to delete holiday",
+                    ex);
+            }
         }
 
         /// <summary>
@@ -117,34 +178,44 @@ namespace MobileWebApi.Repositories
         /// </summary>
         public async Task<int> BulkCreateHolidaysAsync(IEnumerable<Holiday> holidays)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("CreateHoliday");
-            int totalInserted = 0;
-
-            // Use a transaction for bulk insert
-            using var transaction = conn.BeginTransaction();
             try
             {
-                foreach (var holiday in holidays)
-                {
-                    await conn.ExecuteScalarAsync<int>(query, new
-                    {
-                        holiday.Name,
-                        holiday.Date,
-                        holiday.Description,
-                        holiday.TenantId,
-                        holiday.InsertUserId
-                    }, transaction);
-                    totalInserted++;
-                }
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("CreateHoliday");
+                int totalInserted = 0;
 
-                transaction.Commit();
-                return totalInserted;
+                // Use a transaction for bulk insert
+                using var transaction = conn.BeginTransaction();
+                try
+                {
+                    foreach (var holiday in holidays)
+                    {
+                        await conn.ExecuteScalarAsync<int>(query, new
+                        {
+                            holiday.Name,
+                            holiday.Date,
+                            holiday.Description,
+                            holiday.TenantId,
+                            holiday.InsertUserId
+                        }, transaction);
+                        totalInserted++;
+                    }
+
+                    transaction.Commit();
+                    return totalInserted;
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
             }
-            catch
+            catch (Exception ex)
             {
-                transaction.Rollback();
-                throw;
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(BulkCreateHolidaysAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.HolidayBulkCreateHolidaysDatabaseError}: Failed to bulk create holidays",
+                    ex);
             }
         }
     }

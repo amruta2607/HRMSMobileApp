@@ -894,5 +894,62 @@ namespace MobileWebApi.Services
                 };
             }
         }
+
+        /// <summary>
+        /// Get today's punch in / punch out logs for the current user
+        /// </summary>
+        public async Task<TodayPunchLogsResponse> GetTodayPunchLogsAsync(int userId, int tenantId)
+        {
+            try
+            {
+                // Resolve employee from UserId
+                var employee = await _employeeRepository.GetEmployeebyUserIdAsync(userId);
+                if (employee == null)
+                {
+                    return new TodayPunchLogsResponse
+                    {
+                        Success = false,
+                        Message = EmployeeMessages.EmployeeNotFoundForUserId,
+                        Data = null
+                    };
+                }
+
+                // Ensure tenant isolation
+                if (employee.OrganisationId != tenantId)
+                {
+                    return new TodayPunchLogsResponse
+                    {
+                        Success = false,
+                        Message = TenantAccessMessages.TenantAccessDenied,
+                        Data = null
+                    };
+                }
+
+                _logger.LogInformation(LogMessages.Attendance.FetchingTodayPunchLogs, userId);
+
+                var today = DateTime.Today;
+                var logs = await _repo.GetTodayPunchLogsAsync(employee.BiometricNumber, today);
+                var logList = logs
+                    .OrderBy(l => l.LogDateTime)
+                    .ToList();
+
+                return new TodayPunchLogsResponse
+                {
+                    Success = true,
+                    Message = AttendanceMessages.TodayPunchLogsFetchedSuccessfully,
+                    Data = logList
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ExceptionCodes.Attendance.GetTodayPunchLogs, nameof(GetTodayPunchLogsAsync), ex, userId);
+                return new TodayPunchLogsResponse
+                {
+                    Success = false,
+                    Message = GeneralMessages.SomethingWentWrongContactAdmin,
+                    Data = null
+                };
+            }
+        }
     }
 }

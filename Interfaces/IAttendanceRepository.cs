@@ -1,4 +1,4 @@
-﻿using MobileWebApi.Models;
+using MobileWebApi.Models;
 
 namespace MobileWebApi.Interfaces
 {
@@ -31,5 +31,8 @@ namespace MobileWebApi.Interfaces
         // Delete Attendance
         Task<Punch?> GetPunchByIdAsync(int id, int tenantId);
         Task<bool> DeletePunchAsync(int id, int tenantId);
+
+        // DeviceLog-based punch logs
+        Task<IEnumerable<TodayPunchLogItem>> GetTodayPunchLogsAsync(string biometricNumber, DateTime date);
     }
 }

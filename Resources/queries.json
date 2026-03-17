@@ -168,6 +168,10 @@
 
     "UpdatePassword": "UPDATE Users SET PasswordHash = @PasswordHash, PasswordSalt = @PasswordSalt WHERE UserId = @UserId",
 
+    "GetTodayPunchLogs": "SELECT dl.Direction, FORMAT(dl.LogDateTime,'HH:mm') AS LogTime, dl.DeviceName FROM DeviceLog dl WHERE dl.EmployeedId = @BiometricNumber AND CAST(dl.LogDateTime AS DATE) = CAST(GETDATE() AS DATE) ORDER BY dl.LogDateTime",
+
+    //"GetTodayPunchLogs": "SELECT dl.Direction, dl.LogDateTime, dl.DeviceName FROM DeviceLog dl WHERE dl.EmployeedId = @BiometricNumber AND CAST(dl.LogDateTime AS DATE) = @LogDate ORDER BY dl.LogDateTime",
+
     "GetAttendanceByCalendar": "SELECT v.Id, v.EmployeeNumber, v.EmployeeName, v.CalendarDate, v.PunchIn, v.PunchOut, v.WorkingDuration, v.Month, v.Source, v.TenantId AS OrganisationId, v.SystemUserId FROM [dbo].[VwTimsheetPageData] v INNER JOIN Employee e ON v.EmployeeNumber = e.EmployeeNumber WHERE e.Id = @EmployeeId AND v.CalendarDate >= @DateFrom AND v.CalendarDate <= @DateTo AND v.Source='Punch' ORDER BY v.CalendarDate",
 
     "InsertEvent": "INSERT INTO Events (UserId, EventTypeId, EventData, State, Status, TenantId, InsertDate, InsertUserId, created_at) VALUES (@UserId, @EventTypeId, @EventData, @State, @Status, @TenantId, GETDATE(), @InsertUserId, GETDATE()); SELECT CAST(SCOPE_IDENTITY() AS INT);",

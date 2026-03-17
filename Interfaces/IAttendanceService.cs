@@ -1,4 +1,4 @@
-﻿using MobileWebApi.Models;
+using MobileWebApi.Models;
 
 namespace MobileWebApi.Interfaces
 {
@@ -31,5 +31,8 @@ namespace MobileWebApi.Interfaces
         
         // Get Attendance Status
         Task<AttendanceStatusResponse> GetAttendanceStatusAsync(int userId, DateTime date, int tenantId);
+
+        // Today's punch logs for logged-in user
+        Task<TodayPunchLogsResponse> GetTodayPunchLogsAsync(int userId, int tenantId);
     }
 }

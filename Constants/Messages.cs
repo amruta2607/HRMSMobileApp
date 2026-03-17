@@ -124,6 +124,7 @@ namespace MobileWebApi.Constants
         public const string RealTimeAttendanceFetchedSuccessfully = "Real-time attendance status fetched successfully.";
         public const string CurrentlyPunchedInFetchedSuccessfully = "Currently punched in employees fetched successfully.";
         public const string EmployeeAttendanceFetchedSuccessfully = "Employee attendance fetched successfully.";
+        public const string TodayPunchLogsFetchedSuccessfully = "Today's punch logs fetched successfully.";
 
         // Error messages
         public const string PunchInAlreadyDone = "Punch In already done for today.";
