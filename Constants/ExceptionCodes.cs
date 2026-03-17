@@ -191,6 +191,19 @@ namespace MobileWebApi.Constants
             public const string DownloadPaySlip = "PAY-003";
         }
 
+        // PaySlip controller (PaySlipController)
+        public static class PaySlip
+        {
+            public const string GetPaySlipYears = "PAYC-001";
+            public const string GetPaySlipMonths = "PAYC-002";
+            public const string GetPaySlipsGet = "PAYC-003";
+            public const string GetPaySlipById = "PAYC-004";
+            public const string DownloadPaySlipByMonthYear = "PAYC-005";
+            public const string GetProvidentFund = "PAYC-006";
+            public const string GetMonthlyPaymentSummary = "PAYC-007";
+            public const string GetLastMonthPayroll = "PAYC-008";
+        }
+
         // User module (UserService)
         public static class User
         {
@@ -203,12 +216,24 @@ namespace MobileWebApi.Constants
             public const string DeactivateUser = "USR-007";
         }
 
+        // User controller (UserController)
+        public static class UserController
+        {
+            public const string GetUserById = "USRC-001";
+            public const string DeleteUser = "USRC-002";
+            public const string InactiveUser = "USRC-003";
+        }
+
         // Leave module (LeaveService)
         public static class Leave
         {
             public const string CreateLeaveRequest = "LEAVE-001";
             public const string GetLeaveRequests = "LEAVE-002";
             public const string GetLeaveHistory = "LEAVE-003";
+            public const string ApproveLeaveRequest = "LEAVE-004";
+            public const string RejectLeaveRequest = "LEAVE-005";
+            public const string WithdrawLeaveRequest = "LEAVE-006";
+            public const string GetLeaveBalance = "LEAVE-007";
         }
 
         // Holiday module (HolidayService)
@@ -258,6 +283,29 @@ namespace MobileWebApi.Constants
             public const string GetLatestAnnouncements = "MOBD-002";
             public const string GetLatestEvents = "MOBD-003";
             public const string GetLatestHolidays = "MOBD-004";
+        }
+
+        // Mobile events (MobileEventController)
+        public static class MobileEvent
+        {
+            public const string GetEvents = "MOBE-001";
+        }
+
+        // Geo-fencing (GeoFencingController)
+        public static class GeoFencing
+        {
+            public const string GetTenantGeofence = "GEOF-001";
+        }
+
+        // Personal details (PersonalDetailsController)
+        public static class PersonalDetails
+        {
+            public const string GetPersonalDetailsById = "PERS-001";
+            public const string GetPersonalDetailsByUser = "PERS-002";
+            public const string GetPersonalDetailsByBranch = "PERS-003";
+            public const string AddPersonalDetails = "PERS-004";
+            public const string UpdatePersonalDetailsPhoneAndPicture = "PERS-005";
+            public const string DeletePersonalDetails = "PERS-006";
         }
 
         // SMS service (SmsService)
