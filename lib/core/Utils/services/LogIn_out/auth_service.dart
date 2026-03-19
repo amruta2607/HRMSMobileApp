@@ -93,20 +93,19 @@ class AuthService {
 
 
 
-  // ================= MOBILE LOGIN =================
-  Future<Map<String, dynamic>> loginWithMobile({
+  // ================= MOBILE LOGIN - STEP 1: SEND OTP =================
+  Future<Map<String, dynamic>> sendMobileOtp({
     required String mobileNumber,
-    required String pin,
   }) async {
     final url = Uri.parse(BaseUrls.loginWithMobile);
 
     final body = {
-      "mobile_number": mobileNumber.trim(),
-      "pin": pin.trim(),
+      "mobileNumber": mobileNumber.trim(),
+      "otp": "",
     };
 
-    print("LOGIN MOBILE URL => $url");
-    print("LOGIN MOBILE BODY => $body");
+    print("SEND OTP URL => $url");
+    print("SEND OTP BODY => $body");
 
     final response = await http.post(
       url,
@@ -114,8 +113,35 @@ class AuthService {
       body: jsonEncode(body),
     );
 
-    print("LOGIN MOBILE STATUS => ${response.statusCode}");
-    print("LOGIN MOBILE RESPONSE => ${response.body}");
+    print("SEND OTP STATUS => ${response.statusCode}");
+    print("SEND OTP RESPONSE => ${response.body}");
+
+    return jsonDecode(response.body);
+  }
+
+  // ================= MOBILE LOGIN - STEP 2: VERIFY OTP =================
+  Future<Map<String, dynamic>> verifyMobileOtp({
+    required String mobileNumber,
+    required String otp,
+  }) async {
+    final url = Uri.parse(BaseUrls.loginWithMobile);
+
+    final body = {
+      "mobileNumber": mobileNumber.trim(),
+      "otp": otp.trim(),
+    };
+
+    print("VERIFY MOBILE OTP URL => $url");
+    print("VERIFY MOBILE OTP BODY => $body");
+
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(body),
+    );
+
+    print("VERIFY MOBILE OTP STATUS => ${response.statusCode}");
+    print("VERIFY MOBILE OTP RESPONSE => ${response.body}");
 
     return jsonDecode(response.body);
   }

@@ -78,7 +78,7 @@ class _Cell extends StatelessWidget {
         textAlign: alignRight ? TextAlign.right : TextAlign.left,
         style: TextStyle(
           fontFamily: 'Inter',
-          fontSize: 12 * scale, // Scaled font size
+          fontSize: 11 * scale, // Scaled font size
           fontWeight: bold ? FontWeight.w600 : FontWeight.w500,
           height: 22.69 / 12, // Preserve Original Line Height Ratio
           letterSpacing: 0,

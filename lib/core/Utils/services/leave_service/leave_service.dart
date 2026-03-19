@@ -71,7 +71,6 @@ class LeaveService {
         print(' LEAVE SERVICE: API returned success=false');
         return null;
       }
-
     } catch (e, s) {
       print(' LEAVE SERVICE ERROR => $e');
       print(' STACKTRACE => $s');
@@ -100,10 +99,14 @@ class LeaveService {
 
       if (userId == null || orgId == null) {
         print(' APPLY LEAVE: userId or orgId is NULL');
-        return {'success': false, 'message': 'User ID or Organization ID is missing'};
+        return {
+          'success': false,
+          'message': 'User ID or Organization ID is missing'
+        };
       }
 
-      String attachmentString = "string"; // Default as per curl example if empty?
+      String attachmentString =
+          "string"; // Default as per curl example if empty?
 
       if (attachmentPath != null && attachmentPath.isNotEmpty) {
         try {
@@ -146,7 +149,10 @@ class LeaveService {
 
       if (response.statusCode == 401) {
         await TokenStorage.logoutAndNavigate();
-        return {'success': false, 'message': 'Session expired. Please login again.'};
+        return {
+          'success': false,
+          'message': 'Session expired. Please login again.'
+        };
       }
 
       final decoded = jsonDecode(response.body);
@@ -163,8 +169,11 @@ class LeaveService {
         return {'success': true, 'message': 'Leave applied successfully'};
       }
 
-      return {'success': false, 'message': decoded['message'] ?? 'Failed with status ${response.statusCode}'};
-
+      return {
+        'success': false,
+        'message':
+        decoded['message'] ?? 'Failed with status ${response.statusCode}'
+      };
     } catch (e, s) {
       print(' APPLY LEAVE ERROR => $e');
       print(' STACKTRACE => $s');
@@ -208,7 +217,6 @@ class LeaveService {
     }
   }
 
-
   static Future<List<LeaveRequestModel>?> getLeaveRequests() async {
     try {
       final token = await TokenStorage.getToken();
@@ -251,11 +259,11 @@ class LeaveService {
         final decoded = jsonDecode(response.body);
         if (decoded['success'] == true) {
           final List<dynamic> data = decoded['data'];
+          print('DEBUG: Leave Requests IDs => ${data.map((e) => {"id": e['id'], "employeeName": e['employeeName'], "startDate": e['fromDate']}).toList()}');
           return data.map((json) => LeaveRequestModel.fromJson(json)).toList();
         }
       }
       return null;
-
     } catch (e, s) {
       print(' LEAVE REQUESTS ERROR => $e');
       print(' STACKTRACE => $s');
@@ -315,7 +323,6 @@ class LeaveService {
       }
 
       return null;
-
     } catch (e, s) {
       print(' WITHDRAW LEAVE ERROR => $e');
       print(' STACKTRACE => $s');

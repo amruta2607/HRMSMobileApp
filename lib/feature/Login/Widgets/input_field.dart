@@ -10,6 +10,7 @@ class InputField extends StatefulWidget {
   final TextInputType keyboardType;
   final List<TextInputFormatter>? inputFormatters;
   final String? iconPath;
+  final bool readOnly;
 
   const InputField({
     super.key,
@@ -21,6 +22,7 @@ class InputField extends StatefulWidget {
     this.keyboardType = TextInputType.text,
     this.inputFormatters,
     this.iconPath,
+    this.readOnly = false,
   });
 
   @override
@@ -35,11 +37,11 @@ class _InputFieldState extends State<InputField> {
   @override
   Widget build(BuildContext context) {
     return TextField(
-
       controller: widget.controller,
       keyboardType: widget.keyboardType,
       inputFormatters: widget.inputFormatters,
       obscureText: widget.isPassword ? _obscureText : false,
+      readOnly: widget.readOnly,
       decoration: InputDecoration(
         filled: true,
         fillColor: const Color(0xFFF8FAFC),

@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/Theme/app_colors.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../core/Utils/services/alert_service/alert_count_service.dart';
 
-class CustomNavigationBar extends StatelessWidget {
+class CustomNavigationBar extends StatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onChanged;
 
@@ -13,16 +14,39 @@ class CustomNavigationBar extends StatelessWidget {
   });
 
   @override
+  State<CustomNavigationBar> createState() => _CustomNavigationBarState();
+}
+
+class _CustomNavigationBarState extends State<CustomNavigationBar> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initial fetch
+    AlertCountService.fetchCount();
+    // Refresh every 2 minutes
+    _timer = Timer.periodic(const Duration(minutes: 2), (_) {
+      AlertCountService.fetchCount();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
     final screenWidth = MediaQuery.of(context).size.width;
-
     const designWidth = 402.0;
     final scale = (screenWidth / designWidth).clamp(0.9, 1.05);
 
     return Container(
-      height: 65 + bottomInset, // Increased height slightly
-      padding: EdgeInsets.only(bottom: bottomInset + 8), // Added extra bottom padding to lift content
+      height: 65 + bottomInset,
+      padding: EdgeInsets.only(bottom: bottomInset + 8),
       decoration: const BoxDecoration(
         color: AppColors.navBarBg,
         boxShadow: [
@@ -33,47 +57,51 @@ class CustomNavigationBar extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          _NavItem(
-            icon: Icons.home_filled,
-
-
-            label: 'Home',
-            active: currentIndex == 0,
-            scale: scale,
-            onTap: () => onChanged(0),
-          ),
-          _NavItem(
-            imagePath: 'img/alert.png',
-            label: 'Alerts',
-            active: currentIndex == 1,
-            scale: scale,
-            onTap: () => onChanged(1),
-          ),
-
-          _NavItem(
-            imagePath: 'img/AttendanceNav.png',
-            label: 'Attendance',
-            active: currentIndex == 2,
-            scale: scale,
-            onTap: () => onChanged(2),
-          ),
-
-          _NavItem(
-            imagePath: 'img/menu.png',
-            label: 'Menu',
-            active: currentIndex == 3,
-            scale: scale,
-            onTap: () => onChanged(3),
-          ),
-
-
-        ],
+      child: ValueListenableBuilder<int>(
+        valueListenable: AlertCountService.alertCountNotifier,
+        builder: (context, alertCount, _) {
+          return Row(
+            children: [
+              _NavItem(
+                icon: Icons.home_filled,
+                label: 'Home',
+                active: widget.currentIndex == 0,
+                scale: scale,
+                onTap: () => widget.onChanged(0),
+              ),
+              _NavItem(
+                imagePath: 'img/alert.png',
+                label: 'Alerts',
+                active: widget.currentIndex == 1,
+                scale: scale,
+                badgeCount: alertCount,
+                onTap: () {
+                  widget.onChanged(1);
+                },
+              ),
+              _NavItem(
+                imagePath: 'img/attend.png',
+                label: 'Attendance',
+                active: widget.currentIndex == 2,
+                scale: scale,
+                onTap: () => widget.onChanged(2),
+              ),
+              _NavItem(
+                imagePath: 'img/menu.png',
+                label: 'Menu',
+                active: widget.currentIndex == 3,
+                scale: scale,
+                onTap: () => widget.onChanged(3),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _NavItem extends StatelessWidget {
   final IconData? icon;
@@ -81,6 +109,7 @@ class _NavItem extends StatelessWidget {
   final String label;
   final bool active;
   final double scale;
+  final int badgeCount;
   final VoidCallback onTap;
 
   const _NavItem({
@@ -89,6 +118,7 @@ class _NavItem extends StatelessWidget {
     required this.label,
     required this.active,
     required this.scale,
+    this.badgeCount = 0,
     required this.onTap,
   });
 
@@ -100,28 +130,65 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (imagePath != null)
-              Image.asset(
-                imagePath!,
-                width: 22 * scale,
-                height: 22 * scale,
-                color: active ? AppColors.primaryBlue : AppColors.iconInactive,
-              )
-            else if (icon != null)
-              Icon(
-                icon,
-                size: 22 * scale,
-                color:
-                active ? AppColors.primaryBlue : AppColors.iconInactive,
-              ),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Icon or Image
+                if (imagePath != null)
+                  Image.asset(
+                    imagePath!,
+                    width: 22 * scale,
+                    height: 22 * scale,
+                    color: active
+                        ? AppColors.primaryBlue
+                        : AppColors.iconInactive,
+                  )
+                else if (icon != null)
+                  Icon(
+                    icon,
+                    size: 22 * scale,
+                    color: active
+                        ? AppColors.primaryBlue
+                        : AppColors.iconInactive,
+                  ),
+
+                // Red Badge
+                if (badgeCount > 0)
+                  Positioned(
+                    top: -5,
+                    right: -6,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        badgeCount > 99 ? '99+' : '$badgeCount',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 9 * scale,
+                          fontWeight: FontWeight.bold,
+                          height: 1.2,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+
             const SizedBox(height: 2),
             Text(
               label,
               style: TextStyle(
                 fontSize: 10.5 * scale,
                 fontWeight: FontWeight.w500,
-                color:
-                active ? AppColors.primaryBlue : AppColors.textGrey,
+                color: active ? AppColors.primaryBlue : AppColors.textGrey,
               ),
             ),
           ],

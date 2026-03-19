@@ -50,29 +50,42 @@ class LeaveHeaderState extends State<LeaveHeader> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          /// Back + Title
-          Row(
-            children: [
-              InkWell(
-                onTap: () {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const MainNavigationScreen(initialIndex: 0),
+          /// ✅ Material + InkWell wraps both arrow + "Leave" text
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                    const MainNavigationScreen(initialIndex: 0),
+                  ),
+                      (route) => false,
+                );
+              },
+              borderRadius: BorderRadius.circular(8),
+              splashColor: Colors.black.withOpacity(0.1),
+              highlightColor: Colors.black.withOpacity(0.05),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Padding(
+                    padding:
+                    const EdgeInsets.only(right: 8.0, top: 4, bottom: 4),
+                    child: const Icon(Icons.arrow_back_ios, size: 18),
+                  ),
+                  Text(
+                    "Leave",
+                    style: TextStyle(
+                      fontSize: 24 * scale,
+                      fontWeight: FontWeight.w700,
                     ),
-                        (route) => false,
-                  );
-                },
-                child: const Icon(Icons.arrow_back_ios, size: 18),
+                  ),
+                ],
               ),
-              Text(
-                "Leave",
-                style: TextStyle(
-                  fontSize: 24 * scale,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+            ),
           ),
 
           SizedBox(height: 20 * scale),
@@ -85,7 +98,6 @@ class LeaveHeaderState extends State<LeaveHeader> {
                 return const Center(child: CircularProgressIndicator());
               }
 
-
               final data = snapshot.data;
 
               if (data == null || data.isEmpty) {
@@ -94,7 +106,8 @@ class LeaveHeaderState extends State<LeaveHeader> {
 
               return SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.only(left: 8 * scale, right: 8 * scale),
+                padding:
+                EdgeInsets.only(left: 8 * scale, right: 8 * scale),
                 child: Row(
                   children: data.map((item) {
                     return Padding(

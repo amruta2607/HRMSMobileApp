@@ -26,6 +26,7 @@ class AlertService {
       }
 
       if (response.statusCode == 200) {
+        print('DEBUG: Raw Alerts Response => ${response.body}');
         final decoded = jsonDecode(response.body);
         if (decoded['success'] == true) {
           final List<dynamic> data = decoded['data'];
@@ -79,6 +80,7 @@ class AlertService {
       }
 
       final decoded = jsonDecode(response.body);
+      print('DEBUG: Process Request Response => $decoded');
       return {
         'success': decoded['success'] == true || response.statusCode == 200,
         'message': decoded['message'] ?? (isApprove ? 'Approved' : 'Rejected'),

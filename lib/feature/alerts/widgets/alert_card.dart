@@ -19,6 +19,92 @@ class AlertCard extends StatelessWidget {
     required this.isTask,
   });
 
+  // ─── Detail Dialog ────────────────────────────────────────────────────────
+  void _showDetailDialog(BuildContext context, double scale) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16 * scale),
+          ),
+          insetPadding:
+          const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          child: Padding(
+            padding: EdgeInsets.all(20 * scale),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Header ──────────────────────────────────────────────────
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        alert.title,
+                        style: TextStyle(
+                          fontSize: 16 * scale,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.of(ctx).pop(),
+                      child: const Icon(Icons.close,
+                          size: 20, color: Colors.black45),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+
+                // ── Message ─────────────────────────────────────────────────
+                Text(
+                  alert.message,
+                  style: TextStyle(
+                    fontSize: 14 * scale,
+                    color: AppColors.textGrey,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // ── Close Button ─────────────────────────────────────────────
+                SizedBox(
+                  width: double.infinity,
+                  height: 42 * scale,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryBlue,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10 * scale),
+                      ),
+                    ),
+                    child: Text(
+                      'Close',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14 * scale,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ─── Main Card ────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final scale = (MediaQuery.of(context).size.width / 402).clamp(0.85, 1.1);
@@ -61,49 +147,31 @@ class AlertCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Expanded(
-                child: SizedBox(
-                  height: 36 * scale,
-                  child: OutlinedButton(
-                    onPressed: onView,
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.primaryBlue),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: Text(
-                      'View',
-                      style: TextStyle(
-                        color: AppColors.primaryBlue,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14 * scale,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
               if (isActionable) ...[
-                const SizedBox(width: 8),
                 Expanded(
                   child: SizedBox(
                     height: 36 * scale,
                     child: ElevatedButton(
                       onPressed: onApprove,
                       style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.zero,
                         backgroundColor: const Color(0xff98f1b4),
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: Text(
-                        'Approve',
-                        style: TextStyle(
-                          color: const Color(0xff15803d),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14 * scale,
+                      child: Center(
+                        child: Text(
+                          'Approve',
+                          style: TextStyle(
+                            color: const Color(0xff15803d),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14 * scale,
+                            height: 1.0,
+                          ),
                         ),
                       ),
                     ),
@@ -116,24 +184,55 @@ class AlertCard extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: onReject,
                       style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.zero,
                         backgroundColor: const Color(0xffffa1a1),
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: Text(
-                        'Reject',
-                        style: TextStyle(
-                          color: const Color(0xffc62828),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14 * scale,
+                      child: Center(
+                        child: Text(
+                          'Reject',
+                          style: TextStyle(
+                            color: const Color(0xffc62828),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14 * scale,
+                            height: 1.0,
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
               ],
+              SizedBox(
+                height: 36 * scale,
+                width: 90 * scale,
+                child: OutlinedButton(
+                  // ← triggers the detail dialog
+                  onPressed: () => _showDetailDialog(context, scale),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    side: const BorderSide(color: AppColors.primaryBlue),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'View',
+                      style: TextStyle(
+                        color: AppColors.primaryBlue,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14 * scale,
+                        height: 1.0,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),

@@ -14,29 +14,41 @@ class PayrollHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          /// Back + Title
-          Row(
-            children: [
-              InkWell(
-                onTap: () {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const MainNavigationScreen(initialIndex: 0),
+          /// ✅ Material + InkWell wraps both arrow + "Payroll" text
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                    const MainNavigationScreen(initialIndex: 0),
+                  ),
+                      (route) => false,
+                );
+              },
+              borderRadius: BorderRadius.circular(8),
+              splashColor: Colors.black.withOpacity(0.1),
+              highlightColor: Colors.black.withOpacity(0.05),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(right: 8.0, top: 4, bottom: 4),
+                    child: Icon(Icons.arrow_back_ios, size: 18),
+                  ),
+                  Text(
+                    "Payroll",
+                    style: TextStyle(
+                      fontSize: 24 * scale,
+                      fontWeight: FontWeight.w700,
                     ),
-                        (route) => false,
-                  );
-                },
-                child: const Icon(Icons.arrow_back_ios, size: 18),
+                  ),
+                ],
               ),
-              Text(
-                "Payroll",
-                style: TextStyle(
-                  fontSize: 24 * scale,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),

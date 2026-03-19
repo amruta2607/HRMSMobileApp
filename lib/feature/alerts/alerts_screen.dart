@@ -7,16 +7,18 @@ import 'package:altroz/feature/alerts/model/alert_model.dart';
 import 'package:altroz/feature/alerts/widgets/alert_card.dart';
 import '../Reuse_Widgets/home_screen_constent.dart';
 import 'package:altroz/feature/Navigation/main_navigation_screen.dart';
+import 'package:altroz/core/Utils/services/alert_service/alert_count_service.dart';
 
 class AlertsScreen extends StatefulWidget {
-  const AlertsScreen({super.key});
+  final bool initialShowTasks;
+  const AlertsScreen({super.key, this.initialShowTasks = false});
 
   @override
   State<AlertsScreen> createState() => _AlertsScreenState();
 }
 
 class _AlertsScreenState extends State<AlertsScreen> {
-  bool isTasksSelected = false;
+  late bool isTasksSelected;
   List<AlertModel> _alerts = [];
   bool _isLoading = false;
   String? _error;
@@ -24,7 +26,17 @@ class _AlertsScreenState extends State<AlertsScreen> {
   @override
   void initState() {
     super.initState();
+    isTasksSelected = widget.initialShowTasks;
     _loadAlerts();
+  }
+
+  // ✅ React when parent changes initialShowTasks
+  @override
+  void didUpdateWidget(AlertsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialShowTasks != widget.initialShowTasks) {
+      setState(() => isTasksSelected = widget.initialShowTasks);
+    }
   }
 
   Future<void> _loadAlerts() async {
@@ -39,6 +51,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
         setState(() {
           if (result != null) {
             _alerts = result;
+            AlertCountService.updateCount(_unreadCount);
           } else {
             _error = "Failed to load alerts";
           }
@@ -75,10 +88,12 @@ class _AlertsScreenState extends State<AlertsScreen> {
       if (result['success']) {
         setState(() {
           _alerts.removeWhere((a) => a.id == alert.id);
+          AlertCountService.updateCount(_unreadCount);
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("${isApprove ? 'Approved' : 'Rejected'} successfully"),
+            content: Text(
+                "${isApprove ? 'Approved' : 'Rejected'} successfully"),
             backgroundColor: Colors.green,
           ),
         );
@@ -97,6 +112,11 @@ class _AlertsScreenState extends State<AlertsScreen> {
   Widget build(BuildContext context) {
     final scale = (MediaQuery.of(context).size.width / 402).clamp(0.85, 1.1);
 
+    final tasksCount =
+        _alerts.where((a) => a.title.contains("Leave Request")).length;
+    final notificationsCount =
+        _alerts.where((a) => !a.title.contains("Leave Request")).length;
+
     return HomeScreenConstent(
       body: Column(
         children: [
@@ -105,42 +125,50 @@ class _AlertsScreenState extends State<AlertsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                /// Back + Title (Payroll Style)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    InkWell(
-                      onTap: () {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const MainNavigationScreen(initialIndex: 0),
-                          ),
-                              (route) => false,
-                        );
-                      },
-                      child: const Padding(
-                        padding: EdgeInsets.only(right: 8.0),
-                        child: Icon(
-                          Icons.arrow_back_ios,
-                          size: 18, // Payroll icon size
-                          color: AppColors.textDark,
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                          const MainNavigationScreen(initialIndex: 0),
                         ),
-                      ),
+                            (route) => false,
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    splashColor: AppColors.textDark.withOpacity(0.1),
+                    highlightColor: AppColors.textDark.withOpacity(0.05),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Padding(
+                          padding:
+                          EdgeInsets.only(right: 8.0, top: 4, bottom: 4),
+                          child: Icon(
+                            Icons.arrow_back_ios,
+                            size: 18,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                        Text(
+                          'Alerts',
+                          style: TextStyle(
+                            fontSize: 24 * scale,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      'Alerts',
-                      style: TextStyle(
-                        fontSize: 24 * scale, // Payroll title size
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Padding(
-                  padding: EdgeInsets.only(left: 18 * scale), // Aligned under title text
+                  padding: EdgeInsets.only(left: 18 * scale),
                   child: Text(
                     '$_unreadCount New notifications',
                     style: TextStyle(
@@ -165,12 +193,12 @@ class _AlertsScreenState extends State<AlertsScreen> {
               child: Row(
                 children: [
                   ToggleItem(
-                    text: "Tasks",
+                    text: "Tasks ($tasksCount)",
                     selected: isTasksSelected,
                     onTap: () => setState(() => isTasksSelected = true),
                   ),
                   ToggleItem(
-                    text: "Notifications",
+                    text: "Notifications ($notificationsCount)",
                     selected: !isTasksSelected,
                     onTap: () => setState(() => isTasksSelected = false),
                   ),
@@ -183,35 +211,75 @@ class _AlertsScreenState extends State<AlertsScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
-                ? Center(child: Text(_error!))
+                ? RefreshIndicator(
+              onRefresh: _loadAlerts,
+              child: ListView(
+                children: [
+                  SizedBox(
+                    height: 300,
+                    child: Center(child: Text(_error!)),
+                  ),
+                ],
+              ),
+            )
                 : _alerts.isEmpty
-                ? const Center(child: Text("No notifications found"))
+                ? RefreshIndicator(
+              onRefresh: _loadAlerts,
+              child: ListView(
+                children: const [
+                  SizedBox(
+                    height: 300,
+                    child: Center(
+                      child: Text("No notifications found"),
+                    ),
+                  ),
+                ],
+              ),
+            )
                 : () {
               final filtered = _alerts.where((a) {
-                final isLeave = a.title.contains("Leave Request");
-                // In future, more task types can be added here
+                final isLeave =
+                a.title.contains("Leave Request");
                 return isTasksSelected ? isLeave : !isLeave;
               }).toList();
 
               if (filtered.isEmpty) {
-                return Center(child: Text("No ${isTasksSelected ? 'tasks' : 'notifications'} found"));
+                return RefreshIndicator(
+                  onRefresh: _loadAlerts,
+                  child: ListView(
+                    children: [
+                      SizedBox(
+                        height: 300,
+                        child: Center(
+                          child: Text(
+                            "No ${isTasksSelected ? 'tasks' : 'notifications'} found",
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
               }
 
-              return ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                itemCount: filtered.length,
-                itemBuilder: (context, index) {
-                  final alert = filtered[index];
-                  return AlertCard(
-                    alert: alert,
-                    isTask: isTasksSelected,
-                    onView: () {
-                      // Implement view logic
-                    },
-                    onApprove: () => _handleAction(alert, true),
-                    onReject: () => _handleAction(alert, false),
-                  );
-                },
+              return RefreshIndicator(
+                onRefresh: _loadAlerts,
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 8),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final alert = filtered[index];
+                    return AlertCard(
+                      alert: alert,
+                      isTask: isTasksSelected,
+                      onView: () {},
+                      onApprove: () =>
+                          _handleAction(alert, true),
+                      onReject: () =>
+                          _handleAction(alert, false),
+                    );
+                  },
+                ),
               );
             }(),
           ),

@@ -37,21 +37,34 @@ class LoginController {
     );
   }
 
-  // ================= MOBILE LOGIN =================
-  Future<void> loginWithMobile({
+  // ================= MOBILE LOGIN - STEP 1: SEND OTP =================
+  /// Returns resendAfterSeconds from the response
+  Future<int> sendOtp({required String mobile}) async {
+    final response = await _auth.sendMobileOtp(mobileNumber: mobile);
+
+    print("CONTROLLER SEND OTP RESPONSE → $response");
+
+    if (response['success'] != true) {
+      throw Exception(response['message'] ?? 'Failed to send OTP');
+    }
+
+    return (response['resendAfterSeconds'] as int?) ?? 30;
+  }
+
+  // ================= MOBILE LOGIN - STEP 2: VERIFY OTP =================
+  Future<void> verifyOtp({
     required String mobile,
-    required String pin,
+    required String otp,
   }) async {
-    final response = await _auth.loginWithMobile(
+    final response = await _auth.verifyMobileOtp(
       mobileNumber: mobile,
-      pin: pin,
+      otp: otp,
     );
 
-    print("CONTROLLER MOBILE RESPONSE → $response");
+    print("CONTROLLER VERIFY OTP RESPONSE → $response");
 
     final model = LoginModel.fromJson(response);
 
-    // LOGIN FAILED
     if (!model.success) {
       throw Exception(model.message);
     }
@@ -65,10 +78,7 @@ class LoginController {
     );
 
     print(
-      "LOGIN SUCCESS (MOBILE) → userId=${model.userId}, orgId=${model.organisationId}",
-
-
-
+      "LOGIN SUCCESS (MOBILE OTP) → userId=${model.userId}, orgId=${model.organisationId}",
     );
   }
 }

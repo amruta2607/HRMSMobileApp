@@ -35,32 +35,43 @@ class ProfileScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
 
-                      /// Back Arrow
-                      GestureDetector(
-                        onTap: () => Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                            const MainNavigationScreen(),
+                      /// ✅ Material + InkWell wraps both arrow + "Profile" text
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const MainNavigationScreen(),
+                            ),
+                                (route) => false,
                           ),
-                              (route) => false,
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_ios,
-                          size: 22,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-
-                      const SizedBox(width: 8),
-
-                      /// Profile Title
-                      const Text(
-                        "Profile",
-                        style: TextStyle(
-                          fontSize: 23,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textDark,
+                          borderRadius: BorderRadius.circular(8),
+                          splashColor: AppColors.textDark.withOpacity(0.1),
+                          highlightColor: AppColors.textDark.withOpacity(0.05),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: const [
+                              Padding(
+                                padding: EdgeInsets.only(
+                                    right: 8.0, top: 4, bottom: 4),
+                                child: Icon(
+                                  Icons.arrow_back_ios,
+                                  size: 22,
+                                  color: AppColors.textDark,
+                                ),
+                              ),
+                              Text(
+                                "Profile",
+                                style: TextStyle(
+                                  fontSize: 23,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textDark,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
 
@@ -73,8 +84,7 @@ class ProfileScreen extends StatelessWidget {
                             context: context,
                             isScrollControlled: true,
                             backgroundColor: Colors.transparent,
-                            builder: (context) =>
-                            const EditProfileDialog(),
+                            builder: (context) => const EditProfileDialog(),
                           );
                         },
                         child: const Icon(
@@ -102,8 +112,7 @@ class ProfileScreen extends StatelessWidget {
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(
-                builder: (_) =>
-                    MainNavigationScreen(initialIndex: index),
+                builder: (_) => MainNavigationScreen(initialIndex: index),
               ),
                   (route) => false,
             );

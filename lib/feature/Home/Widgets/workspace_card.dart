@@ -8,6 +8,7 @@ class WorkspaceCard extends StatelessWidget {
   final String? imagePath;
   final Color? iconColor;
   final Color? iconBgColor;
+  final double iconSize;
   final VoidCallback? onTap;
 
   const WorkspaceCard({
@@ -18,6 +19,7 @@ class WorkspaceCard extends StatelessWidget {
     this.imagePath,
     this.iconColor,
     this.iconBgColor,
+    this.iconSize = 20, // default unchanged behaviour
     this.onTap,
   });
 
@@ -25,9 +27,7 @@ class WorkspaceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 🔹 Figma reference
         const figmaWidth = 113.0;
-        const figmaHeight = 98.3;
 
         final scale = (constraints.maxWidth / figmaWidth).clamp(0.75, 1.2);
 
@@ -58,7 +58,7 @@ class WorkspaceCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 27 * scale, // based on 26.92
+                  width: 27 * scale,
                   height: 27 * scale,
                   decoration: BoxDecoration(
                     color: iconBgColor ?? Colors.transparent,
@@ -68,12 +68,12 @@ class WorkspaceCard extends StatelessWidget {
                   child: imagePath != null
                       ? Image.asset(
                     imagePath!,
-                    width: 20 * scale, // slightly smaller than container
-                    height: 20 * scale,
+                    width: iconSize * scale,
+                    height: iconSize * scale,
                   )
                       : Icon(
                     icon,
-                    size: 18 * scale, // adjusted for container
+                    size: iconSize * scale,
                     color: iconColor,
                   ),
                 ),
@@ -86,7 +86,7 @@ class WorkspaceCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 12 * scale,
+                    fontSize: 10.8 * scale,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textDark,
                   ),

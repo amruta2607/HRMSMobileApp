@@ -22,6 +22,8 @@ class BaseUrls {
   static const String attendanceStatus = "$base/api/attendance/status";
   static const String geofencingByTenant = "$base/api/geofencing/by-tenant";
 
+  static const String todayLogs = "$base/api/attendance/today-logs";
+
 
   // PROFILE
   static const String profileByUser =
@@ -57,4 +59,8 @@ class BaseUrls {
   static const String alerts = "$base/api/Alert/user";
   static const String approveAlert = "$base/api/Alert/approve-request";
   static const String rejectAlert = "$base/api/Alert/reject-request";
+
+  //menu
+  static const String alertCount = "$base/api/Alert/user/count";
+
 }

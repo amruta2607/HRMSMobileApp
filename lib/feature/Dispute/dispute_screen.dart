@@ -46,29 +46,38 @@ class DisputeScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  /// 🔹 Back + Title
-                  Row(
-                    children: [
-                      InkWell(
-                        onTap: () => Navigator.pop(context),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Icon(
-                          Icons.arrow_back_ios,
-                          size: 20 * scale,
-                          color: AppColors.textDark,
-                        ),
+                  /// ✅ Material + InkWell wraps both arrow + "Raise a Dispute" text
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => Navigator.pop(context),
+                      borderRadius: BorderRadius.circular(8),
+                      splashColor: AppColors.textDark.withOpacity(0.1),
+                      highlightColor: AppColors.textDark.withOpacity(0.05),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(
+                                right: 8.0, top: 4, bottom: 4),
+                            child: Icon(
+                              Icons.arrow_back_ios,
+                              size: 20 * scale,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                          Text(
+                            'Raise a Dispute',
+                            style: TextStyle(
+                              fontSize: 18 * scale,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(width: 8 * scale),
-                      Text(
-                        'Raise a Dispute',
-                        style: TextStyle(
-                          fontSize: 18 * scale,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textDark,
-
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
 
                   SizedBox(height: 18 * scale),

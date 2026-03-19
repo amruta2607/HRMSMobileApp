@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/Theme/app_colors.dart';
 import '../../leave/leave_screen.dart';
 import '../../payroll/payroll_screen.dart';
+import 'package:altroz/feature/Navigation/main_navigation_screen.dart'; // 👈 Import
 import 'workspace_card.dart';
 
 class HomeWorkspaceSection extends StatelessWidget {
@@ -11,15 +12,15 @@ class HomeWorkspaceSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final spacing = 14.0;
+        const spacing = 14.0;
 
         final items = [
-
           WorkspaceCard(
             title: 'Payroll',
             subtitle: 'Slip',
-            imagePath: 'img/payroll.png',
+            imagePath: 'img/payrolll.png',
             iconBgColor: Color(0x8FAFF8CC),
+            iconSize: 16,
             onTap: () {
               Navigator.push(
                 context,
@@ -31,10 +32,23 @@ class HomeWorkspaceSection extends StatelessWidget {
           WorkspaceCard(
             title: 'Tasks',
             subtitle: '3 Pending',
-            imagePath: 'img/tasks.png',
+            imagePath: 'img/taskk.png',
             iconColor: AppColors.tasksRed,
             iconBgColor: Color(0x8FAFF8CC),
-
+            iconSize: 16,
+            onTap: () {
+              // 👇 Navigate to MainNavigationScreen with Alerts tab + Tasks pre-selected
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MainNavigationScreen(
+                    initialIndex: 1,
+                    initialAlertShowTasks: true,
+                  ),
+                ),
+                    (route) => false,
+              );
+            },
           ),
 
           WorkspaceCard(
@@ -42,6 +56,7 @@ class HomeWorkspaceSection extends StatelessWidget {
             subtitle: '12 days',
             imagePath: 'img/leave.png',
             iconBgColor: Color(0x8FAFF8CC),
+            iconSize: 16,
             onTap: () {
               Navigator.push(
                 context,
@@ -56,7 +71,7 @@ class HomeWorkspaceSection extends StatelessWidget {
             icon: Icons.access_time,
             iconColor: AppColors.attendanceBlue,
             iconBgColor: Color(0x8FAFF8CC),
-
+            iconSize: 22,
           ),
 
           WorkspaceCard(
@@ -65,15 +80,16 @@ class HomeWorkspaceSection extends StatelessWidget {
             icon: Icons.access_time,
             iconColor: AppColors.attendanceBlue,
             iconBgColor: Color(0x8FAFF8CC),
-
+            iconSize: 22,
           ),
+
           WorkspaceCard(
             title: 'Attendance',
             subtitle: 'Today',
             icon: Icons.access_time,
             iconColor: AppColors.textGrey,
             iconBgColor: Color(0x8FAFF8CC),
-
+            iconSize: 22,
           ),
         ];
 
@@ -89,19 +105,15 @@ class HomeWorkspaceSection extends StatelessWidget {
                 color: AppColors.textGrey,
               ),
             ),
-
             const SizedBox(height: 16),
-
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: items.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
                 crossAxisSpacing: spacing,
                 mainAxisSpacing: spacing,
-
-                // 🔹 Figma ratio
                 childAspectRatio: 113 / 98.3,
               ),
               itemBuilder: (_, index) => items[index],
@@ -112,18 +124,3 @@ class HomeWorkspaceSection extends StatelessWidget {
     );
   }
 }
-
-
-//
-// GridView.builder(
-// shrinkWrap: true,
-// physics: const NeverScrollableScrollPhysics(),
-// itemCount: items.length,
-// gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-// crossAxisCount: 3, // ✅ FIXED: 3 cards per row
-// crossAxisSpacing: 14,
-// mainAxisSpacing: 14,
-// childAspectRatio: 113 / 98.3, // ✅ Figma ratio
-// ),
-// itemBuilder: (_, index) => items[index],
-// ),

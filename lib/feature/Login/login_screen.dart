@@ -30,6 +30,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final LoginController _loginController = LoginController();
   bool _isLoading = false;
 
+  // Mobile OTP flow state
+  bool _otpSent = false;
+  int _resendCountdown = 0;
+
   void _switchMode(bool isEmail) {
     if (isEmailSelected == isEmail) return;
     setState(() {
@@ -38,50 +42,142 @@ class _LoginScreenState extends State<LoginScreen> {
       passwordController.clear();
       fieldError = null;
       passwordError = null;
+      _otpSent = false;
+      _resendCountdown = 0;
     });
   }
 
-  Future<void> onLogin() async {
-    final result = Validator.validateLogin(
-      isEmail: isEmailSelected,
-      fieldValue: fieldController.text,
-      passwordValue: passwordController.text,
-    );
-
-    setState(() {
-      fieldError = result.fieldError;
-      passwordError = result.passwordError;
+  void _startCountdown(int seconds) {
+    setState(() => _resendCountdown = seconds);
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(seconds: 1));
+      if (!mounted) return false;
+      setState(() => _resendCountdown--);
+      return _resendCountdown > 0;
     });
+  }
 
-    if (fieldError != null || passwordError != null) return;
-
-    setState(() => _isLoading = true);
-
+  Future<void> _sendOtp() async {
+    final mobile = fieldController.text.trim();
+    if (mobile.isEmpty || mobile.length < 10) {
+      setState(() => fieldError = 'Enter a valid 10-digit mobile number');
+      return;
+    }
+    setState(() {
+      fieldError = null;
+      _isLoading = true;
+    });
     try {
-      if (isEmailSelected) {
+      final seconds = await _loginController.sendOtp(mobile: mobile);
+      setState(() {
+        _otpSent = true;
+        passwordController.clear();
+        passwordError = null;
+      });
+      _startCountdown(seconds);
+    } catch (e) {
+      setState(() {
+        fieldError = e.toString().replaceAll('Exception:', '').trim();
+      });
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> onLogin() async {
+    // ── EMAIL path ──
+    if (isEmailSelected) {
+      final result = Validator.validateLogin(
+        isEmail: true,
+        fieldValue: fieldController.text,
+        passwordValue: passwordController.text,
+      );
+      setState(() {
+        fieldError = result.fieldError;
+        passwordError = result.passwordError;
+      });
+      if (fieldError != null || passwordError != null) return;
+
+      setState(() => _isLoading = true);
+      try {
         await _loginController.loginWithEmail(
           email: fieldController.text.trim(),
           password: passwordController.text.trim(),
         );
-      } else {
-        await _loginController.loginWithMobile(
-          mobile: fieldController.text.trim(),
-          pin: passwordController.text.trim(),
-        );
-      }
-
-      if (!mounted) return;
-
-      // Force refresh profile for new user
-      if (mounted) {
+        if (!mounted) return;
         context.read<ProfileController>().refreshProfile();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+        );
+      } catch (e) {
+        if (e is SocketException) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Connect to the Internet to Proceed"),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+          return;
+        }
+        final msg = e.toString().toLowerCase();
+        String? newFieldError;
+        String? newPasswordError;
+        if (msg.contains("password")) {
+          newPasswordError =
+              e.toString().replaceAll('Exception:', '').trim();
+        } else if (msg.contains("user") ||
+            msg.contains("email") ||
+            msg.contains("account")) {
+          newFieldError =
+              e.toString().replaceAll('Exception:', '').trim();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  e.toString().replaceAll('Exception:', '').trim()),
+            ),
+          );
+        }
+        setState(() {
+          fieldError = newFieldError;
+          passwordError = newPasswordError;
+        });
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
       }
+      return;
+    }
 
+    // ── MOBILE OTP path ──
+    // Step 1: OTP not sent yet → send OTP first
+    if (!_otpSent) {
+      await _sendOtp();
+      return;
+    }
+
+    // Step 2: OTP sent → verify OTP
+    final otp = passwordController.text.trim();
+    if (otp.isEmpty || otp.length < 4) {
+      setState(
+              () => passwordError = 'Enter the OTP received on your mobile');
+      return;
+    }
+    setState(() {
+      passwordError = null;
+      _isLoading = true;
+    });
+    try {
+      await _loginController.verifyOtp(
+        mobile: fieldController.text.trim(),
+        otp: otp,
+      );
+      if (!mounted) return;
+      context.read<ProfileController>().refreshProfile();
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => const MainNavigationScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
       );
     } catch (e) {
       if (e is SocketException) {
@@ -94,39 +190,12 @@ class _LoginScreenState extends State<LoginScreen> {
         );
         return;
       }
-
-      final msg = e.toString().toLowerCase();
-
-      String? newFieldError;
-      String? newPasswordError;
-
-      if (msg.contains("password") || msg.contains("otp")) {
-        newPasswordError =
-            e.toString().replaceAll('Exception:', '').trim();
-      } else if (msg.contains("user") ||
-          msg.contains("email") ||
-          msg.contains("account") ||
-          msg.contains("mobile")) {
-        newFieldError =
-            e.toString().replaceAll('Exception:', '').trim();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              e.toString().replaceAll('Exception:', '').trim(),
-            ),
-          ),
-        );
-      }
-
       setState(() {
-        fieldError = newFieldError;
-        passwordError = newPasswordError;
+        passwordError =
+            e.toString().replaceAll('Exception:', '').trim();
       });
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -157,7 +226,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   height: 105 * scale,
                   width: 145 * scale,
                 ),
-
 
                 Text(
                   "Welcome Back",
@@ -204,13 +272,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(height: 20 * scale),
 
                 Text(
-                  isEmailSelected
-                      ? "WORK EMAIL / USER ID"
-                      : "MOBILE NUMBER",
+                  isEmailSelected ? "WORK EMAIL / USER ID" : "MOBILE NUMBER",
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF94A3B8),
+                    color: Color(0xFF94A3B8),
                     letterSpacing: 0.6,
                   ),
                 ),
@@ -227,6 +293,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   iconPath: isEmailSelected ? 'img/workMail.png' : null,
                   controller: fieldController,
                   errorText: fieldError,
+                  // Lock mobile field once OTP is sent
+                  readOnly: !isEmailSelected && _otpSent,
                   keyboardType: isEmailSelected
                       ? TextInputType.emailAddress
                       : TextInputType.number,
@@ -238,37 +306,57 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
 
-                SizedBox(height: 15 * scale),
-
-                Text(
-                  isEmailSelected ? "PASSWORD" : "OTP",
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF94A3B8),                    letterSpacing: 0.6,
+                // OTP field – only show after OTP is sent
+                if (!isEmailSelected && _otpSent) ...[
+                  SizedBox(height: 15 * scale),
+                  const Text(
+                    "OTP",
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF94A3B8),
+                      letterSpacing: 0.6,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 6),
+                  InputField(
+                    hint: "Enter OTP",
+                    icon: Icons.lock_outline,
+                    iconPath: 'img/passwordP.png',
+                    isPassword: true,
+                    controller: passwordController,
+                    errorText: passwordError,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(6),
+                    ],
+                  ),
+                ],
 
-                const SizedBox(height: 6),
-
-                InputField(
-                  hint: isEmailSelected ? "Enter Password" : "OTP",
-                  icon: Icons.lock_outline,
-
-                  iconPath: 'img/passwordP.png',
-                  isPassword: true,
-                  controller: passwordController,
-                  errorText: passwordError,
-                  keyboardType: isEmailSelected
-                      ? TextInputType.visiblePassword
-                      : TextInputType.number,
-                  inputFormatters: isEmailSelected
-                      ? []
-                      : [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(6),
-                  ],
-                ),
+                // Email password field
+                if (isEmailSelected) ...[
+                  SizedBox(height: 15 * scale),
+                  const Text(
+                    "PASSWORD",
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF94A3B8),
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  InputField(
+                    hint: "Enter Password",
+                    icon: Icons.lock_outline,
+                    iconPath: 'img/passwordP.png',
+                    isPassword: true,
+                    controller: passwordController,
+                    errorText: passwordError,
+                    keyboardType: TextInputType.visiblePassword,
+                  ),
+                ],
 
                 SizedBox(height: 12 * scale),
 
@@ -283,8 +371,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             builder: (_) => const ForgotPasswordScreen(),
                           ),
                         );
-                      } else {
-                        // Resend OTP logic
+                      } else if (_otpSent) {
+                        // Resend OTP only when countdown finishes
+                        if (_resendCountdown <= 0) {
+                          _sendOtp();
+                        }
                       }
                     },
                     child: Container(
@@ -298,10 +389,18 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       child: Text(
-                        isEmailSelected ? "Forgot Password?" : "Resend OTP",
+                        isEmailSelected
+                            ? "Forgot Password?"
+                            : _otpSent
+                            ? (_resendCountdown > 0
+                            ? "Resend OTP in ${_resendCountdown}s"
+                            : "Resend OTP")
+                            : "",
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          color: const Color(0xFFCCCCCC),
+                          color: (_otpSent && _resendCountdown <= 0)
+                              ? const Color(0xFF0F62FE)
+                              : const Color(0xFFCCCCCC),
                           fontSize: 17.42 * scale,
                           fontWeight: FontWeight.w500,
                           height: 19.89 / 17.42,
@@ -331,18 +430,22 @@ class _LoginScreenState extends State<LoginScreen> {
                         : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
+                      children: [
                         Text(
-                          "Login Securely",
-                          style: TextStyle(
+                          isEmailSelected
+                              ? "Login Securely"
+                              : _otpSent
+                              ? "Verify OTP"
+                              : "Send OTP",
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        SizedBox(width: 8),
-                        Icon(
+                        const SizedBox(width: 8),
+                        const Icon(
                           Icons.arrow_forward,
-                          color: const Color(0xFFFFFFFF),
+                          color: Colors.white,
                           size: 20,
                         ),
                       ],
