@@ -928,8 +928,11 @@ namespace MobileWebApi.Services
                 _logger.LogInformation(LogMessages.Attendance.FetchingTodayPunchLogs, userId);
 
                 var today = DateTime.Today;
-                var logs = await _repo.GetTodayPunchLogsAsync(employee.BiometricNumber, today);
-                var logList = logs
+                var deviceLogs = await _repo.GetTodayPunchLogsAsync(employee.BiometricNumber, today);
+                var punchLogs = await _repo.GetTodayPunchLogsFromPunchAsync(employee.Id, tenantId, today);
+
+                var logList = deviceLogs
+                    .Concat(punchLogs)
                     .OrderBy(l => l.LogDateTime)
                     .ToList();
 

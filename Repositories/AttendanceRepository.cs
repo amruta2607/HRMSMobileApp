@@ -440,5 +440,33 @@ namespace MobileWebApi.Repositories
                     ex);
             }
         }
+
+        /// <summary>
+        /// Get today's punch logs from Punch table for a specific employee and tenant.
+        /// </summary>
+        public async Task<IEnumerable<TodayPunchLogItem>> GetTodayPunchLogsFromPunchAsync(int employeeId, int tenantId, DateTime date)
+        {
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("GetTodayPunchLogsFromPunch");
+
+                var result = await conn.QueryAsync<TodayPunchLogItem>(query, new
+                {
+                    EmployeeId = employeeId,
+                    TenantId = tenantId,
+                    LogDate = date.Date
+                });
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetTodayPunchLogsFromPunchAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.AttendanceTodayPunchLogsDatabaseError}: Failed to fetch today's punch logs from Punch table",
+                    ex);
+            }
+        }
     }
 }

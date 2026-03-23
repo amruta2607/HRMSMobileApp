@@ -34,5 +34,6 @@ namespace MobileWebApi.Interfaces
 
         // DeviceLog-based punch logs
         Task<IEnumerable<TodayPunchLogItem>> GetTodayPunchLogsAsync(string biometricNumber, DateTime date);
+        Task<IEnumerable<TodayPunchLogItem>> GetTodayPunchLogsFromPunchAsync(int employeeId, int tenantId, DateTime date);
     }
 }

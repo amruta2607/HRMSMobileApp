@@ -168,7 +168,9 @@
 
     "UpdatePassword": "UPDATE Users SET PasswordHash = @PasswordHash, PasswordSalt = @PasswordSalt WHERE UserId = @UserId",
 
-    "GetTodayPunchLogs": "SELECT dl.Direction, FORMAT(dl.LogDateTime,'HH:mm') AS LogTime, dl.DeviceName FROM DeviceLog dl WHERE dl.EmployeedId = @BiometricNumber AND CAST(dl.LogDateTime AS DATE) = CAST(GETDATE() AS DATE) ORDER BY dl.LogDateTime",
+    "GetTodayPunchLogs": "SELECT dl.Direction, dl.LogDateTime, dl.DeviceName FROM DeviceLog dl WHERE dl.EmployeedId = @BiometricNumber AND CAST(dl.LogDateTime AS DATE) = @LogDate ORDER BY dl.LogDateTime",
+
+    "GetTodayPunchLogsFromPunch": "SELECT 'IN' AS Direction, p.PunchIn AS LogDateTime, 'Punch' AS DeviceName FROM Punch p WHERE p.EmployeeId = @EmployeeId AND p.TenantId = @TenantId AND CAST(p.PunchDate AS DATE) = @LogDate AND p.PunchIn IS NOT NULL UNION ALL SELECT 'OUT' AS Direction, p.PunchOut AS LogDateTime, 'Punch' AS DeviceName FROM Punch p WHERE p.EmployeeId = @EmployeeId AND p.TenantId = @TenantId AND CAST(p.PunchDate AS DATE) = @LogDate AND p.PunchOut IS NOT NULL",
 
     //"GetTodayPunchLogs": "SELECT dl.Direction, dl.LogDateTime, dl.DeviceName FROM DeviceLog dl WHERE dl.EmployeedId = @BiometricNumber AND CAST(dl.LogDateTime AS DATE) = @LogDate ORDER BY dl.LogDateTime",
 
