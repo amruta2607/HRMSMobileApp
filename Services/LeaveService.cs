@@ -310,7 +310,7 @@ namespace MobileWebApi.Services
 			if (leave == null)
 				return Fail(LeaveMessages.LeaveRequestNotFound);
 
-			if (leave.LeaveRequestStatus != STATUS_ID_SUBMIT)
+			if (leave.LeaveRequestStatus != STATUS_ID_SUBMIT && leave.LeaveRequestStatus != STATUS_ID_PENDING)
 				return Fail("Only pending leave requests can be withdrawn");
 
 			await _leaveRepository.UpdateLeaveRequestStatusAsync(
