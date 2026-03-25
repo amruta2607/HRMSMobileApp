@@ -1,5 +1,5 @@
+using System.Collections.Generic;
 using MobileWebApi.Constants;
-using MobileWebApi.Helper;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using Microsoft.Extensions.Logging;
@@ -11,50 +11,41 @@ namespace MobileWebApi.Services
 		private readonly ILeaveRepository _leaveRepository;
 		private readonly IEmployeeRepository _employeeRepository;
 		private readonly IApprovalWorkflowService _approvalWorkflowService;
+		private readonly IApprovalRepository _approvalRepository;
 		private readonly ILogger<LeaveService> _logger;
 
-		// -----------------------------
-		// Status strings
-		// -----------------------------
 		// -----------------------------
 		// Status strings
 		// -----------------------------
 		private const string STATUS_SUBMIT = "Submit";
 		private const string STATUS_APPROVED = "Approved";
 		private const string STATUS_REJECTED = "Rejected";
-		private const string STATUS_WITHDRAW = "Withdrawn";
-		private const string STATUS_CANCELLED = "Canceled";
+		private const string STATUS_CANCELLED = "Cancelled";
+		private const string STATUS_WITHDRAW = "Withdraw";
 		private const string STATUS_PENDING = "Pending";
-		private const string STATUS_PENDING_FOR_APPROVAL = "Pending For Approval";
-		private const string STATUS_CANCELLATION_APPROVED = "Cancellation Approved";
-		private const string STATUS_CANCELLATION_REJECTED = "Cancellation Rejected";
 
 
-		// -----------------------------
-		// Status IDs in DB
-		// -----------------------------
 		// -----------------------------
 		// Status IDs in DB
 		// -----------------------------
 		private const int STATUS_ID_SUBMIT = 1;
 		private const int STATUS_ID_APPROVED = 2;
 		private const int STATUS_ID_REJECTED = 3;
-		private const int STATUS_ID_WITHDRAW = 4;
 		private const int STATUS_ID_CANCELLED = 5;
+		private const int STATUS_ID_WITHDRAW = 4;
 		private const int STATUS_ID_PENDING = 6;
-		private const int STATUS_ID_PENDING_FOR_APPROVAL = 7;
-		private const int STATUS_ID_CANCELLATION_APPROVED = 8;
-		private const int STATUS_ID_CANCELLATION_REJECTED = 9;
 
 		public LeaveService(
 			ILeaveRepository leaveRepository,
 			IEmployeeRepository employeeRepository,
 			IApprovalWorkflowService approvalWorkflowService,
+			IApprovalRepository approvalRepository,
 			ILogger<LeaveService> logger)
 		{
 			_leaveRepository = leaveRepository;
 			_employeeRepository = employeeRepository;
 			_approvalWorkflowService = approvalWorkflowService;
+			_approvalRepository = approvalRepository;
 			_logger = logger;
 		}
 
@@ -78,16 +69,13 @@ namespace MobileWebApi.Services
 				// -----------------------------
 				// Get configured week offs & holidays
 				// -----------------------------
-				var fromDate = request.startdate.Date;
-				var toDate = request.enddate.Date;
-
 				var dayOffs = await _leaveRepository.GetTenantDayOffsAsync(request.organization ?? 0); // returns List<int> for DayOffId (1=Sunday etc.)
-				var holidays = await _leaveRepository.GetHolidaysAsync(request.organization ?? 0, fromDate, toDate);
+				var holidays = await _leaveRepository.GetHolidaysAsync(request.organization ?? 0, request.startdate, request.enddate);
 
 				// -----------------------------
 				// Determine valid leave dates
 				// -----------------------------
-				var requestedDates = EachDate(fromDate, toDate).ToList();
+				var requestedDates = EachDate(request.startdate, request.enddate).ToList();
 
 				var invalidDates = requestedDates
 					.Where(d => dayOffs.Contains((int)d.DayOfWeek) || holidays.Any(h => h.Date.Date == d.Date))
@@ -97,19 +85,6 @@ namespace MobileWebApi.Services
 				{
 					var invalidDatesStr = string.Join(", ", invalidDates.Select(d => d.ToString("yyyy-MM-dd")));
 					return Fail($"Cannot apply leave on week offs or holidays: {invalidDatesStr}");
-				}
-				// -----------------------------
-				// Prevent duplicate / overlapping leave
-				// -----------------------------
-				var hasOverlap = await _leaveRepository.HasOverlappingLeaveAsync(
-					employeeId.Value,
-					fromDate,
-					toDate
-				);
-
-				if (hasOverlap)
-				{
-					return Fail(LeaveMessages.LeaveAlreadyAppliedForSelectedDate);
 				}
 
 				// -----------------------------
@@ -126,7 +101,8 @@ namespace MobileWebApi.Services
 				// -----------------------------
 				// Generate leave request number
 				// -----------------------------
-				var requestNumber = await GenerateLeaveRequestNumberAsync(request.organization ?? 0);
+				var requestNumber = await _leaveRepository.GenerateLeaveRequestNumberAsync(request.organization ?? 0);
+
 				// -----------------------------
 				// Create leave request
 				// -----------------------------
@@ -136,12 +112,12 @@ namespace MobileWebApi.Services
 					EmployeeId = employeeId.Value,
 					LeaveTypeId = request.leave_type,
 					LeaveBalance = availableBalance,
-					FromDate = fromDate,
-					ToDate = toDate,
+					FromDate = request.startdate,
+					ToDate = request.enddate,
 					Duration = duration,
 					Description = request.reason,
 					CurrentAction = STATUS_SUBMIT,
-					LeaveRequestStatus = STATUS_ID_PENDING,
+					LeaveRequestStatus = STATUS_ID_SUBMIT,
 					OrganisationId = request.organization,
 					InsertUserId = request.user,
 					InsertDate = DateTime.Now
@@ -168,15 +144,15 @@ namespace MobileWebApi.Services
 				}
 				catch (Exception ex)
 				{
-					_logger.LogWarning(ex, LogMessages.ApprovalWorkflow.ApprovalWorkflowNotConfigured);
+					_logger.LogWarning(ex, "Approval workflow not configured");
 				}
 
 				return Success(LeaveMessages.LeaveRequestSubmittedSuccessfully, new { Id = newId, Number = requestNumber });
 			}
 			catch (Exception ex)
 			{
-				_logger.LogException(ExceptionCodes.Leave.CreateLeaveRequest, nameof(CreateLeaveRequestAsync), ex, request.user);
-				return Fail(string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.Leave.CreateLeaveRequest));
+				_logger.LogError(ex, "Error creating leave request");
+				return Fail(ex.Message);
 			}
 		}
 
@@ -225,8 +201,8 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogException(ExceptionCodes.Leave.GetLeaveRequests, nameof(GetLeaveRequestsAsync), ex, request.user);
-				return Fail(string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.Leave.GetLeaveRequests));
+				_logger.LogError(ex, "GetLeaveRequestsAsync failed");
+				return Fail(ex.Message);
 			}
 		}
 		private string MapDbStatusIdToText(int statusId)
@@ -236,12 +212,9 @@ namespace MobileWebApi.Services
 				STATUS_ID_SUBMIT => STATUS_SUBMIT,
 				STATUS_ID_APPROVED => STATUS_APPROVED,
 				STATUS_ID_REJECTED => STATUS_REJECTED,
-				STATUS_ID_WITHDRAW => STATUS_WITHDRAW,
 				STATUS_ID_CANCELLED => STATUS_CANCELLED,
+				STATUS_ID_WITHDRAW => STATUS_WITHDRAW,
 				STATUS_ID_PENDING => STATUS_PENDING,
-				STATUS_ID_PENDING_FOR_APPROVAL => STATUS_PENDING_FOR_APPROVAL,
-				STATUS_ID_CANCELLATION_APPROVED => STATUS_CANCELLATION_APPROVED,
-				STATUS_ID_CANCELLATION_REJECTED => STATUS_CANCELLATION_REJECTED,
 				_ => "Unknown"
 			};
 		}
@@ -310,6 +283,11 @@ namespace MobileWebApi.Services
 			if (leave == null)
 				return Fail(LeaveMessages.LeaveRequestNotFound);
 
+			// Enforce: user can only withdraw their own leave request
+			var employeeId = await _leaveRepository.GetEmployeeIdByUserIdAsync(userId);
+			if (!employeeId.HasValue || leave.EmployeeId != employeeId.Value)
+				return Fail(TenantAccessMessages.UserAccessDeniedSimple);
+
 			if (leave.LeaveRequestStatus != STATUS_ID_SUBMIT && leave.LeaveRequestStatus != STATUS_ID_PENDING)
 				return Fail("Only pending leave requests can be withdrawn");
 
@@ -319,7 +297,95 @@ namespace MobileWebApi.Services
 				STATUS_WITHDRAW,
 				userId);
 
+			// Mark existing screen notifications related to this leave request as read
+			if (leave.OrganisationId.HasValue)
+			{
+				await _approvalRepository.MarkScreenNotificationsReadByLeaveRequestIdAsync(
+					id,
+					leave.OrganisationId.Value,
+					userId);
+			}
+
 			return Success("Leave request withdrawn successfully", new { Id = id });
+		}
+
+		/// <summary>
+		/// Get leave history for the logged-in user (current year).
+		/// </summary>
+		public async Task<LeaveHistoryResponse> GetLeaveHistoryAsync(int userId)
+		{
+			try
+			{
+				if (userId <= 0)
+				{
+					return new LeaveHistoryResponse
+					{
+						Success = false,
+						Message = LeaveMessages.UserIdRequired,
+						Year = DateTime.Now.Year,
+						LeavesAvailed = 0,
+						Data = null
+					};
+				}
+
+				var employeeId = await _leaveRepository.GetEmployeeIdByUserIdAsync(userId);
+				if (!employeeId.HasValue)
+				{
+					return new LeaveHistoryResponse
+					{
+						Success = false,
+						Message = LeaveMessages.EmployeeNotFoundForUser,
+						Year = DateTime.Now.Year,
+						LeavesAvailed = 0,
+						Data = null
+					};
+				}
+
+				var year = DateTime.Now.Year;
+				var leaveRequests = await _leaveRepository.GetLeaveRequestsByEmployeeIdAsync(employeeId.Value);
+
+				var history = new List<LeaveHistoryItem>();
+
+				foreach (var lr in leaveRequests)
+				{
+					foreach (var day in EachDate(lr.FromDate, lr.ToDate))
+					{
+						if (day.Year != year)
+							continue;
+
+						history.Add(new LeaveHistoryItem
+						{
+							LeaveDate = day.Date,
+							LeaveType = lr.LeaveTypeName,
+							Reason = lr.Description,
+							Status = MapDbStatusIdToText(lr.LeaveRequestStatus ?? 0)
+						});
+					}
+				}
+
+				history = history.OrderBy(h => h.LeaveDate).ToList();
+
+				return new LeaveHistoryResponse
+				{
+					Success = true,
+					Message = LeaveMessages.LeaveHistoryFetchedSuccessfully,
+					LeavesAvailed = history.Count,
+					Year = year,
+					Data = history
+				};
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "GetLeaveHistoryAsync failed for user {UserId}", userId);
+				return new LeaveHistoryResponse
+				{
+					Success = false,
+					Message = GeneralMessages.SomethingWentWrongContactAdmin,
+					LeavesAvailed = 0,
+					Year = DateTime.Now.Year,
+					Data = null
+				};
+			}
 		}
 
 		// =====================================================
@@ -348,72 +414,10 @@ namespace MobileWebApi.Services
 			};
 		}
 
-		// =====================================================
-		// GET LEAVE HISTORY
-		// =====================================================
-		public async Task<LeaveHistoryResponse> GetLeaveHistoryAsync(int userId)
-		{
-			try
-			{
-				var targetYear = DateTime.Now.Year;
-
-				var employeeId = await _leaveRepository.GetEmployeeIdByUserIdAsync(userId);
-				if (!employeeId.HasValue)
-					return new LeaveHistoryResponse
-					{
-						Success = false,
-						Message = LeaveMessages.EmployeeNotFoundForUser
-					};
-
-				var history = (await _leaveRepository.GetLeaveHistoryAsync(employeeId.Value, targetYear)).ToList();
-
-				var leavesAvailed = history.Count(h => h.Status == STATUS_APPROVED);
-
-				return new LeaveHistoryResponse
-				{
-					Success = true,
-					Message = LeaveMessages.LeaveHistoryFetchedSuccessfully,
-					LeavesAvailed = leavesAvailed,
-					Year = targetYear,
-					Data = history
-				};
-			}
-			catch (Exception ex)
-			{
-				_logger.LogException(ExceptionCodes.Leave.GetLeaveHistory, nameof(GetLeaveHistoryAsync), ex, userId);
-				return new LeaveHistoryResponse
-				{
-					Success = false,
-					Message = string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.Leave.GetLeaveHistory)
-				};
-			}
-		}
-
 		private LeaveRequestResponse Fail(string message) =>
 			new LeaveRequestResponse { Success = false, Message = message };
 
 		private LeaveRequestResponse Success(string message, object? data = null) =>
 			new LeaveRequestResponse { Success = true, Message = message, Data = data, TotalRecords = 1 };
-		private async Task<string> GenerateLeaveRequestNumberAsync(int organisationId)
-		{
-			var today = DateTime.Now.ToString("yyyyMMdd");
-
-			var lastNumber = await _leaveRepository
-				.GetLastLeaveRequestNumberAsync(today, organisationId);
-
-			int nextSequence = 1;
-
-			if (!string.IsNullOrEmpty(lastNumber))
-			{
-				var seqPart = lastNumber.Substring(lastNumber.Length - 4);
-
-				if (int.TryParse(seqPart, out int seq))
-				{
-					nextSequence = seq + 1;
-				}
-			}
-
-			return $"LVR/{today}{nextSequence:D4}";
-		}
 	}
 }

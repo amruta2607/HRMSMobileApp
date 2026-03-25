@@ -414,6 +414,29 @@ namespace MobileWebApi.Repositories
             }
         }
 
+        public async Task<int> MarkScreenNotificationsReadByLeaveRequestIdAsync(int leaveRequestId, int tenantId, int updateUserId)
+        {
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("MarkScreenNotificationsReadByLeaveRequestId");
+
+                return await conn.ExecuteAsync(query, new
+                {
+                    LeaveRequestId = leaveRequestId,
+                    TenantId = tenantId,
+                    UpdateUserId = updateUserId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(MarkScreenNotificationsReadByLeaveRequestIdAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalInsertScreenNotificationDatabaseError}: Failed to mark screen notifications as read for withdrawn leave request",
+                    ex);
+            }
+        }
+
         #endregion
 
         #region Email Operations

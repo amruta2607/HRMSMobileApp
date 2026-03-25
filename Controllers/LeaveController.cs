@@ -157,16 +157,33 @@ namespace MobileWebApi.Controllers
 				});
 			}
 
+			var loggedInUserId = CurrentUserId;
+			if (!loggedInUserId.HasValue)
+			{
+				return Unauthorized(new { Success = false, Message = TenantAccessMessages.UserNotAuthenticated });
+			}
+
+			// Do not trust client-provided userId; enforce it matches authenticated user
+			if (request.UserId != loggedInUserId.Value)
+			{
+				Logger.LogWarning(LogMessages.TenantAccess.UnauthorizedUpdatePersonalDetails, loggedInUserId.Value, request.UserId);
+				return UserAccessDenied();
+			}
+
             Logger.LogInformation(LogMessages.Leave.CancellingLeaveRequest, request.Id);
 
 			var result = await _leaveService.WithdrawLeaveRequestAsync(
 				request.Id,
-				request.UserId,
+				loggedInUserId.Value,
 				request.Reason
 			);
 
 			if (result.Success)
 				return Ok(result);
+
+			// If the service denied access (leave doesn't belong to the logged-in user), return 403
+			if (string.Equals(result.Message, TenantAccessMessages.UserAccessDeniedSimple, System.StringComparison.OrdinalIgnoreCase))
+				return UserAccessDenied();
 
 			return BadRequest(result);
 		}

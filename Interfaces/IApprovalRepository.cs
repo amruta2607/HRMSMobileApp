@@ -29,6 +29,7 @@ namespace MobileWebApi.Interfaces
         
         // Screen Notification operations
         Task<int> InsertScreenNotificationAsync(int userId, int? eventId, string title, string message, int tenantId, int insertUserId);
+        Task<int> MarkScreenNotificationsReadByLeaveRequestIdAsync(int leaveRequestId, int tenantId, int updateUserId);
         
         // Email operations
         Task<int> InsertEmailNotificationAsync(string toEmail, string subject, string body, int tenantId, int insertUserId);

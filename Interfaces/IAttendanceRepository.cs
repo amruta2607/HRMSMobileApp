@@ -32,7 +32,7 @@ namespace MobileWebApi.Interfaces
         Task<Punch?> GetPunchByIdAsync(int id, int tenantId);
         Task<bool> DeletePunchAsync(int id, int tenantId);
 
-        // DeviceLog-based punch logs
+        // Today punch logs (DeviceLog + Punch table)
         Task<IEnumerable<TodayPunchLogItem>> GetTodayPunchLogsAsync(string biometricNumber, DateTime date);
         Task<IEnumerable<TodayPunchLogItem>> GetTodayPunchLogsFromPunchAsync(int employeeId, int tenantId, DateTime date);
     }

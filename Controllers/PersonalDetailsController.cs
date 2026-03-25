@@ -145,9 +145,7 @@ namespace MobileWebApi.Controllers
         }
 
         /// <summary>
-        /// Get all personal details by branch.
-        /// Note: Only HR / TenantAdmin can access other users' data.
-        /// Regular users cannot access other employees' personal details.
+        /// Get all personal details by branch
         /// </summary>
         [HttpGet("Personal-Details-by-branch/{branchId}")]
         public async Task<IActionResult> GetPersonalDetailsByBranch(int branchId)
@@ -158,17 +156,31 @@ namespace MobileWebApi.Controllers
                 return BadRequest(new { Message = EmployeeMessages.InvalidBranchId });
             }
 
-            // Enforce access rules: only users with elevated access can list branch employees
-            if (!HasElevatedAccess)
-            {
-                Logger.LogWarning(LogMessages.TenantAccess.UnauthorizedAccessToPersonalDetails,
-                    CurrentUserId, branchId, CurrentUserId);
-                return UserAccessDenied();
-            }
+            // Get logged-in user ID from JWT token
+            int loggedUserId = int.Parse(User.FindFirst("UserId")?.Value ?? "0");
 
             Logger.LogInformation(LogMessages.Employee.RetrievingEmployeesByBranch, branchId);
-            var allEmployees = await _employeeService.GetEmployeesByBranchAsync(branchId);
-            return Ok(allEmployees);
+
+            // Get logged-in user details
+            var loggedUser = await _userRepository.GetUserByIdAsync(loggedUserId);
+            if (loggedUser == null)
+            {
+                Logger.LogWarning(UserMessages.UserNotFound);
+                return Unauthorized(new { Message = UserMessages.UserNotFound });
+            }
+
+            // HR or Tenant Admin -> can see all employees
+            if (loggedUser.IsHrUser || loggedUser.IsTenantAdmin)
+            {
+                var allEmployees = await _employeeService.GetEmployeesByBranchAsync(branchId);
+                return Ok(allEmployees);
+            }
+            else
+            {
+                // Normal employee -> can see other employees except themselves
+                var employees = await _employeeService.GetEmployeesByBranchExceptUserAsync(branchId, loggedUser.UserId);
+                return Ok(employees);
+            }
         }
 
         /// <summary>
