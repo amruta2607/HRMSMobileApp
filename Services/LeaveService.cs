@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using MobileWebApi.Constants;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
@@ -165,6 +166,33 @@ namespace MobileWebApi.Services
 				yield return day;
 		}
 
+		public static int CalculateLeaveDays(DateTime fromDate, DateTime toDate, List<DateTime> holidays)
+		{
+			if (toDate.Date < fromDate.Date)
+				return 0;
+
+			var holidaySet = new HashSet<DateTime>(holidays.Select(h => h.Date));
+			var count = 0;
+
+			for (var day = fromDate.Date; day <= toDate.Date; day = day.AddDays(1))
+			{
+				if (holidaySet.Contains(day))
+					continue;
+
+				count++;
+			}
+
+			return count;
+		}
+
+		private static string FormatLeaveDates(DateTime fromDate, DateTime toDate)
+		{
+			const string fmt = "dd-MM-yyyy";
+			var fromStr = fromDate.ToString(fmt, CultureInfo.InvariantCulture);
+			var toStr = toDate.ToString(fmt, CultureInfo.InvariantCulture);
+			return fromDate.Date == toDate.Date ? fromStr : $"{fromStr} - {toStr}";
+		}
+
 		// =====================================================
 		// GET LEAVE REQUESTS
 		// =====================================================
@@ -188,7 +216,7 @@ namespace MobileWebApi.Services
 				foreach (var item in list)
 				{
 					item.LeaveRequestStatusText =
-						MapDbStatusIdToText((int)item.LeaveRequestStatus);
+						MapDbStatusIdToText(item.LeaveRequestStatus ?? 0);
 				}
 
 				return new LeaveRequestResponse
@@ -384,6 +412,115 @@ namespace MobileWebApi.Services
 					LeavesAvailed = 0,
 					Year = DateTime.Now.Year,
 					Data = null
+				};
+			}
+		}
+
+		public async Task<LeaveHistorySummaryResponse> GetLeaveHistorySummaryAsync(int userId)
+		{
+			try
+			{
+				if (userId <= 0)
+				{
+					return new LeaveHistorySummaryResponse
+					{
+						Success = false,
+						Message = LeaveMessages.UserIdRequired,
+						EmployeeId = 0,
+						AvailableLeaves = 0,
+						Year = DateTime.Now.Year,
+						LeaveHistory = null
+					};
+				}
+
+				var employeeId = await _leaveRepository.GetEmployeeIdByUserIdAsync(userId);
+				if (!employeeId.HasValue)
+				{
+					return new LeaveHistorySummaryResponse
+					{
+						Success = false,
+						Message = LeaveMessages.EmployeeNotFoundForUser,
+						EmployeeId = 0,
+						AvailableLeaves = 0,
+						Year = DateTime.Now.Year,
+						LeaveHistory = null
+					};
+				}
+
+				var year = DateTime.Now.Year;
+				var leaveRequests = (await _leaveRepository.GetLeaveRequestsByEmployeeIdAsync(employeeId.Value))
+					.Where(lr => lr.FromDate.Year == year)
+					.ToList();
+
+				// Pre-fetch holidays once per tenant across the min/max leave range.
+				var holidaysByTenant = new Dictionary<int, List<DateTime>>();
+				var tenantGroups = leaveRequests
+					.Where(lr => lr.OrganisationId.HasValue)
+					.GroupBy(lr => lr.OrganisationId!.Value)
+					.ToList();
+
+				foreach (var grp in tenantGroups)
+				{
+					var minFrom = grp.Min(lr => lr.FromDate).Date;
+					var maxTo = grp.Max(lr => lr.ToDate).Date;
+					var hols = await _leaveRepository.GetHolidaysAsync(grp.Key, minFrom, maxTo);
+					holidaysByTenant[grp.Key] = hols.Select(h => h.Date.Date).Distinct().ToList();
+				}
+
+				var items = new List<LeaveHistorySummaryItem>();
+				var usedLeavesApproved = 0;
+
+				foreach (var lr in leaveRequests.OrderByDescending(x => x.InsertDate ?? DateTime.MinValue).ThenByDescending(x => x.Id))
+				{
+					var tenantId = lr.OrganisationId ?? 0;
+					var holidayDates = tenantId != 0 && holidaysByTenant.TryGetValue(tenantId, out var list)
+						? list
+						: new List<DateTime>();
+
+					var usedDays = CalculateLeaveDays(lr.FromDate, lr.ToDate, holidayDates);
+					var status = MapDbStatusIdToText(lr.LeaveRequestStatus ?? 0);
+
+					// Only show approved leaves in leave history
+					if (string.Equals(status, STATUS_APPROVED, StringComparison.OrdinalIgnoreCase))
+					{
+						items.Add(new LeaveHistorySummaryItem
+						{
+							LeaveRequestId = lr.Id,
+							LeaveDates = FormatLeaveDates(lr.FromDate, lr.ToDate),
+							LeaveType = lr.LeaveTypeName,
+							UsedDays = usedDays,
+							Status = status
+						});
+
+						usedLeavesApproved += usedDays;
+					}
+				}
+
+				// EmployeeLeave.LeaveBalance is treated as the current available balance.
+				// So AvailableLeaves should come directly from SUM(EmployeeLeave.LeaveBalance).
+				var availableLeaves = await _leaveRepository.GetTotalLeaveAllocationForEmployeeAsync(employeeId.Value);
+
+				return new LeaveHistorySummaryResponse
+				{
+					Success = true,
+					Message = LeaveMessages.LeaveHistoryFetchedSuccessfully,
+					EmployeeId = employeeId.Value,
+					AvailableLeaves = availableLeaves,
+					Year = year,
+					LeaveHistory = items
+				};
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "GetLeaveHistorySummaryAsync failed for user {UserId}", userId);
+				return new LeaveHistorySummaryResponse
+				{
+					Success = false,
+					Message = GeneralMessages.SomethingWentWrongContactAdmin,
+					EmployeeId = 0,
+					AvailableLeaves = 0,
+					Year = DateTime.Now.Year,
+					LeaveHistory = null
 				};
 			}
 		}

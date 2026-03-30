@@ -97,6 +97,8 @@
 
     "UpdateLeaveRequestStatus": "UPDATE LeaveRequest SET LeaveRequestStatus = @StatusId, CurrentAction = @StatusText, UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE Id = @Id",
 
+    "GetTotalLeaveAllocationForEmployee": "SELECT CAST(ISNULL(SUM(el.LeaveBalance), 0) AS INT) FROM EmployeeLeave el WHERE el.EmployeeId = @EmployeeId",
+
 
 
     "GetLeaveBalanceByEmployeeId": "SELECT el.Id, el.EmployeeId, lt.DisplayName AS LeaveTypeName, el.LeaveTypeId, lt.LeaveBalance AS TotalBalance, el.LeaveBalance AS RemainingBalance , el.TenantId AS OrganisationId FROM LeaveTypes lt INNER JOIN EmployeeLeave el ON lt.Id = el.LeaveTypeId INNER JOIN Employee e ON e.Id = el.EmployeeId WHERE el.EmployeeId = @EmployeeId",

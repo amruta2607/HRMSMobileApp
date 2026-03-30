@@ -211,25 +211,22 @@ namespace MobileWebApi.Repositories
         public async Task<string?> GenerateLeaveRequestNumberAsync(int organisationId)
         {
             using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetNextLeaveRequestNumber");
+            string query = _queryProvider.Get("GetLastLeaveRequestNumber");
 
-            var lastNumber = await conn.QueryFirstOrDefaultAsync<string>(query, new { OrganisationId = organisationId });
-
-            // Generate next number (format: LR-YYYYMMDD-0001)
             var today = DateTime.Now.ToString("yyyyMMdd");
-            var prefix = $"LR-{today}-";
+            var prefix = $"LVR/{today}";
 
-            if (string.IsNullOrEmpty(lastNumber) || !lastNumber.Contains(today))
+            var lastNumber = await conn.QueryFirstOrDefaultAsync<string>(query, new { TenantId = organisationId, Today = today });
+
+            // Required format: LVR/YYYYMMDD#### (sequence resets daily)
+            if (string.IsNullOrWhiteSpace(lastNumber) || !lastNumber.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {
                 return $"{prefix}0001";
             }
 
-            // Extract and increment the sequence number
-            var parts = lastNumber.Split('-');
-            if (parts.Length >= 3 && int.TryParse(parts[2], out int seq))
-            {
+            var seqPart = lastNumber.Substring(prefix.Length);
+            if (seqPart.Length == 4 && int.TryParse(seqPart, out var seq))
                 return $"{prefix}{(seq + 1):D4}";
-            }
 
             return $"{prefix}0001";
         }
@@ -260,6 +257,15 @@ namespace MobileWebApi.Repositories
 			});
 
 			return result.ToList();
+		}
+
+		public async Task<int> GetTotalLeaveAllocationForEmployeeAsync(int employeeId)
+		{
+			using var conn = _context.CreateConnection();
+			string query = _queryProvider.Get("GetTotalLeaveAllocationForEmployee");
+
+			var total = await conn.ExecuteScalarAsync<int?>(query, new { EmployeeId = employeeId });
+			return total ?? 0;
 		}
 	}
 }

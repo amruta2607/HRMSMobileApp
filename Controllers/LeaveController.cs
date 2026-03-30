@@ -189,7 +189,7 @@ namespace MobileWebApi.Controllers
 		}
 
 		/// <summary>
-		/// Get leave history for the logged-in user (current year)
+		/// Get leave history (summary per request) for the logged-in user
 		/// GET: api/leave/history
 		/// </summary>
 		[HttpGet("history")]
@@ -202,7 +202,7 @@ namespace MobileWebApi.Controllers
 			}
 
             Logger.LogInformation(LogMessages.Leave.FetchingLeaveHistory, userId.Value);
-			var result = await _leaveService.GetLeaveHistoryAsync(userId.Value);
+			var result = await _leaveService.GetLeaveHistorySummaryAsync(userId.Value);
 
 			if (result.Success)
 			{
