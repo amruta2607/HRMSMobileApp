@@ -17,6 +17,8 @@ namespace MobileWebApi.Models
 		public bool IsActive { get; set; }
 		public string? Status { get; set; }
 
+		public DateTime? InsertDate { get; set; }
+
 		public int? InsertUserId { get; set; }
 		public DateTime? UpdateDate { get; set; }
 		public int? UpdateUserId { get; set; }

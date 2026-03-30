@@ -33,6 +33,13 @@ namespace MobileWebApi.Controllers
 				Logger.LogInformation(LogMessages.Alert.RetrievingAlertsForUser, userId);
 				// Fetch only unread alerts (IsRead == false)
 				var result = await _service.GetAlertsByUserIdAsync(userId, isRead: false);
+				if (result.Success && result.Data != null)
+				{
+					result.Data = result.Data
+						.OrderByDescending(a => a.InsertDate ?? DateTime.MinValue)
+						.ThenByDescending(a => a.Id)
+						.ToList();
+				}
 				if (result.Success)
 				{
 					return Ok(result);
