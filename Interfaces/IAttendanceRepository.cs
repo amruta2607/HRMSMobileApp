@@ -6,8 +6,9 @@ namespace MobileWebApi.Interfaces
     {
         Task<Punch?> GetPunchByEmployeeAndDate(int employeeId, DateTime punchDate);
         Task<Punch?> GetPunchByEmployeeAndDateWithTenant(int employeeId, DateTime punchDate, int tenantId);
-        Task<int> InsertPunchIn(int employeeId, DateTime punchIn, DateTime punchDate);
-        Task UpdatePunchOut(int employeeId, DateTime punchOut, DateTime punchDate, double? duration);
+        Task<Punch?> GetOpenPunchByEmployeeId(int employeeId);
+        Task<int> InsertPunchIn(int employeeId, DateTime punchIn, DateTime punchDate, string inSource, string? coordinateIn, string? linkIn);
+        Task UpdatePunchOut(int punchId, DateTime punchOut, double? duration, string outSource, string? coordinateOut, string? linkOut);
         
         // Attendance Report Methods
         Task<IEnumerable<AttendanceReport>> GetAttendanceReportAsync(AttendanceReportRequest request);

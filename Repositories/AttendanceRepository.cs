@@ -41,7 +41,15 @@ namespace MobileWebApi.Repositories
                 new { EmployeeId = employeeId, PunchDate = punchDate.Date, TenantId = tenantId });
         }
 
-        public async Task<int> InsertPunchIn(int employeeId, DateTime punchIn, DateTime punchDate)
+        public async Task<Punch?> GetOpenPunchByEmployeeId(int employeeId)
+        {
+            using var conn = _context.CreateConnection();
+            string query = _queryProvider.Get("GetOpenPunchByEmployeeId");
+
+            return await conn.QueryFirstOrDefaultAsync<Punch>(query, new { EmployeeId = employeeId });
+        }
+
+        public async Task<int> InsertPunchIn(int employeeId, DateTime punchIn, DateTime punchDate, string inSource, string? coordinateIn, string? linkIn)
         {
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("InsertPunchIn");
@@ -51,13 +59,14 @@ namespace MobileWebApi.Repositories
                 { 
                     EmployeeId = employeeId, 
                     PunchDate = punchDate.Date, 
-                    PunchIn = punchIn
-                  
-                   
+                    PunchIn = punchIn,
+                    InSource = inSource,
+                    CoordinateIn = coordinateIn,
+                    LinkIn = linkIn
                 });
         }
 
-        public async Task UpdatePunchOut(int employeeId, DateTime punchOut, DateTime punchDate, double? duration)
+        public async Task UpdatePunchOut(int punchId, DateTime punchOut, double? duration, string outSource, string? coordinateOut, string? linkOut)
         {
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("UpdatePunchOut");
@@ -65,11 +74,12 @@ namespace MobileWebApi.Repositories
             await conn.ExecuteAsync(query,
                 new 
                 { 
-                    EmployeeId = employeeId, 
-                    PunchDate = punchDate.Date, 
+                    Id = punchId,
                     PunchOut = punchOut, 
-                    Duration = duration
-                  
+                    Duration = duration,
+                    OutSource = outSource,
+                    CoordinateOut = coordinateOut,
+                    LinkOut = linkOut
                 });
         }
 

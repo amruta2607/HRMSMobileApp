@@ -2,6 +2,8 @@ using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using MobileWebApi.Constants;
 using MobileWebApi.Helper;
+using System.Globalization;
+using System.Text.Json;
 
 namespace MobileWebApi.Services
 {
@@ -10,19 +12,27 @@ namespace MobileWebApi.Services
         private readonly IAttendanceRepository _repo;
         private readonly IEmployeeRepository _employeeRepository;
         private readonly IEmployeeService _employeeService;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IConfiguration _configuration;
         private readonly ILogger<AttendanceService> _logger;
 
         public AttendanceService(
             IAttendanceRepository repo, 
             IEmployeeRepository employeeRepository, 
             IEmployeeService employeeService,
+            IHttpClientFactory httpClientFactory,
+            IConfiguration configuration,
             ILogger<AttendanceService> logger)
         {
             _repo = repo;
             _employeeRepository = employeeRepository;
             _employeeService = employeeService;
+            _httpClientFactory = httpClientFactory;
+            _configuration = configuration;
             _logger = logger;
         }
+
+        private const string MobileSource = "Mobile";
 
         /// <summary>
         /// Resolves EmployeeId from UserId by joining Users and Employee tables
@@ -74,11 +84,18 @@ namespace MobileWebApi.Services
 
           
 
+            var coordinateIn = BuildCoordinate(req.latitude, req.longitude);
+            var linkIn = GenerateGoogleMapLink(req.latitude, req.longitude);
+            _ = await TryGetReverseGeocodedAddressAsync(req.latitude, req.longitude);
+
             // Insert punch-in with location data
             var punchId = await _repo.InsertPunchIn(
                 employeeId.Value,
                 punchInLocal,
-                attendanceDateLocal
+                attendanceDateLocal,
+                MobileSource,
+                coordinateIn,
+                linkIn
             );
 
             if (punchId > 0)
@@ -108,9 +125,9 @@ namespace MobileWebApi.Services
             var attendanceDateLocal = DateTime.SpecifyKind(req.attendance_date, DateTimeKind.Utc).ToLocalTime().Date;
             
             // Check if punch-in exists (prevent punch-out without punch-in)
-            var punch = await _repo.GetPunchByEmployeeAndDate(employeeId.Value, attendanceDateLocal);
+            var punch = await _repo.GetOpenPunchByEmployeeId(employeeId.Value);
 
-            if (punch == null || punch.PunchIn == null)
+            if (punch == null || punch.PunchIn == null || punch.PunchDate.Date != attendanceDateLocal)
             {
                 _logger.LogWarning(AttendanceMessages.CannotPunchOutWithoutPunchIn);
                 return AttendanceMessages.CannotPunchOutWithoutPunchIn;
@@ -125,13 +142,18 @@ namespace MobileWebApi.Services
 
             // Calculate duration in hours
             double? duration = CalculateDurationInHours(punch.PunchIn, punchOutLocal);
+            var coordinateOut = BuildCoordinate(req.latitude, req.longitude);
+            var linkOut = GenerateGoogleMapLink(req.latitude, req.longitude);
+            _ = await TryGetReverseGeocodedAddressAsync(req.latitude, req.longitude);
 
             // Update punch-out with location data
             await _repo.UpdatePunchOut(
-                employeeId.Value,
+                punch.Id,
                 punchOutLocal,
-                attendanceDateLocal,
-                duration
+                duration,
+                MobileSource,
+                coordinateOut,
+                linkOut
             );
 
             _logger.LogInformation(LogMessages.Attendance.PunchOutSuccessful, employeeId.Value);
@@ -144,6 +166,60 @@ namespace MobileWebApi.Services
 
             var diff = punchOut - punchIn.Value;
             return Math.Round(diff.TotalHours, 2);
+        }
+
+        public string GenerateGoogleMapLink(double? lat, double? lng)
+        {
+            if (!lat.HasValue || !lng.HasValue)
+                return string.Empty;
+
+            var latText = lat.Value.ToString(CultureInfo.InvariantCulture);
+            var lngText = lng.Value.ToString(CultureInfo.InvariantCulture);
+            return $"https://www.google.com/maps/search/?api=1&query={latText},{lngText}";
+        }
+
+        private static string? BuildCoordinate(double? lat, double? lng)
+        {
+            if (!lat.HasValue || !lng.HasValue)
+                return null;
+
+            var latText = lat.Value.ToString(CultureInfo.InvariantCulture);
+            var lngText = lng.Value.ToString(CultureInfo.InvariantCulture);
+            return $"{latText},{lngText}";
+        }
+
+        private async Task<string?> TryGetReverseGeocodedAddressAsync(double? lat, double? lng)
+        {
+            if (!lat.HasValue || !lng.HasValue)
+                return null;
+
+            var apiKey = _configuration["GoogleMaps:ApiKey"];
+            if (string.IsNullOrWhiteSpace(apiKey))
+                return null;
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                var url = $"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat.Value},{lng.Value}&key={apiKey}";
+                using var response = await client.GetAsync(url);
+                if (!response.IsSuccessStatusCode)
+                    return null;
+
+                using var stream = await response.Content.ReadAsStreamAsync();
+                using var document = await JsonDocument.ParseAsync(stream);
+                if (!document.RootElement.TryGetProperty("results", out var results) || results.GetArrayLength() == 0)
+                    return null;
+
+                if (results[0].TryGetProperty("formatted_address", out var address))
+                    return address.GetString();
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Reverse geocoding failed for coordinates {Latitude},{Longitude}", lat, lng);
+                return null;
+            }
         }
 
         /// <summary>
