@@ -64,7 +64,7 @@ class LocationService {
       final placemarks = await placemarkFromCoordinates(
         position.latitude,
         position.longitude,
-      );
+      ).timeout(const Duration(seconds: 5));
 
       if (placemarks.isEmpty) {
         return 'Location unavailable';
@@ -78,11 +78,13 @@ class LocationService {
           ? '$area, $city'
           : city.isNotEmpty
           ? city
-          : 'Location unavailable';
+          : 'Location found'; // fallback if names are empty but position was found
 
       _cachedLocation = location;
       return location;
-    } catch (_) {
+    } catch (e) {
+      print('Location error in getLocation: $e');
+      if (_cachedLocation != null) return _cachedLocation!;
       return 'Location unavailable';
     }
   }
@@ -113,12 +115,31 @@ class LocationService {
       return _cachedPosition!;
     }
 
-    final position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
+    try {
+      // 1. Try last known position first for speed
+      final lastKnown = await Geolocator.getLastKnownPosition();
+      if (lastKnown != null && !forceRefresh) {
+        _cachedPosition = lastKnown;
+        return lastKnown;
+      }
 
-    _cachedPosition = position;
-    return position;
+      // 2. Try current position with a timeout
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 5),
+      );
+
+      _cachedPosition = position;
+      return position;
+    } catch (e) {
+      print('Location error in _getPosition: $e');
+      // 3. Final fallback to last known if current failed
+      final lastKnown = await Geolocator.getLastKnownPosition();
+      if (lastKnown != null) {
+        return lastKnown;
+      }
+      rethrow;
+    }
   }
 
 

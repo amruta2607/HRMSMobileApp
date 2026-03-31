@@ -1,27 +1,34 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
+// import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:overlay_support/overlay_support.dart';
 
 import 'core/Theme/app_colors.dart';
 import 'core/Utils/services/ navigation_service.dart';
-import 'core/Utils/services/notification_service.dart';
-import 'firebase_options.dart';
+// import 'firebase_options.dart';
 import 'feature/Profile/controller/profile_controller.dart';
 import 'feature/Splash/splash_screen.dart';
 import 'feature/Login/login_screen.dart';
+import 'core/Utils/services/Attendance service/attendance_service.dart';
+import 'core/Utils/services/connectivity_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // await Firebase.initializeApp(
+  //   options: DefaultFirebaseOptions.currentPlatform,
+  // );
 
-  if (Platform.isAndroid) {
-    await NotificationService.initialize();
-  }
+  ConnectivityService.initialize();
+
+  // Register global "Data Restore" / Sync tasks
+  ConnectivityService.onReconnected(() {
+    print(' GLOBAL SYNC: Connection restored, syncing pending data...');
+    AttendanceService.syncPendingPunches();
+  });
+
+  // Initial sync attempt if already online
+  AttendanceService.syncPendingPunches();
 
   runApp(
     MultiProvider(

@@ -58,7 +58,7 @@ class _ClockOutDialogState extends State<ClockOutDialog> {
                     ),
                     SizedBox(width: 10),
                     Text(
-                      'Do you want to Clock-Out?',
+                      'Do you want to Punch-Out?',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 16,

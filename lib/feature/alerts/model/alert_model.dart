@@ -38,7 +38,7 @@ class AlertModel {
       title: json['title'] ?? '',
       message: json['message'] ?? '',
       isRead: json['isRead'] ?? false,
-      isActive: json['isActive'] ?? false,
+     isActive: json['isActive'] ?? false,
       status: json['status'] ?? '',
       insertDate: json['insertDate'] ?? '',
       insertUserId: json['insertUserId'] ?? 0,

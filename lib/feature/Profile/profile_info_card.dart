@@ -103,6 +103,7 @@ class _ProfileInfoRow extends StatelessWidget {
                 item.value!,
                 style: TextStyle(
                   fontSize: 12 * scale,
+                  fontWeight: FontWeight.w600,
                   color: const Color(0xFF5D6063),                ),
               ),
 

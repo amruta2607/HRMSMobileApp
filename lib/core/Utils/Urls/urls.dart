@@ -1,6 +1,9 @@
-// In urls.dart
 class BaseUrls {
-  static const String base = "http://103.123.74.160:81";
+
+ //static const String base = "http://103.123.74.160:81"; //d
+
+
+  static const String base = "http://103.123.74.159:5005"; //p
 
   // AUTH
   static const String loginWithEmail = "$base/api/Auth/login-email";
@@ -62,5 +65,10 @@ class BaseUrls {
 
   //menu
   static const String alertCount = "$base/api/Alert/user/count";
+
+  // Announcements
+  static const String announcements = "$base/api/mobile/announcements";
+
+
 
 }

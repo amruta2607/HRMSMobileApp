@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/Theme/app_colors.dart';
 import '../../../../core/Utils/services/Attendance service/attendance_service.dart';
 import '../../../../feature/Attendance/model/weekoverview.dart';
+import '../../../../core/Utils/services/connectivity_service.dart';
 
 class AttendanceOverviewCard extends StatefulWidget {
   const AttendanceOverviewCard({super.key});
@@ -18,6 +19,22 @@ class _AttendanceOverviewCardState extends State<AttendanceOverviewCard> {
   void initState() {
     super.initState();
     _future = AttendanceService.getCurrentWeekOverview();
+    ConnectivityService.onReconnected(_handleReconnection);
+  }
+
+  void _handleReconnection() {
+    if (mounted) {
+      print('🌐 Connection restored, refreshing attendance overview...');
+      setState(() {
+        _future = AttendanceService.getCurrentWeekOverview();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    ConnectivityService.removeOnReconnected(_handleReconnection);
+    super.dispose();
   }
 
   @override
@@ -192,7 +209,7 @@ class _Row extends StatelessWidget {
       fontFamily: 'Inter',
       fontSize: 15.89 * scale,
       fontWeight: FontWeight.w400,
-      height: 22.69 / 15.89, // ✅ exact Figma line-height
+      height: 22.69 / 15.89, // exact Figma line-height
       letterSpacing: 0,
       color: AppColors.textDark,
     );

@@ -19,7 +19,7 @@ class WorkspaceCard extends StatelessWidget {
     this.imagePath,
     this.iconColor,
     this.iconBgColor,
-    this.iconSize = 20, // default unchanged behaviour
+    this.iconSize = 20,
     this.onTap,
   });
 
@@ -39,7 +39,7 @@ class WorkspaceCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(20.04 * scale),
               border: Border.all(
                 color: AppColors.workspaceCardBorder,
-                width: 0.83 * scale,
+                width: 1.0 * scale,
               ),
               boxShadow: const [
                 BoxShadow(
@@ -86,21 +86,22 @@ class WorkspaceCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 10.8 * scale,
+                    fontSize: 14.5 * scale,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textDark,
                   ),
                 ),
 
                 if (subtitle.isNotEmpty) ...[
-                  SizedBox(height: 2 * scale),
+                  SizedBox(height: 1 * scale),
                   Text(
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 9 * scale,
+                      fontSize: 11.5 * scale,
+                      fontWeight: FontWeight.w500,
                       color: AppColors.textLight,
                     ),
                   ),

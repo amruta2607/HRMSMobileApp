@@ -24,11 +24,11 @@ class ClockActionButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: isClockedIn
               ? const Color(0xFFF8D1AF)
-              : const Color(0xFFB2FFE3),
+              : const Color(0xFF2196F3),
           borderRadius: BorderRadius.circular(8 * scale),
         ),
         child: Text(
-          isClockedIn ? 'Clock-Out' : 'Clock-In',
+          isClockedIn ? 'Punch-Out' : 'Punch-In',
           style: TextStyle(
             fontSize: 12 * scale,
             fontWeight: FontWeight.w600,

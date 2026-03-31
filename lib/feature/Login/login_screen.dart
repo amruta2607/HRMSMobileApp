@@ -151,13 +151,11 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     // ── MOBILE OTP path ──
-    // Step 1: OTP not sent yet → send OTP first
     if (!_otpSent) {
       await _sendOtp();
       return;
     }
 
-    // Step 2: OTP sent → verify OTP
     final otp = passwordController.text.trim();
     if (otp.isEmpty || otp.length < 4) {
       setState(
@@ -214,248 +212,277 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: 25 * scale),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Image.asset(
-                  'img/app_icon.png',
-                  height: 105 * scale,
-                  width: 145 * scale,
-                ),
-
-                Text(
-                  "Welcome Back",
-                  style: TextStyle(
-                    fontSize: 29.87 * scale,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                SizedBox(height: 8 * scale),
-
-                Text(
-                  "Enter your credentials to access your workspace.",
-                  style: TextStyle(
-                    color: const Color(0xFF64748B),
-                    fontSize: 18 * scale,
-                  ),
-                ),
-
-                SizedBox(height: 23 * scale),
-
-                Container(
-                  height: 52 * scale,
-                  decoration: BoxDecoration(
-                    color: const Color(0xffF1F4F9),
-                    borderRadius: BorderRadius.circular(14 * scale),
-                  ),
-                  child: Row(
-                    children: [
-                      ToggleItem(
-                        text: "Email",
-                        selected: isEmailSelected,
-                        onTap: () => _switchMode(true),
-                      ),
-                      ToggleItem(
-                        text: "Mobile",
-                        selected: !isEmailSelected,
-                        onTap: () => _switchMode(false),
-                      ),
-                    ],
-                  ),
-                ),
-
-                SizedBox(height: 20 * scale),
-
-                Text(
-                  isEmailSelected ? "WORK EMAIL / USER ID" : "MOBILE NUMBER",
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF94A3B8),
-                    letterSpacing: 0.6,
-                  ),
-                ),
-
-                const SizedBox(height: 6),
-
-                InputField(
-                  hint: isEmailSelected
-                      ? "name@altroz.com"
-                      : "Mobile Number",
-                  icon: isEmailSelected
-                      ? Icons.email_outlined
-                      : Icons.phone_outlined,
-                  iconPath: isEmailSelected ? 'img/workMail.png' : null,
-                  controller: fieldController,
-                  errorText: fieldError,
-                  // Lock mobile field once OTP is sent
-                  readOnly: !isEmailSelected && _otpSent,
-                  keyboardType: isEmailSelected
-                      ? TextInputType.emailAddress
-                      : TextInputType.number,
-                  inputFormatters: isEmailSelected
-                      ? []
-                      : [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(10),
-                  ],
-                ),
-
-                // OTP field – only show after OTP is sent
-                if (!isEmailSelected && _otpSent) ...[
-                  SizedBox(height: 15 * scale),
-                  const Text(
-                    "OTP",
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF94A3B8),
-                      letterSpacing: 0.6,
+      body: Stack(                                          // ← Stack added
+        children: [
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(horizontal: 25 * scale),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Image.asset(
+                      'img/app_icon.png',
+                      height: 105 * scale,
+                      width: 145 * scale,
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  InputField(
-                    hint: "Enter OTP",
-                    icon: Icons.lock_outline,
-                    iconPath: 'img/passwordP.png',
-                    isPassword: true,
-                    controller: passwordController,
-                    errorText: passwordError,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(6),
-                    ],
-                  ),
-                ],
 
-                // Email password field
-                if (isEmailSelected) ...[
-                  SizedBox(height: 15 * scale),
-                  const Text(
-                    "PASSWORD",
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF94A3B8),
-                      letterSpacing: 0.6,
+                    Text(
+                      "Welcome Back",
+                      style: TextStyle(
+                        fontSize: 29.87 * scale,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  InputField(
-                    hint: "Enter Password",
-                    icon: Icons.lock_outline,
-                    iconPath: 'img/passwordP.png',
-                    isPassword: true,
-                    controller: passwordController,
-                    errorText: passwordError,
-                    keyboardType: TextInputType.visiblePassword,
-                  ),
-                ],
 
-                SizedBox(height: 12 * scale),
+                    SizedBox(height: 8 * scale),
 
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: GestureDetector(
-                    onTap: () {
-                      if (isEmailSelected) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ForgotPasswordScreen(),
+                    Text(
+                      "Enter your credentials to access your workspace.",
+                      style: TextStyle(
+                        color: const Color(0xFF64748B),
+                        fontSize: 18 * scale,
+                      ),
+                    ),
+
+                    SizedBox(height: 23 * scale),
+
+                    Container(
+                      height: 52 * scale,
+                      decoration: BoxDecoration(
+                        color: const Color(0xffF1F4F9),
+                        borderRadius: BorderRadius.circular(14 * scale),
+                      ),
+                      child: Row(
+                        children: [
+                          ToggleItem(
+                            text: "Email",
+                            selected: isEmailSelected,
+                            onTap: () => _switchMode(true),
                           ),
-                        );
-                      } else if (_otpSent) {
-                        // Resend OTP only when countdown finishes
-                        if (_resendCountdown <= 0) {
-                          _sendOtp();
-                        }
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.only(bottom: 1.0),
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: Color(0xFFCCCCCC),
-                            width: 1.0,
+                          ToggleItem(
+                            text: "Mobile",
+                            selected: !isEmailSelected,
+                            onTap: () => _switchMode(false),
                           ),
-                        ),
-                      ),
-                      child: Text(
-                        isEmailSelected
-                            ? "Forgot Password?"
-                            : _otpSent
-                            ? (_resendCountdown > 0
-                            ? "Resend OTP in ${_resendCountdown}s"
-                            : "Resend OTP")
-                            : "",
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          color: (_otpSent && _resendCountdown <= 0)
-                              ? const Color(0xFF0F62FE)
-                              : const Color(0xFFCCCCCC),
-                          fontSize: 17.42 * scale,
-                          fontWeight: FontWeight.w500,
-                          height: 19.89 / 17.42,
-                        ),
+                        ],
                       ),
                     ),
-                  ),
-                ),
 
-                SizedBox(height: 48 * scale),
+                    SizedBox(height: 20 * scale),
 
-                SizedBox(
-                  width: double.infinity,
-                  height: 55 * scale,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : onLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0F62FE),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16 * scale),
+                    Text(
+                      isEmailSelected ? "WORK EMAIL / USER ID" : "MOBILE NUMBER",
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF94A3B8),
+                        letterSpacing: 0.6,
                       ),
                     ),
-                    child: _isLoading
-                        ? const CircularProgressIndicator(
-                      color: Colors.white,
-                    )
-                        : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          isEmailSelected
-                              ? "Login Securely"
-                              : _otpSent
-                              ? "Verify OTP"
-                              : "Send OTP",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(
-                          Icons.arrow_forward,
-                          color: Colors.white,
-                          size: 20,
-                        ),
+
+                    const SizedBox(height: 6),
+
+                    InputField(
+                      hint: isEmailSelected
+                          ? "name@altroz.com"
+                          : "Mobile Number",
+                      icon: isEmailSelected
+                          ? Icons.email_outlined
+                          : Icons.phone_outlined,
+                      iconPath: isEmailSelected ? 'img/workMail.png' : null,
+                      controller: fieldController,
+                      errorText: fieldError,
+                      readOnly: !isEmailSelected && _otpSent,
+                      keyboardType: isEmailSelected
+                          ? TextInputType.emailAddress
+                          : TextInputType.number,
+                      inputFormatters: isEmailSelected
+                          ? []
+                          : [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(10),
                       ],
                     ),
-                  ),
+
+                    // OTP field – only show after OTP is sent
+                    if (!isEmailSelected && _otpSent) ...[
+                      SizedBox(height: 15 * scale),
+                      const Text(
+                        "OTP",
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF94A3B8),
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      InputField(
+                        hint: "Enter OTP",
+                        icon: Icons.lock_outline,
+                        iconPath: 'img/passwordP.png',
+                        isPassword: true,
+                        controller: passwordController,
+                        errorText: passwordError,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(6),
+                        ],
+                      ),
+                    ],
+
+                    // Email password field
+                    if (isEmailSelected) ...[
+                      SizedBox(height: 15 * scale),
+                      const Text(
+                        "PASSWORD",
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF94A3B8),
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      InputField(
+                        hint: "Enter Password",
+                        icon: Icons.lock_outline,
+                        iconPath: 'img/passwordP.png',
+                        isPassword: true,
+                        controller: passwordController,
+                        errorText: passwordError,
+                        keyboardType: TextInputType.visiblePassword,
+                      ),
+                    ],
+
+                    SizedBox(height: 12 * scale),
+
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: GestureDetector(
+                        onTap: () {
+                          if (isEmailSelected) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ForgotPasswordScreen(),
+                              ),
+                            );
+                          } else if (_otpSent) {
+                            if (_resendCountdown <= 0) {
+                              _sendOtp();
+                            }
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.only(bottom: 1.0),
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: Color(0xFFCCCCCC),
+                                width: 1.0,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            isEmailSelected
+                                ? "Forgot Password?"
+                                : _otpSent
+                                ? (_resendCountdown > 0
+                                ? "Resend OTP in ${_resendCountdown}s"
+                                : "Resend OTP")
+                                : "",
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              color: (_otpSent && _resendCountdown <= 0)
+                                  ? const Color(0xFF0F62FE)
+                                  : const Color(0xFFCCCCCC),
+                              fontSize: 17.42 * scale,
+                              fontWeight: FontWeight.w500,
+                              height: 19.89 / 17.42,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 48 * scale),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 55 * scale,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : onLogin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0F62FE),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16 * scale),
+                          ),
+                        ),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(
+                          color: Colors.white,
+                        )
+                            : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              isEmailSelected
+                                  ? "Login Securely"
+                                  : _otpSent
+                                  ? "Verify OTP"
+                                  : "Send OTP",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Icon(
+                              Icons.arrow_forward,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // ── Top-right logos ──────────────────────────────
+          Padding(
+            padding: EdgeInsets.only(
+              top: 64,
+              right: 21 * scale,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Image.asset(
+                  'img/ordinet_logo.png',
+                  width: 65 * scale,
+                  height: 22 * scale,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(width: 6),
+                Image.asset(
+                  'img/altrozhrm_logo.png',
+                  width: 65 * scale,
+                  height: 22 * scale,
+                  fit: BoxFit.contain,
                 ),
               ],
             ),
           ),
-        ),
+          // ─────────────────────────────────────────────────
+        ],
       ),
     );
   }

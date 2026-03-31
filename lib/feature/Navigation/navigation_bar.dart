@@ -70,7 +70,7 @@ class _CustomNavigationBarState extends State<CustomNavigationBar> {
                 onTap: () => widget.onChanged(0),
               ),
               _NavItem(
-                imagePath: 'img/alert.png',
+                imagePath: 'img/NotificationNav.png',
                 label: 'Alerts',
                 active: widget.currentIndex == 1,
                 scale: scale,
@@ -80,7 +80,7 @@ class _CustomNavigationBarState extends State<CustomNavigationBar> {
                 },
               ),
               _NavItem(
-                imagePath: 'img/attend.png',
+                imagePath: 'img/AttendanceNav.png',
                 label: 'Attendance',
                 active: widget.currentIndex == 2,
                 scale: scale,

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../core/Theme/app_colors.dart';
-import '../Alerts/alerts_screen.dart';
+import '../Holiday/holiday_screen.dart';
 import '../Reuse_Widgets/home_screen_constent.dart';
 import '../Reuse_Widgets/header_bg.dart';
 import '../payroll/payroll_screen.dart';
 import '../leave/leave_screen.dart';
 import '../Navigation/main_navigation_screen.dart';
+import '../Announcement/announcement.dart';
 
 class MenuScreen extends StatelessWidget {
   final ValueChanged<int>? onNavigate;
@@ -59,6 +60,28 @@ class MenuScreen extends StatelessWidget {
         color: const Color(0xFFE3F2FD),
         iconColor: const Color(0xFF1565C0),
         onTap: () => onNavigateToTasks?.call(), // 👈 use new callback
+      ),
+      _MenuItem(
+        title: 'Holiday',
+        subtitle: 'View company holiday calendar',
+        icon: Icons.calendar_today,
+        color: const Color(0xFFF3E5F5),
+        iconColor: const Color(0xFF7B1FA2),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const HolidayScreen()),
+        ),
+      ),
+      _MenuItem(
+        title: 'Announcement',
+        subtitle: 'Stay updated with company news',
+        icon: Icons.notifications_active,
+        color: const Color(0xFFE3F2FD),
+        iconColor: const Color(0xFF1565C0),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AnnouncementScreen()),
+        ),
       ),
     ];
 
@@ -152,7 +175,8 @@ class MenuScreen extends StatelessWidget {
 class _MenuItem {
   final String title;
   final String subtitle;
-  final String imagePath;
+  final String? imagePath;
+  final IconData? icon;
   final Color color;
   final Color iconColor;
   final VoidCallback onTap;
@@ -160,7 +184,8 @@ class _MenuItem {
   const _MenuItem({
     required this.title,
     required this.subtitle,
-    required this.imagePath,
+    this.imagePath,
+    this.icon,
     required this.color,
     required this.iconColor,
     required this.onTap,
@@ -210,10 +235,16 @@ class _MenuTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12 * scale),
                 ),
                 child: Center(
-                  child: Image.asset(
-                    item.imagePath,
+                  child: item.imagePath != null
+                      ? Image.asset(
+                    item.imagePath!,
                     width: 26 * scale,
                     height: 26 * scale,
+                    color: item.iconColor,
+                  )
+                      : Icon(
+                    item.icon,
+                    size: 26 * scale,
                     color: item.iconColor,
                   ),
                 ),

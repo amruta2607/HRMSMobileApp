@@ -58,7 +58,7 @@ class _ClockInDialogState extends State<ClockInDialog> {
                     ),
                     SizedBox(width: 10),
                     Text(
-                      'Do you want to Clock-in?',
+                      'Do you want to Punch-in?',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 16,

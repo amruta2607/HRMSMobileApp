@@ -8,10 +8,12 @@ import 'package:altroz/feature/alerts/widgets/alert_card.dart';
 import '../Reuse_Widgets/home_screen_constent.dart';
 import 'package:altroz/feature/Navigation/main_navigation_screen.dart';
 import 'package:altroz/core/Utils/services/alert_service/alert_count_service.dart';
+import 'package:altroz/core/Utils/services/connectivity_service.dart';
 
 class AlertsScreen extends StatefulWidget {
   final bool initialShowTasks;
-  const AlertsScreen({super.key, this.initialShowTasks = false});
+  final VoidCallback? onBack;
+  const AlertsScreen({super.key, this.initialShowTasks = false, this.onBack});
 
   @override
   State<AlertsScreen> createState() => _AlertsScreenState();
@@ -28,6 +30,14 @@ class _AlertsScreenState extends State<AlertsScreen> {
     super.initState();
     isTasksSelected = widget.initialShowTasks;
     _loadAlerts();
+    ConnectivityService.onReconnected(_handleReconnection);
+  }
+
+  void _handleReconnection() {
+    if (mounted) {
+      print('🌐 Connection restored, refreshing alerts...');
+      _loadAlerts();
+    }
   }
 
   // ✅ React when parent changes initialShowTasks
@@ -70,6 +80,11 @@ class _AlertsScreenState extends State<AlertsScreen> {
 
   int get _unreadCount => _alerts.where((a) => !a.isRead).length;
 
+  bool _isTask(AlertModel a) =>
+      a.title.contains("Leave Request") ||
+          a.title.contains("Payroll Submitted") ||a.title.contains("Reimbursement Request") ||
+          a.title.contains("Resignation Request") || a.title.contains("Cancel Leave Request") || a.title.contains("Cancel Payroll Request") || a.title.contains("Overtime Request");
+
   Future<void> _handleAction(AlertModel alert, bool isApprove) async {
     setState(() => _isLoading = true);
 
@@ -109,13 +124,17 @@ class _AlertsScreenState extends State<AlertsScreen> {
   }
 
   @override
+  void dispose() {
+    ConnectivityService.removeOnReconnected(_handleReconnection);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final scale = (MediaQuery.of(context).size.width / 402).clamp(0.85, 1.1);
 
-    final tasksCount =
-        _alerts.where((a) => a.title.contains("Leave Request")).length;
-    final notificationsCount =
-        _alerts.where((a) => !a.title.contains("Leave Request")).length;
+    final tasksCount = _alerts.where((a) => _isTask(a)).length;
+    final notificationsCount = _alerts.where((a) => !_isTask(a)).length;
 
     return HomeScreenConstent(
       body: Column(
@@ -128,7 +147,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () {
+                    onTap: widget.onBack ?? () {
                       Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(
@@ -238,9 +257,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
             )
                 : () {
               final filtered = _alerts.where((a) {
-                final isLeave =
-                a.title.contains("Leave Request");
-                return isTasksSelected ? isLeave : !isLeave;
+                return isTasksSelected ? _isTask(a) : !_isTask(a);
               }).toList();
 
               if (filtered.isEmpty) {

@@ -33,12 +33,12 @@ class AppColors {
   static const Color homeStatusIconBg = Color(0xFFDFF5E6);
   static const Color homeStatusTextGreen = Color(0xFF2E7D32);
   static const Color log = Color(0xFFF8FAFC);
-  static const Color presentGreen = Color(0xFF15803D);
+  static const Color presentGreen = Color(0xFF40D276);
   static const Color primaryBlueSoft = Color(0x690F62FE);
 
 
   static const Color workspaceCardBg = Color(0xFFF5FAFE);
-  static const Color workspaceCardBorder = Color(0xFFF1F5F9);
+  static const Color workspaceCardBorder = Color(0xFFE2E8F0);
   static const Color workspaceCardShadow = Color(0x14000000);
   static const Color upNextCardBg = Color(0x14F44336);
   static const Color upNextDateBg = Color(0xFFDFF5E6);

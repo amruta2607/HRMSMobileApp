@@ -7,6 +7,7 @@ import '../model/pay_slip_model.dart';
 import 'monthly_pay_summary_card.dart';
 import 'employee_provident_fund_card.dart';
 import 'recent_pay_slips_section.dart';
+import '../../../core/Utils/services/connectivity_service.dart';
 
 class PayrollBody extends StatefulWidget {
   const PayrollBody({super.key});
@@ -29,9 +30,23 @@ class _PayrollBodyState extends State<PayrollBody> {
   @override
   void initState() {
     super.initState();
+    _fetchPayrollData();
+    ConnectivityService.onReconnected(_handleReconnection);
+  }
+
+  void _fetchPayrollData() {
     _providentFundFuture = PayrollService.getProvidentFund();
     _paySlipsFuture = PayrollService.getPaySlips(year: DateTime.now().year);
     _loadMonthlySummaryFromLastPayroll();
+  }
+
+  void _handleReconnection() {
+    if (mounted) {
+      print('🌐 Connection restored, refreshing payroll data...');
+      setState(() {
+        _fetchPayrollData();
+      });
+    }
   }
 
   Future<void> _loadMonthlySummaryFromLastPayroll() async {
@@ -61,6 +76,12 @@ class _PayrollBodyState extends State<PayrollBody> {
         setState(() => _isSummaryLoading = false);
       }
     }
+  }
+
+  @override
+  void dispose() {
+    ConnectivityService.removeOnReconnected(_handleReconnection);
+    super.dispose();
   }
 
   @override

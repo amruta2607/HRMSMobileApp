@@ -10,9 +10,24 @@ import '../../../../feature/Attendance/model/weekoverview.dart';
 import '../../../../feature/Home/model/attendance_status_model.dart';
 import '../../Urls/urls.dart';
 import '../Time_Location/location_service.dart';
+import 'package:flutter/foundation.dart';
 import '../token_storage.dart';
 
 class AttendanceService {
+  // Global State Notifiers for real-time synchronization
+  static final ValueNotifier<bool> isClockedInNotifier = ValueNotifier<bool>(false);
+  static final ValueNotifier<DateTime?> punchInTimeNotifier = ValueNotifier<DateTime?>(null);
+  static final ValueNotifier<bool> isPunchedOutForTodayNotifier = ValueNotifier<bool>(false);
+  static final ValueNotifier<int> attendanceRefreshNotifier = ValueNotifier<int>(0);
+
+  // Convenience getters
+  static bool get isClockedIn => isClockedInNotifier.value;
+  static DateTime? get punchInTime => punchInTimeNotifier.value;
+  static bool get isPunchedOutForToday => isPunchedOutForTodayNotifier.value;
+  static int get refreshCount => attendanceRefreshNotifier.value;
+
+  static void triggerRefresh() => attendanceRefreshNotifier.value++;
+
   static Future<int?> _getUserId() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt('userId');
@@ -28,47 +43,36 @@ class AttendanceService {
   // ===================================================
   // CLOCK IN / CLOCK OUT
   // ===================================================
-  static Future<bool> submitAttendance({
+  static Future<({bool success, String? message})> submitAttendance({
     required bool isPunchIn,
     required DateTime punchTime,
   }) async {
+    final token = await TokenStorage.getToken();
+    if (token == null) return (success: false, message: 'Token Missing');
+
+    final userId = await _getUserId();
+    if (userId == null) return (success: false, message: 'User ID Missing');
+
+    late final position;
     try {
-      final token = await TokenStorage.getToken();
-      if (token == null) {
-        print(' ATTENDANCE: Token is NULL');
-        return false;
-      }
+      position = await LocationService.getLatLng();
+    } catch (e) {
+      return (success: false, message: 'Location error: $e');
+    }
 
-      final userId = await _getUserId();
-      if (userId == null) {
-        print(' ATTENDANCE: userId is NULL');
-        return false;
-      }
+    final model = Attendance_in_out_Model(
+      userId: userId,
+      attendanceDate: punchTime,
+      punchInTime: isPunchIn ? punchTime : null,
+      punchOutTime: isPunchIn ? null : punchTime,
+      latitude: position.latitude,
+      longitude: position.longitude,
+    );
 
-      late final position;
-      try {
-        position = await LocationService.getLatLng();
-      } catch (e) {
-        print(' ATTENDANCE: Location error => $e');
-        return false;
-      }
+    final url = isPunchIn ? BaseUrls.punchIn : BaseUrls.punchOut;
+    final body = isPunchIn ? model.toPunchInJson() : model.toPunchOutJson();
 
-      final model = Attendance_in_out_Model(
-        userId: userId,
-        attendanceDate: punchTime,
-        punchInTime: isPunchIn ? punchTime : null,
-        punchOutTime: isPunchIn ? null : punchTime,
-        latitude: position.latitude,
-        longitude: position.longitude,
-      );
-
-      final url = isPunchIn ? BaseUrls.punchIn : BaseUrls.punchOut;
-      final body =
-      isPunchIn ? model.toPunchInJson() : model.toPunchOutJson();
-
-      print(' ATTENDANCE API URL => $url');
-      print(' ATTENDANCE REQUEST BODY => ${jsonEncode(body)}');
-
+    try {
       final response = await http.post(
         Uri.parse(url),
         headers: {
@@ -79,37 +83,103 @@ class AttendanceService {
         body: jsonEncode(body),
       );
 
-      print(' ATTENDANCE STATUS => ${response.statusCode}');
-      print(' ATTENDANCE RESPONSE => ${response.body}');
-
       if (response.statusCode == 401) {
-        print(' ATTENDANCE: Token expired, logging out');
         await TokenStorage.logoutAndNavigate();
-        return false;
-      }
-
-      if (response.statusCode != 200 &&
-          response.statusCode != 201) {
-        print(' ATTENDANCE: Non-success HTTP status');
-        return false;
+        return (success: false, message: 'Session expired');
       }
 
       final decoded = jsonDecode(response.body);
-      final success = decoded['success'] == true;
-      final message =
-          decoded['message']?.toString().toLowerCase() ?? '';
+      final bool success = decoded['success'] == true;
+      final String message = decoded['message']?.toString() ?? '';
+      final msgLower = message.toLowerCase();
 
-      if (success) return true;
-      if (message.contains('already')) return true;
-      if (message.contains('successful')) return true;
+      // If already done or successfully done
+      if (success || msgLower.contains('already') || msgLower.contains('successful')) {
+        if (isPunchIn) {
+          isClockedInNotifier.value = true;
+          punchInTimeNotifier.value = punchTime;
+          isPunchedOutForTodayNotifier.value = false;
+        } else {
+          isClockedInNotifier.value = false;
+          punchInTimeNotifier.value = null;
+          isPunchedOutForTodayNotifier.value = true;
+        }
 
-      print(' ATTENDANCE: success=false, message=$message');
-      return false;
-    } catch (e, s) {
-      print(' ATTENDANCE ERROR => $e');
-      print(' STACKTRACE => $s');
-      return false;
+        if (msgLower.contains('already')) {
+          return (success: false, message: message); // Return false but with message
+        }
+        return (success: true, message: message);
+      }
+
+      return (success: false, message: message);
+    } catch (e) {
+      if (e is http.ClientException || e.toString().contains('SocketException')) {
+        await _savePendingPunch(body, isPunchIn);
+        return (success: true, message: 'Offline: Punch saved for later sync');
+      }
+      return (success: false, message: e.toString());
     }
+  }
+
+  // ===================================================
+  // OFFLINE SYNC LOGIC
+  // ===================================================
+  static Future<void> _savePendingPunch(Map<String, dynamic> body, bool isPunchIn) async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> pending = prefs.getStringList('pending_punches') ?? [];
+
+    final item = {
+      'isPunchIn': isPunchIn,
+      'body': body,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    pending.add(jsonEncode(item));
+    await prefs.setStringList('pending_punches', pending);
+    print('✅ Saved pending punch locally. Total pending: ${pending.length}');
+  }
+
+  static Future<void> syncPendingPunches() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> pending = prefs.getStringList('pending_punches') ?? [];
+
+    if (pending.isEmpty) return;
+
+    print('🌐 SYNC: Found ${pending.length} pending punches. Starting sync...');
+
+    final List<String> failed = [];
+    final token = await TokenStorage.getToken();
+    if (token == null) return;
+
+    for (final itemStr in pending) {
+      try {
+        final item = jsonDecode(itemStr);
+        final bool isPunchIn = item['isPunchIn'];
+        final Map<String, dynamic> body = item['body'];
+        final url = isPunchIn ? BaseUrls.punchIn : BaseUrls.punchOut;
+
+        final response = await http.post(
+          Uri.parse(url),
+          headers: {
+            'accept': '*/*',
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode(body),
+        );
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          print('✅ SYNC SUCCESS');
+        } else {
+          failed.add(itemStr);
+        }
+      } catch (e) {
+        failed.add(itemStr);
+      }
+    }
+
+    await prefs.setStringList('pending_punches', failed);
+    print('🌐 SYNC COMPLETE. Remaining: ${failed.length}');
   }
 
   // ===================================================
@@ -121,23 +191,12 @@ class AttendanceService {
   }) async {
     try {
       final token = await TokenStorage.getToken();
-      if (token == null) {
-        print(' CALENDAR: Token is NULL');
-        return null;
-      }
+      if (token == null) return null;
 
       final userId = await _getUserId();
-      if (userId == null) {
-        print(' CALENDAR: userId is NULL');
-        return null;
-      }
+      if (userId == null) return null;
 
-      final uri = Uri.parse(
-        '${BaseUrls
-            .attendanceCalendar}?user_id=$userId&month=$month&year=$year',
-      );
-
-      print(' CALENDAR API URL => $uri');
+      final uri = Uri.parse('${BaseUrls.attendanceCalendar}?user_id=$userId&month=$month&year=$year');
 
       final response = await http.get(
         uri,
@@ -147,33 +206,13 @@ class AttendanceService {
         },
       );
 
-      print(' CALENDAR STATUS => ${response.statusCode}');
-      print(' CALENDAR RESPONSE => ${response.body}');
-
-      if (response.statusCode == 401) {
-        print(' CALENDAR: Token expired, logging out');
-        await TokenStorage.logoutAndNavigate();
-        return null;
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
       }
-
-      if (response.statusCode != 200) {
-        print(' CALENDAR: Non-200 status');
-        return null;
-      }
-
-      final decoded = jsonDecode(response.body);
-
-      if (decoded['success'] != true) {
-        print(' CALENDAR: success=false');
-        return null;
-      }
-
-      return decoded;
-    } catch (e, s) {
+    } catch (e) {
       print(' CALENDAR ERROR => $e');
-      print(' STACKTRACE => $s');
-      return null;
     }
+    return null;
   }
 
   // ===================================================
@@ -187,43 +226,14 @@ class AttendanceService {
       final userId = await _getUserId();
       final orgId = await _getOrgId();
 
-      if (userId == null || orgId == null) throw Exception(
-          "User/Org ID Missing");
+      if (userId == null || orgId == null) throw Exception("User/Org ID Missing");
 
       final now = DateTime.now();
-
-      // Monday → Sunday (LOCAL TIME)
-      final startOfWeek = DateTime(
-        now.year,
-        now.month,
-        now.day - (now.weekday - 1),
-        0,
-        0,
-        0,
-      );
-
-      final endOfWeek = DateTime(
-        startOfWeek.year,
-        startOfWeek.month,
-        startOfWeek.day + 6,
-        23,
-        59,
-        59,
-      );
+      final startOfWeek = DateTime(now.year, now.month, now.day - (now.weekday - 1), 0, 0, 0);
+      final endOfWeek = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day + 6, 23, 59, 59);
 
       final f = DateFormat("yyyy-MM-dd'T'HH:mm:ss");
-      final fromDate = f.format(startOfWeek);
-      final toDate = f.format(endOfWeek);
-
-      final uri = Uri.parse(
-        '${BaseUrls.attendanceOverview}'
-            '?userId=$userId'
-            '&organisationId=$orgId'
-            '&fromDate=$fromDate'
-            '&toDate=$toDate',
-      );
-
-      print(' OVERVIEW API URL => $uri');
+      final uri = Uri.parse('${BaseUrls.attendanceOverview}?userId=$userId&organisationId=$orgId&fromDate=${f.format(startOfWeek)}&toDate=${f.format(endOfWeek)}');
 
       final response = await http.get(
         uri,
@@ -233,36 +243,17 @@ class AttendanceService {
         },
       );
 
-      print(' OVERVIEW STATUS => ${response.statusCode}');
-      print(' OVERVIEW RESPONSE => ${response.body}');
-
-      if (response.statusCode == 401) {
-        await TokenStorage.logoutAndNavigate();
-        throw Exception("Session Expired (401)");
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded['success'] == true) {
+          return WeekOverview.fromJson(decoded['data']);
+        }
       }
-
-      if (response.statusCode != 200) {
-        throw Exception("HTTP ${response.statusCode}");
-      }
-
-      final decoded = jsonDecode(response.body);
-
-      if (decoded['success'] != true) {
-        final msg = decoded['message'] ?? 'Unknown API Error';
-        throw Exception("API Error: $msg");
-      }
-
-      print(' OVERVIEW DATA => ${decoded['data']}');
-
-      return WeekOverview.fromJson(decoded['data']);
-    } catch (e, s) {
+    } catch (e) {
       print(' OVERVIEW ERROR => $e');
-      print(' STACKTRACE => $s');
-      // Rethrow so FutureBuilder sees the error
-      throw e;
     }
+    return null;
   }
-
 
   // ===================================================
   // ATTENDANCE STATUS
@@ -273,20 +264,10 @@ class AttendanceService {
   }) async {
     try {
       final token = await TokenStorage.getToken();
-      if (token == null) {
-        print('🔴 ATTENDANCE STATUS: Token is NULL');
-        return null;
-      }
+      if (token == null) return null;
 
-      // Format the date as ISO 8601 string
       final f = DateFormat("yyyy-MM-dd'T'HH:mm:ss");
-      final dateStr = f.format(date);
-
-      final uri = Uri.parse(
-        '${BaseUrls.attendanceStatus}?userId=$userId&date=$dateStr',
-      );
-
-      print('🔵 ATTENDANCE STATUS API URL => $uri');
+      final uri = Uri.parse('${BaseUrls.attendanceStatus}?userId=$userId&date=${f.format(date)}');
 
       final response = await http.get(
         uri,
@@ -296,54 +277,44 @@ class AttendanceService {
         },
       );
 
-      print('🔵 ATTENDANCE STATUS STATUS => ${response.statusCode}');
-      print('🔵 ATTENDANCE STATUS RESPONSE => ${response.body}');
-
-      if (response.statusCode == 401) {
-        print('🔴 ATTENDANCE STATUS: Token expired, logging out');
-        await TokenStorage.logoutAndNavigate();
-        return null;
+      if (response.statusCode == 200) {
+        return AttendanceStatusResponse.fromJson(jsonDecode(response.body));
       }
-
-      if (response.statusCode != 200) {
-        print('🔴 ATTENDANCE STATUS: Non-200 status');
-        return null;
-      }
-
-      final decoded = jsonDecode(response.body);
-
-      return AttendanceStatusResponse.fromJson(decoded);
-    } catch (e, s) {
+    } catch (e) {
       print(' ATTENDANCE STATUS ERROR => $e');
-      print(' STACKTRACE => $s');
-      return null;
     }
+    return null;
   }
 
-  // ===================================================
-  // GET TODAY STATUS (Convenience)
-  // ===================================================
   static Future<AttendanceStatusData?> getTodayStatus() async {
     try {
       final userId = await _getUserId();
       if (userId == null) return null;
 
-      final response = await getAttendanceStatus(
-          userId: userId,
-          date: DateTime.now()
-      );
-
-      if (response != null && response.success && response.data != null) {
+      final response = await getAttendanceStatus(userId: userId, date: DateTime.now());
+      if (response != null && response.success) {
+        final data = response.data;
+        if (data != null) {
+          if (data.punchIn != null && data.punchOut == null) {
+            isClockedInNotifier.value = true;
+            punchInTimeNotifier.value = data.punchIn;
+            isPunchedOutForTodayNotifier.value = false;
+          } else if (data.punchIn != null && data.punchOut != null) {
+            isClockedInNotifier.value = false;
+            punchInTimeNotifier.value = null;
+            isPunchedOutForTodayNotifier.value = true;
+          } else {
+            isClockedInNotifier.value = false;
+            punchInTimeNotifier.value = null;
+            isPunchedOutForTodayNotifier.value = false;
+          }
+        }
         return response.data;
       }
-    } catch (e) {
-      print('Error fetching today status: $e');
-    }
+    } catch (e) {}
     return null;
   }
 
-  // ATTENDANCE SUMMARY (RECORDS)
-  // ===================================================
   static Future<Map<String, dynamic>?> getAttendanceSummary({
     required int month,
     required int year,
@@ -354,26 +325,13 @@ class AttendanceService {
 
       final userId = await _getUserId();
       final orgId = await _getOrgId();
-
       if (userId == null || orgId == null) return null;
 
-      // Calculate first and last day of the month
       final fromDate = DateTime(year, month, 1);
-      final toDate = DateTime(year, month + 1, 0); // Last day of month
-
+      final toDate = DateTime(year, month + 1, 0);
       final f = DateFormat("yyyy-MM-dd'T'HH:mm:ss");
-      final fromStr = f.format(fromDate);
-      final toStr = f.format(toDate);
 
-      final uri = Uri.parse(
-        '${BaseUrls.attendanceSummary}'
-            '?organization_id=$orgId'
-            '&user_id=$userId'
-            '&from_date=$fromStr'
-            '&to_date=$toStr',
-      );
-
-      print(' SUMMARY API URL => $uri');
+      final uri = Uri.parse('${BaseUrls.attendanceSummary}?organization_id=$orgId&user_id=$userId&from_date=${f.format(fromDate)}&to_date=${f.format(toDate)}');
 
       final response = await http.get(
         uri,
@@ -383,48 +341,31 @@ class AttendanceService {
         },
       );
 
-      print(' SUMMARY STATUS => ${response.statusCode}');
-      if (response.statusCode != 200) return null;
-
-      final decoded = jsonDecode(response.body);
-      if (decoded['success'] != true) return null;
-
-      return decoded;
-    } catch (e) {
-      print(' SUMMARY ERROR => $e');
-      return null;
-    }
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded['success'] == true) return decoded;
+      }
+    } catch (e) {}
+    return null;
   }
 
-  // ===================================================
-  // GEOFENCING
-  // ===================================================
   static Future<GeofencingModel?> getGeofencingDetails() async {
     try {
       final token = await TokenStorage.getToken();
       if (token == null) return null;
 
-      final uri = Uri.parse(BaseUrls.geofencingByTenant);
-      print(' GEOFENCING API URL => $uri');
-
       final response = await http.get(
-        uri,
+        Uri.parse(BaseUrls.geofencingByTenant),
         headers: {
           'accept': '*/*',
           'Authorization': 'Bearer $token',
         },
       );
 
-      print(' GEOFENCING STATUS => ${response.statusCode}');
-      print(' GEOFENCING RESPONSE => ${response.body}');
-
       if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        return GeofencingModel.fromJson(decoded);
+        return GeofencingModel.fromJson(jsonDecode(response.body));
       }
-    } catch (e) {
-      print(' GEOFENCING ERROR => $e');
-    }
+    } catch (e) {}
     return null;
   }
 
@@ -435,14 +376,7 @@ class AttendanceService {
     required double branchLng,
     required double radius,
   }) {
-    final distanceInMeters = Geolocator.distanceBetween(
-      currentLat,
-      currentLng,
-      branchLat,
-      branchLng,
-    );
-
-    print(' DISTANCE: $distanceInMeters meters, RADIUS: $radius meters');
+    final distanceInMeters = Geolocator.distanceBetween(currentLat, currentLng, branchLat, branchLng);
     return distanceInMeters <= radius;
   }
 }

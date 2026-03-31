@@ -33,7 +33,6 @@ class _HomeScreenState extends State<HomeScreen>
     super.dispose();
   }
 
-  // 🔁 CALLED WHEN USER RETURNS FROM SETTINGS
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
@@ -87,6 +86,9 @@ class _HomeScreenState extends State<HomeScreen>
           children: [
             const HomeHeaderSection(),
 
+
+
+
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -99,9 +101,9 @@ class _HomeScreenState extends State<HomeScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(height: 12 * scale),
+                    SizedBox(height: 13 * scale),
                     const HomeWorkspaceSection(),
-                    SizedBox(height: 12 * scale),
+                    SizedBox(height: 13 * scale),
                     const Text(
                       'UP NEXT',
                       style: TextStyle(
@@ -111,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen>
                         color: AppColors.textGrey,
                       ),
                     ),
-                    SizedBox(height: 8 * scale),
+                    SizedBox(height: 13 * scale),
                     const HomeUpNextSection(),
                   ],
                 ),

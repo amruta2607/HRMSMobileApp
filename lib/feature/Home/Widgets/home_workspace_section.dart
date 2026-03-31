@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/Theme/app_colors.dart';
+import '../../Announcement/announcement.dart';
+import '../../Holiday/holiday_screen.dart';
 import '../../leave/leave_screen.dart';
 import '../../payroll/payroll_screen.dart';
 import 'package:altroz/feature/Navigation/main_navigation_screen.dart'; // 👈 Import
@@ -67,29 +69,50 @@ class HomeWorkspaceSection extends StatelessWidget {
 
           WorkspaceCard(
             title: 'Attendance',
-            subtitle: '08:42 hrs',
+            subtitle: 'Punch In/Out',
             icon: Icons.access_time,
             iconColor: AppColors.attendanceBlue,
-            iconBgColor: Color(0x8FAFF8CC),
+            iconBgColor: const Color(0x8FAFF8CC),
             iconSize: 22,
+            onTap: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MainNavigationScreen(initialIndex: 2),
+                ),
+                    (route) => false,
+              );
+            },
           ),
 
           WorkspaceCard(
-            title: 'Attendance',
-            subtitle: 'Today',
-            icon: Icons.access_time,
-            iconColor: AppColors.attendanceBlue,
-            iconBgColor: Color(0x8FAFF8CC),
-            iconSize: 22,
+            title: 'Holiday',
+            subtitle: 'Holidays',
+            icon: Icons.calendar_today,
+            iconColor: AppColors.holidayBlue,
+            iconBgColor: const Color(0x8FAFF8CC),
+            iconSize: 16,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const HolidayScreen()),
+              );
+            },
           ),
 
           WorkspaceCard(
-            title: 'Attendance',
-            subtitle: 'Today',
-            icon: Icons.access_time,
-            iconColor: AppColors.textGrey,
-            iconBgColor: Color(0x8FAFF8CC),
-            iconSize: 22,
+            title: 'Announcement',
+            subtitle: 'Company News',
+            icon: Icons.notifications_active,
+            iconColor: AppColors.accentBlue,
+            iconBgColor: const Color(0x8FAFF8CC),
+            iconSize: 16,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AnnouncementScreen()),
+              );
+            },
           ),
         ];
 
@@ -101,11 +124,11 @@ class HomeWorkspaceSection extends StatelessWidget {
               style: TextStyle(
                 letterSpacing: 1.4,
                 fontSize: 13,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
                 color: AppColors.textGrey,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 13),
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -114,7 +137,7 @@ class HomeWorkspaceSection extends StatelessWidget {
                 crossAxisCount: 3,
                 crossAxisSpacing: spacing,
                 mainAxisSpacing: spacing,
-                childAspectRatio: 113 / 98.3,
+                childAspectRatio: 110 / 105, // Adjusted to give more vertical space
               ),
               itemBuilder: (_, index) => items[index],
             ),

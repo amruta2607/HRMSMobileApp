@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../Reuse_Widgets/header_bg.dart';
-import '../../Navigation/main_navigation_screen.dart';
+
 
 class PayrollHeader extends StatelessWidget {
   const PayrollHeader({super.key});
@@ -19,14 +19,7 @@ class PayrollHeader extends StatelessWidget {
             color: Colors.transparent,
             child: InkWell(
               onTap: () {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                    const MainNavigationScreen(initialIndex: 0),
-                  ),
-                      (route) => false,
-                );
+                Navigator.pop(context);
               },
               borderRadius: BorderRadius.circular(8),
               splashColor: Colors.black.withOpacity(0.1),

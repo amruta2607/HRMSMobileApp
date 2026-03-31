@@ -3,6 +3,7 @@ import '../../Reuse_Widgets/leave_primary_button.dart';
 import '../../Navigation/navigation_bar.dart';
 import '../../Navigation/main_navigation_screen.dart';
 import '../../../../core/Utils/services/leave_service/leave_service.dart';
+import '../../../../core/Utils/services/connectivity_service.dart';
 
 import 'package:file_picker/file_picker.dart' as fp;
 import 'package:intl/intl.dart';
@@ -33,6 +34,16 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   void initState() {
     super.initState();
     _fetchLeaveTypes();
+
+    // Auto-refresh when internet is back
+    ConnectivityService.onReconnected(_handleReconnection);
+  }
+
+  void _handleReconnection() {
+    if (mounted) {
+      print('🌐 Connection restored, refreshing leave types...');
+      _fetchLeaveTypes();
+    }
   }
 
   Future<void> _fetchLeaveTypes() async {
@@ -50,6 +61,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
 
   @override
   void dispose() {
+    ConnectivityService.removeOnReconnected(_handleReconnection);
     _reasonController.dispose();
     super.dispose();
   }

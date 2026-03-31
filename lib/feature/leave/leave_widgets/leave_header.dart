@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/Utils/services/leave_service/leave_service.dart';
 import '../../Reuse_Widgets/header_bg.dart';
-import '../../Navigation/main_navigation_screen.dart';
+
 import '../model/leave_balence_model.dart';
 import 'leave_summary_card.dart';
 
@@ -55,14 +55,7 @@ class LeaveHeaderState extends State<LeaveHeader> {
             color: Colors.transparent,
             child: InkWell(
               onTap: () {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                    const MainNavigationScreen(initialIndex: 0),
-                  ),
-                      (route) => false,
-                );
+                Navigator.pop(context);
               },
               borderRadius: BorderRadius.circular(8),
               splashColor: Colors.black.withOpacity(0.1),

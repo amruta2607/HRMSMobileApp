@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/Utils/services/LogIn_out/auth_service.dart';
+import '../../core/validators/validation.dart';
 import '../../feature/login/widgets/input_field.dart';
 import 'reset_password_screen.dart';
 
@@ -15,11 +16,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final AuthService _authService = AuthService();
 
   bool _isLoading = false;
+  String? _emailError; // 👈 Added state for inline error
 
   Future<void> _submitEmail() async {
     final email = _emailController.text.trim();
+
+    // Reset error
+    setState(() => _emailError = null);
+
     if (email.isEmpty) {
-      _showSnackBar('Please enter your email');
+      setState(() => _emailError = 'Please enter your email');
+      return;
+    }
+    if (!Validator.isValidEmail(email)) {
+      setState(() => _emailError = 'Please enter a valid email');
       return;
     }
 
@@ -43,7 +53,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         );
       } else {
-        _showSnackBar(response['message'] ?? 'Failed to send OTP');
+        setState(() => _emailError = response['message'] ?? 'Failed to send OTP');
       }
     } catch (e) {
       _handleError(e);
@@ -78,66 +88,69 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(25 * scale),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Forgot Password",
-                style: TextStyle(
-                  fontSize: 28 * scale,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 10 * scale),
-              Text(
-                "Enter your registered email to reset your password.",
-                style: TextStyle(
-                  color: const Color(0xFF64748B),
-                  fontSize: 16 * scale,
-                ),
-              ),
-              SizedBox(height: 40 * scale),
-
-              const Text(
-                "WORK EMAIL",
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey, letterSpacing: 0.6),
-              ),
-              const SizedBox(height: 6),
-              InputField(
-                hint: "name@company.com",
-                icon: Icons.email_outlined,
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-              ),
-
-              SizedBox(height: 40 * scale),
-
-              SizedBox(
-                width: double.infinity,
-                height: 55 * scale,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _submitEmail,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xff3563F3),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16 * scale),
-                    ),
-                  ),
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                    "Send OTP",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+        child: SingleChildScrollView( // Added scroll view for small screens
+          child: Padding(
+            padding: EdgeInsets.all(25 * scale),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Forgot Password",
+                  style: TextStyle(
+                    fontSize: 28 * scale,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-            ],
+                SizedBox(height: 10 * scale),
+                Text(
+                  "Enter your registered email to reset your password.",
+                  style: TextStyle(
+                    color: const Color(0xFF64748B),
+                    fontSize: 16 * scale,
+                  ),
+                ),
+                SizedBox(height: 40 * scale),
+
+                const Text(
+                  "WORK EMAIL",
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey, letterSpacing: 0.6),
+                ),
+                const SizedBox(height: 6),
+                InputField(
+                  hint: "name@company.com",
+                  icon: Icons.email_outlined,
+                  controller: _emailController,
+                  errorText: _emailError, // 👈 Passing error to input field
+                  keyboardType: TextInputType.emailAddress,
+                ),
+
+                SizedBox(height: 40 * scale),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 55 * scale,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _submitEmail,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xff3563F3),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16 * scale),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                      "Send OTP",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
