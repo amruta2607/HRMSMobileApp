@@ -523,10 +523,29 @@ namespace MobileWebApi.Services
                 var totalDays = dateTo.Day;
                 var today = DateTime.Today;
 
-                var calendarData = new List<CalendarDayAttendance>();
+                // Preload holiday dates and approved leave dates for the month
+                var holidayDates = await _repo.GetHolidayDatesAsync(employee.OrganisationId, dateFrom, dateTo);
+                var holidaySet = new HashSet<DateTime>(holidayDates.Select(d => d.Date));
+
+                var leaveRanges = await _repo.GetApprovedLeaveDateRangesAsync(employeeId.Value, dateFrom, dateTo);
+                var leaveSet = new HashSet<DateTime>();
+				foreach (var (from, to) in leaveRanges)
+				{
+					var start = from.Date < dateFrom ? dateFrom : from.Date;
+					var end = to.Date > dateTo ? dateTo : to.Date;
+
+					for (var d = start; d <= end; d = d.AddDays(1))
+					{
+						leaveSet.Add(d);
+					}
+				}
+
+				var calendarData = new List<CalendarDayAttendance>();
                 int presentDays = 0;
                 int absentDays = 0;
                 int weekendDays = 0;
+                int leaveDays = 0;
+                int holidayDays = 0;
                 double totalWorkingHours = 0;
 
                 for (int day = 1; day <= totalDays; day++)
@@ -540,11 +559,26 @@ namespace MobileWebApi.Services
                         IsWeekend = currentDate.DayOfWeek == DayOfWeek.Saturday || currentDate.DayOfWeek == DayOfWeek.Sunday
                     };
 
+                    // Priority: Weekend -> Holiday -> Leave -> Future -> Present -> Absent
                     if (dayAttendance.IsWeekend)
                     {
                         dayAttendance.Status = "Weekend";
                         dayAttendance.IsAbsent = false;
                         weekendDays++;
+                    }
+                    else if (holidaySet.Contains(currentDate.Date))
+                    {
+                        dayAttendance.IsHoliday = true;
+                        dayAttendance.Status = "Holiday";
+                        dayAttendance.IsAbsent = false;
+                        holidayDays++;
+                    }
+                    else if (leaveSet.Contains(currentDate.Date))
+                    {
+                        dayAttendance.IsLeave = true;
+                        dayAttendance.Status = "Leave";
+                        dayAttendance.IsAbsent = false;
+                        leaveDays++;
                     }
                     else if (currentDate > today)
                     {
@@ -591,8 +625,8 @@ namespace MobileWebApi.Services
                     WorkingDays = workingDays,
                     PresentDays = presentDays,
                     AbsentDays = absentDays,
-                    LeaveDays = 0, // Can be enhanced to include leave data
-                    HolidayDays = 0, // Can be enhanced to include holiday data
+                    LeaveDays = leaveDays,
+                    HolidayDays = holidayDays,
                     WeekendDays = weekendDays,
                     TotalWorkingHours = Math.Round(totalWorkingHours, 2),
                     CalendarData = calendarData

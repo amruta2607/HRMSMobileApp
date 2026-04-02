@@ -83,6 +83,30 @@ namespace MobileWebApi.Repositories
                 });
         }
 
+        public async Task<List<DateTime>> GetHolidayDatesAsync(int tenantId, DateTime fromDate, DateTime toDate)
+        {
+            using var conn = _context.CreateConnection();
+            string query = _queryProvider.Get("GetHolidaysByTenantIdAndDateRange");
+
+            var rows = await conn.QueryAsync<Holiday>(query, new { TenantId = tenantId, FromDate = fromDate.Date, ToDate = toDate.Date });
+            return rows.Select(h => h.Date.Date).Distinct().ToList();
+        }
+
+        private sealed class LeaveDateRangeRow
+        {
+            public DateTime FromDate { get; set; }
+            public DateTime ToDate { get; set; }
+        }
+
+        public async Task<List<(DateTime FromDate, DateTime ToDate)>> GetApprovedLeaveDateRangesAsync(int employeeId, DateTime fromDate, DateTime toDate)
+        {
+            using var conn = _context.CreateConnection();
+            string query = _queryProvider.Get("GetApprovedLeaveDateRangesByEmployeeAndDateRange");
+
+            var rows = await conn.QueryAsync<LeaveDateRangeRow>(query, new { EmployeeId = employeeId, FromDate = fromDate.Date, ToDate = toDate.Date });
+            return rows.Select(r => (r.FromDate.Date, r.ToDate.Date)).ToList();
+        }
+
         /// <summary>
         /// Get attendance report based on request parameters (daily or monthly)
         /// </summary>

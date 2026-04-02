@@ -29,6 +29,8 @@
     "InsertPunchIn": "INSERT INTO Punch (EmployeeId, PunchDate, PunchIn, TenantId, InsertDate, InSource, CoordinateIn, LinkIn) SELECT @EmployeeId, @PunchDate, @PunchIn, e.TenantId, GETDATE(), @InSource, @CoordinateIn, @LinkIn FROM Employee e WHERE e.Id = @EmployeeId; SELECT CAST(SCOPE_IDENTITY() AS INT);",
     "UpdatePunchOut": "UPDATE Punch SET PunchOut = @PunchOut, Duration = @Duration, UpdateDate = GETDATE(), OutSource = @OutSource, CoordinateOut = @CoordinateOut, LinkOut = @LinkOut WHERE Id = @Id",
 
+    "GetApprovedLeaveDateRangesByEmployeeAndDateRange": "SELECT FromDate, ToDate FROM LeaveRequest WHERE EmployeeId = @EmployeeId AND LeaveRequestStatus = 2 AND FromDate <= @ToDate AND ToDate >= @FromDate",
+
 
 
     "GetOrganisationIdByName": "SELECT TenantId FROM Tenant WHERE TenantName = @TenantName",
