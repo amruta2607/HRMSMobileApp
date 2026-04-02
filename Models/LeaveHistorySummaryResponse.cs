@@ -17,6 +17,7 @@ namespace MobileWebApi.Models
 		public int LeaveRequestId { get; set; }
 		public string LeaveDates { get; set; } = string.Empty; // "dd-MM-yyyy" or "dd-MM-yyyy - dd-MM-yyyy"
 		public string? LeaveType { get; set; }
+		public string? Reason { get; set; }
 		public int UsedDays { get; set; }
 		public string? Status { get; set; }
 	}

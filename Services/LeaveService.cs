@@ -488,6 +488,7 @@ namespace MobileWebApi.Services
 							LeaveRequestId = lr.Id,
 							LeaveDates = FormatLeaveDates(lr.FromDate, lr.ToDate),
 							LeaveType = lr.LeaveTypeName,
+							Reason = lr.Description,
 							UsedDays = usedDays,
 							Status = status
 						});
