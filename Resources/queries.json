@@ -253,13 +253,13 @@
 
     "GetTenantDayOffIds": "SELECT DISTINCT DayOffId FROM TenantConfiguredDayOffDays WHERE TenantConfigurationId IN (SELECT TenantConfigurationId FROM TenantConfiguration WHERE TenantId = @TenantId)",
 
-    "GetActualHoursByEmployeeAndDateRange": "SELECT ISNULL(SUM(Duration), 0) AS TotalHours FROM Punch WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND PunchDate >= @FromDate AND PunchDate <= @ToDate AND PunchOut IS NOT NULL",
+    "GetActualHoursByEmployeeAndDateRange": "SELECT ISNULL(SUM(CASE WHEN PunchIn IS NOT NULL AND PunchOut IS NOT NULL AND DATEDIFF(SECOND, PunchIn, PunchOut) > 0 THEN CAST(DATEDIFF(SECOND, PunchIn, PunchOut) AS FLOAT) / 3600.0 ELSE 0 END), 0) AS TotalHours FROM Punch WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND CAST(PunchDate AS DATE) >= @FromDate AND CAST(PunchDate AS DATE) <= @ToDate AND PunchOut IS NOT NULL",
 
     "AttendanceOverview_GetWorkingHours": "SELECT TOP 1 WorkingHours FROM TenantConfiguration WHERE TenantId = @TenantId",
 
     "AttendanceOverview_GetDayOffs": "SELECT DISTINCT DayOffId FROM TenantConfiguredDayOffDays WHERE TenantConfigurationId IN (SELECT TenantConfigurationId FROM TenantConfiguration WHERE TenantId = @TenantId)",
 
-    "AttendanceOverview_GetActualHours": "SELECT ISNULL(SUM(Duration), 0) AS TotalHours FROM Punch WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND PunchDate >= @FromDate AND PunchDate <= @ToDate AND PunchOut IS NOT NULL",
+    "AttendanceOverview_GetActualHours": "SELECT ISNULL(SUM(CASE WHEN PunchIn IS NOT NULL AND PunchOut IS NOT NULL AND DATEDIFF(SECOND, PunchIn, PunchOut) > 0 THEN CAST(DATEDIFF(SECOND, PunchIn, PunchOut) AS FLOAT) / 3600.0 ELSE 0 END), 0) AS TotalHours FROM Punch WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND CAST(PunchDate AS DATE) >= @FromDate AND CAST(PunchDate AS DATE) <= @ToDate AND PunchOut IS NOT NULL",
 
     "GetDisputeCategories": "SELECT Id, CategoryName, IsActive, CreatedOn FROM DisputeCategory WHERE IsActive = 1 ORDER BY CategoryName",
 

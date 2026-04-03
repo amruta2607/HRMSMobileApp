@@ -125,7 +125,7 @@ namespace MobileWebApi.Services
                 // 3. ExpectedHours = WorkingHours × WorkingDays
                 var expectedHours = workingHours.Value * workingDays;
 
-                // 4. Fetch actual worked hours by summing Duration from Punch table
+                // 4. Actual worked hours (elapsed from PunchIn to PunchOut)
                 var actualHours = await GetActualHoursAsync(connection, employeeId.Value, request.organisationId, fromDate, toDate);
 
                 // 5. ShortfallHours = ExpectedHours − ActualHours (minimum 0)
