@@ -587,16 +587,39 @@ namespace MobileWebApi.Services
                     }
                     else if (attendanceDict.TryGetValue(currentDate, out var attendance))
                     {
-                        dayAttendance.IsPresent = true;
                         dayAttendance.PunchIn = attendance.PunchIn;
                         dayAttendance.PunchOut = attendance.PunchOut;
                         dayAttendance.WorkingHours = attendance.WorkingDuration;
-                        dayAttendance.Status = "Present";
-                        presentDays++;
-                        
-                        if (attendance.WorkingDuration.HasValue)
+
+                        var hasPunchIn = attendance.PunchIn.HasValue;
+                        var hasPunchOut = attendance.PunchOut.HasValue;
+
+                        if (hasPunchIn && hasPunchOut)
                         {
-                            totalWorkingHours += attendance.WorkingDuration.Value;
+                            dayAttendance.IsPresent = true;
+                            dayAttendance.Status = "Present";
+                            presentDays++;
+                            if (attendance.WorkingDuration.HasValue)
+                            {
+                                totalWorkingHours += attendance.WorkingDuration.Value;
+                            }
+                        }
+                        else if (hasPunchIn && !hasPunchOut)
+                        {
+                            dayAttendance.IsPresent = true;
+                            dayAttendance.Status = "Present";
+                            dayAttendance.Remarks = "Missing Punch Out";
+                            presentDays++;
+                            if (attendance.WorkingDuration.HasValue)
+                            {
+                                totalWorkingHours += attendance.WorkingDuration.Value;
+                            }
+                        }
+                        else
+                        {
+                            dayAttendance.IsAbsent = true;
+                            dayAttendance.Status = "Absent";
+                            absentDays++;
                         }
                     }
                     else
@@ -621,6 +644,7 @@ namespace MobileWebApi.Services
                     Month = month,
                     MonthName = monthName,
                     Year = year,
+                    
                     TotalDays = totalDays,
                     WorkingDays = workingDays,
                     PresentDays = presentDays,

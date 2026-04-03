@@ -248,6 +248,7 @@ namespace MobileWebApi.Controllers
         /// Get attendance by personal details for employee (current month)
         /// GET: attendance/get-attendance-by-personal-details/?user_id=7
         /// Note: Regular users can only see their own attendance. HR/TenantAdmin can see all.
+        /// Workdays: both punches → Present; punch in only → Present with Remarks "Missing Punch Out" (PunchIn still returned); neither punch → Absent.
         /// </summary>
         [HttpGet("get-attendance-by-personal-details")]
         public async Task<IActionResult> GetAttendanceByPersonalDetails([FromQuery] int user_id)
