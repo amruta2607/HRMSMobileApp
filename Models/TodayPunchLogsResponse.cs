@@ -8,6 +8,12 @@ namespace MobileWebApi.Models
         public string? Direction { get; set; }
         public DateTime LogDateTime { get; set; }
         public string? DeviceName { get; set; }
+        public string? InSource { get; set; }
+        public string? OutSource { get; set; }
+        public string? CoordinateIn { get; set; }
+        public string? CoordinateOut { get; set; }
+        public string? LinkIn { get; set; }
+        public string? LinkOut { get; set; }
     }
 
     public class TodayPunchLogsResponse

@@ -21,6 +21,13 @@ namespace MobileWebApi.Models
         public int OrganisationId { get; set; }
         
         public int? SystemUserId { get; set; }
+
+        public string? InSource { get; set; }
+        public string? OutSource { get; set; }
+        public string? CoordinateIn { get; set; }
+        public string? CoordinateOut { get; set; }
+        public string? LinkIn { get; set; }
+        public string? LinkOut { get; set; }
     }
 }
 

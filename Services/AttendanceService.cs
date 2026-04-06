@@ -590,6 +590,12 @@ namespace MobileWebApi.Services
                         dayAttendance.PunchIn = attendance.PunchIn;
                         dayAttendance.PunchOut = attendance.PunchOut;
                         dayAttendance.WorkingHours = attendance.WorkingDuration;
+                        dayAttendance.InSource = attendance.InSource;
+                        dayAttendance.OutSource = attendance.OutSource;
+                        dayAttendance.CoordinateIn = attendance.CoordinateIn;
+                        dayAttendance.CoordinateOut = attendance.CoordinateOut;
+                        dayAttendance.LinkIn = attendance.LinkIn;
+                        dayAttendance.LinkOut = attendance.LinkOut;
 
                         var hasPunchIn = attendance.PunchIn.HasValue;
                         var hasPunchOut = attendance.PunchOut.HasValue;
@@ -746,6 +752,12 @@ namespace MobileWebApi.Services
                         detail.PunchIn = attendance.PunchIn;
                         detail.PunchOut = attendance.PunchOut;
                         detail.WorkingHours = attendance.WorkingDuration;
+                        detail.InSource = attendance.InSource;
+                        detail.OutSource = attendance.OutSource;
+                        detail.CoordinateIn = attendance.CoordinateIn;
+                        detail.CoordinateOut = attendance.CoordinateOut;
+                        detail.LinkIn = attendance.LinkIn;
+                        detail.LinkOut = attendance.LinkOut;
                         detail.Status = "Present";
                         presentDays++;
                         
@@ -980,6 +992,12 @@ namespace MobileWebApi.Services
                     // Attendance is marked
                     statusData.isMarked = true;
                     statusData.isAlreadyMarked = true; // Prevents duplicate punch-in
+                    statusData.inSource = punch.InSource;
+                    statusData.outSource = punch.OutSource;
+                    statusData.coordinateIn = punch.CoordinateIn;
+                    statusData.coordinateOut = punch.CoordinateOut;
+                    statusData.linkIn = punch.LinkIn;
+                    statusData.linkOut = punch.LinkOut;
 
                     // Determine status based on punch-in/punch-out
                     if (punch.PunchIn.HasValue && punch.PunchOut.HasValue)

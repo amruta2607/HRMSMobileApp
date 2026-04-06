@@ -35,6 +35,12 @@ namespace MobileWebApi.Models
         public DateTime? PunchOut { get; set; }
         public double? WorkingHours { get; set; }
         public string? Status { get; set; } // "Present", "Absent", "Leave", "Holiday", "Weekend"
+        public string? InSource { get; set; }
+        public string? OutSource { get; set; }
+        public string? CoordinateIn { get; set; }
+        public string? CoordinateOut { get; set; }
+        public string? LinkIn { get; set; }
+        public string? LinkOut { get; set; }
     }
 }
 
