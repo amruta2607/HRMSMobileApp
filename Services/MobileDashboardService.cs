@@ -98,7 +98,7 @@ namespace MobileWebApi.Services
 
                 var today = DateTime.Today;
                 return result
-                    .Where(h => h.Date.Date >= today)
+                    .Where(h => h.Date >= today)
                     .OrderBy(h => h.Date)
                     .ToList();
             }

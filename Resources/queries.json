@@ -1,13 +1,13 @@
 {
   "SQLQueries": {
-   "GetUserById": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(u.WorkRoleId, ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.UserId = @UserId",
+    "GetUserById": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(u.WorkRoleId, ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.UserId = @UserId",
 
     "GetUserByUsernameOrMobile": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(u.WorkRoleId, ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.Username = @Login OR u.MobileNumber = @Login",
 
 
-  "GetUserByEmail": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.Department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(CAST(u.WorkRoleId AS NVARCHAR(MAX)), ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.Email = @Email",
+    "GetUserByEmail": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.Department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(CAST(u.WorkRoleId AS NVARCHAR(MAX)), ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.Email = @Email",
 
-"GetUserByMobile": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PinNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(u.WorkRoleId, ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.MobileNumber = @MobileNumber",
+    "GetUserByMobile": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PinNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(u.WorkRoleId, ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.MobileNumber = @MobileNumber",
 
     "GetUsersByOrganisationId": "SELECT UserId,Username,Email,IsActive,MobileNumber,PinNumber,department AS Designation,IsHrUser,IsTenantAdmin,TenantId AS OrganisationId,BranchId,WorkRoleId FROM Users WHERE TenantId = @OrganisationId",
     "GetEmployeeByUserId": "SELECT Id,Name,Description,EmployeeNumber,Street,City,State,ZipCode,Phone,Email,Picture,DateOfBirth,PlaceOfBirth,BiometricNumber,TaxNumber,LatestEducationDegree,GenderId,GradeId,ESINo,PFNo,SalarySlab,BasicSalary,IsPerDayWagesEmployee,PerDayOverTimeWages,DesignationId,DepartmentId,BranchId,SupervisorId,LeaveQuota,LeaveTaken,DateOfJoining,BankAccountForPayroll,IFSCCode,BankNameForPayroll,BankBranchName,SpouseName,SpouseDateOfBirth,SpouseProfession,SpouseStreet,SpouseCity,SpouseState,SpouseZipCode,SpousePhone,SpouseEmail,SystemUserId,TenantId AS OrganisationId,CostToCompany,CtcFrequencyType,IsEmployeeActive,CategoryId,BloodGroup,MaritalStatus,PermanentStreet,PermanentCity,PermanentState,PermanentZipCode,PermanentPhone,PermanentEmail,PersonalEmail,CountryId,StateId,PermanentCountryId,GroupName,NotificationGroupName,UANNo,IsPayrollOnHold,FirstName,MiddleName,LastName,CompensationTemplateId FROM Employee WHERE SystemUserId = @SystemUserId",
@@ -279,10 +279,12 @@
 
     "GetPaySlipMonthsByYear": "SELECT DISTINCT PayrollMonth AS Month FROM [dbo].[vwPayrollDetailPrint] WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND PayrollYear = @Year ORDER BY PayrollMonth DESC",
 
-    "MobileDashboard_GetLatestTrainings": "SELECT TOP 5 Id,Name,StartDate,EndDate,Description,Location FROM Training WHERE TenantId = @TenantId ORDER BY StartDate",
-    "MobileDashboard_GetLatestAnnouncements": "SELECT TOP 5 Id, Name, Message, Date FROM Announcement WHERE TenantId = @TenantId ORDER BY Date",
-    "MobileDashboard_GetLatestEvents": "SELECT TOP 5 Id,Name,StartDate,EndDate,Description,Location FROM Event WHERE TenantId = @TenantId ORDER BY StartDate",
-    "MobileDashboard_GetLatestHolidays": "SELECT TOP 5 Id, Name,Description,Date FROM Holiday WHERE TenantId = @TenantId ORDER BY Date",
+    "MobileDashboard_GetLatestTrainings": "SELECT TOP 5 Id, Name, StartDate, EndDate, Description, Location FROM Training WHERE TenantId = @TenantId AND StartDate >= CAST(GETDATE() AS DATE) ORDER BY StartDate ASC",
+
+    "MobileDashboard_GetLatestAnnouncements": "SELECT TOP 5 Id, Name, Message, Date FROM Announcement WHERE TenantId = @TenantId AND Date >= CAST(GETDATE() AS DATE) ORDER BY Date ASC",
+
+    "MobileDashboard_GetLatestEvents": "SELECT TOP 5 Id, Name, StartDate, EndDate, Description, Location FROM Event WHERE TenantId = @TenantId AND StartDate >= CAST(GETDATE() AS DATE) ORDER BY StartDate ASC",
+    "MobileDashboard_GetLatestHolidays": "SELECT TOP 5 Id, Name, Description, Date FROM Holiday WHERE TenantId = @TenantId AND Date >= CAST(GETDATE() AS DATE) ORDER BY Date ASC",
     "MarkScreenNotificationsReadByLeaveRequestId": "UPDATE sn SET sn.IsRead = 1, sn.Status = 'Read', sn.UpdateDate = GETDATE(), sn.UpdateUserId = @UpdateUserId FROM ScreenNotification sn INNER JOIN Events e ON sn.EventId = e.EventId WHERE sn.TenantId = @TenantId AND sn.IsActive = 1 AND sn.Status = 'Unread' AND e.TenantId = @TenantId AND (CAST(JSON_VALUE(e.EventData, '$.leave_request_id') AS INT) = @LeaveRequestId OR CAST(JSON_VALUE(e.EventData, '$.leaveRequestId') AS INT) = @LeaveRequestId)"
 
   }
