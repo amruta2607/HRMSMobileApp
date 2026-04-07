@@ -24,6 +24,9 @@ namespace MobileWebApi.Services
 		private const string STATUS_CANCELLED = "Cancelled";
 		private const string STATUS_WITHDRAW = "Withdraw";
 		private const string STATUS_PENDING = "Pending";
+		private const string STATUS_PENDING_FOR_APPROVAL = "Pending For Approval";
+		private const string STATUS_CANCELLATION_APPROVED = "Cancellation Approved";
+		private const string STATUS_CANCELLATION_REJECTED = "Cancellation Rejected";
 
 
 		// -----------------------------
@@ -35,6 +38,9 @@ namespace MobileWebApi.Services
 		private const int STATUS_ID_CANCELLED = 5;
 		private const int STATUS_ID_WITHDRAW = 4;
 		private const int STATUS_ID_PENDING = 6;
+		private const int STATUS_ID_PENDING_FOR_APPROVAL = 7;
+		private const int STATUS_ID_CANCELLATION_APPROVED = 8;
+		private const int STATUS_ID_CANCELLATION_REJECTED = 9;
 
 		public LeaveService(
 			ILeaveRepository leaveRepository,
@@ -243,6 +249,9 @@ namespace MobileWebApi.Services
 				STATUS_ID_CANCELLED => STATUS_CANCELLED,
 				STATUS_ID_WITHDRAW => STATUS_WITHDRAW,
 				STATUS_ID_PENDING => STATUS_PENDING,
+				STATUS_ID_PENDING_FOR_APPROVAL => STATUS_PENDING_FOR_APPROVAL,
+				STATUS_ID_CANCELLATION_APPROVED => STATUS_CANCELLATION_APPROVED,
+				STATUS_ID_CANCELLATION_REJECTED => STATUS_CANCELLATION_REJECTED,
 				_ => "Unknown"
 			};
 		}
@@ -547,6 +556,12 @@ namespace MobileWebApi.Services
 				"cancelled" => STATUS_ID_CANCELLED,
 				"withdraw" => STATUS_ID_WITHDRAW,
 				"pending" => STATUS_ID_PENDING,
+				"pending for approval" => STATUS_ID_PENDING_FOR_APPROVAL,
+				"pendingforapproval" => STATUS_ID_PENDING_FOR_APPROVAL,
+				"cancellation approved" => STATUS_ID_CANCELLATION_APPROVED,
+				"cancellationapproved" => STATUS_ID_CANCELLATION_APPROVED,
+				"cancellation rejected" => STATUS_ID_CANCELLATION_REJECTED,
+				"cancellationrejected" => STATUS_ID_CANCELLATION_REJECTED,
 
 				_ => null
 			};
