@@ -555,6 +555,69 @@ namespace MobileWebApi.Services
 				};
 			}
 		}
+
+		public async Task<MonthlyPaymentSummaryResponse>
+	GetMonthlyPaymentSummaryPublishedAsync(MonthlyPaymentSummaryRequest request)
+		{
+			try
+			{
+				if (request.UserId <= 0)
+				{
+					return new MonthlyPaymentSummaryResponse
+					{
+						Success = false,
+						Message = PaySlipMessages.UserIdRequired
+					};
+				}
+
+				var (employeeId, tenantId) =
+					await _paySlipRepository
+						.GetEmployeeIdAndTenantByUserIdAsync(request.UserId);
+
+				if (!employeeId.HasValue || !tenantId.HasValue)
+				{
+					return new MonthlyPaymentSummaryResponse
+					{
+						Success = false,
+						Message = PaySlipMessages.EmployeeNotFound
+					};
+				}
+
+				var summary =
+					await _paySlipRepository
+						.GetMonthlyPaymentSummaryPublishedAsync(
+							employeeId.Value,
+							tenantId.Value,
+							request.Month,
+							request.Year);
+
+				if (summary == null)
+				{
+					return new MonthlyPaymentSummaryResponse
+					{
+						Success = false,
+						Message = PaySlipMessages.NoPayrollDataFound
+					};
+				}
+
+				return new MonthlyPaymentSummaryResponse
+				{
+					Success = true,
+					Message = PaySlipMessages.MonthlySummaryFetchedSuccessfully,
+					Data = summary
+				};
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, LogMessages.PaySlip.ErrorFetchingMonthlyPaymentSummary);
+
+				return new MonthlyPaymentSummaryResponse
+				{
+					Success = false,
+					Message = GeneralMessages.SomethingWentWrongContactAdmin
+				};
+			}
+		}
 		public async Task<MonthlyPaymentSummaryResponse>
 GetLastMonthPaymentSummaryAsync(int userId)
 		{

@@ -217,6 +217,50 @@ namespace MobileWebApi.Repositories
             }
         }
 
+        public async Task<MonthlyPaymentSummary?> GetMonthlyPaymentSummaryPublishedAsync(
+            int employeeId,
+            int tenantId,
+            int month,
+            int year)
+        {
+            try
+            {
+                using var conn = _context.CreateConnection();
+
+                var param = new
+                {
+                    EmployeeId = employeeId,
+                    TenantId = tenantId,
+                    Month = month,
+                    Year = year
+                };
+
+                var summaryQuery = _queryProvider.Get("GetMonthlyPayrollSummary_PublishedOnly");
+                var incomeQuery = _queryProvider.Get("GetMonthlyPayrollIncomes_PublishedOnly");
+                var deductionQuery = _queryProvider.Get("GetMonthlyPayrollDeductions_PublishedOnly");
+
+                var summary = await conn.QueryFirstOrDefaultAsync<MonthlyPaymentSummary>(summaryQuery, param);
+
+                if (summary == null)
+                    return null;
+
+                var incomes = await conn.QueryAsync<IncomeItem>(incomeQuery, param);
+                var deductions = await conn.QueryAsync<DeductionItem>(deductionQuery, param);
+
+                summary.Incomes = incomes.ToList();
+                summary.Deductions = deductions.ToList();
+
+                return summary;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetMonthlyPaymentSummaryPublishedAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.PaySlipGetMonthlyPaymentSummaryDatabaseError}: Failed to fetch monthly payment summary",
+                    ex);
+            }
+        }
+
         public async Task<IEnumerable<PaySlipLineItem>> GetPaySlipIncomesAsync(int paySlipId)
         {
             try
@@ -263,14 +307,18 @@ namespace MobileWebApi.Repositories
             {
                 using var conn = _context.CreateConnection();
 
-                // 1. Fetch the basic payroll info
+                // 1. Fetch the basic payroll info (published payrolls only)
                 string payrollQuery = @"
-        SELECT *
-        FROM vwPayrollDetailPrint
-        WHERE EmployeeId = @EmployeeId 
-          AND TenantId = @TenantId
-          AND PayrollMonth = @Month
-          AND PayrollYear = @Year
+        SELECT v.*
+        FROM vwPayrollDetailPrint v
+        INNER JOIN Payroll p
+            ON p.Id = v.PayrollId
+           AND p.TenantId = v.TenantId
+        WHERE v.EmployeeId = @EmployeeId 
+          AND v.TenantId = @TenantId
+          AND v.PayrollMonth = @Month
+          AND v.PayrollYear = @Year
+          AND ISNULL(p.IspayrollPublished, 0) = 1
     ";
 
                 var payroll = await conn.QueryFirstOrDefaultAsync<PaySlipWithWeekOff>(
@@ -330,11 +378,11 @@ WHERE tc.TenantId = @TenantId
 
         private int NormalizeDayOfWeek(int dayOffId)
         {
-            // DB: 1–7 (Mon–Sun)
-            // .NET: 0–6 (Sun–Sat)
+            // DB: 1â€“7 (Monâ€“Sun)
+            // .NET: 0â€“6 (Sunâ€“Sat)
             if (dayOffId == 7)
                 return 0; // Sunday
-            return dayOffId; // Monday–Saturday
+            return dayOffId; // Mondayâ€“Saturday
         }
 
         public async Task<IEnumerable<PaySlipMonthItem>> GetPaySlipMonthsByYearAsync(int employeeId, int tenantId, int year)

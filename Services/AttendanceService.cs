@@ -140,8 +140,8 @@ namespace MobileWebApi.Services
                 return AttendanceMessages.PunchOutAlreadyDone;
             }
 
-            // Calculate duration in hours
-            double? duration = CalculateDurationInHours(punch.PunchIn, punchOutLocal);
+            // Calculate duration in minutes (do not convert to hours)
+            double? duration = CalculateDurationInMinutes(punch.PunchIn, punchOutLocal);
             var coordinateOut = BuildCoordinate(req.latitude, req.longitude);
             var linkOut = GenerateGoogleMapLink(req.latitude, req.longitude);
             _ = await TryGetReverseGeocodedAddressAsync(req.latitude, req.longitude);
@@ -160,12 +160,12 @@ namespace MobileWebApi.Services
             return AttendanceMessages.PunchOutSuccessful;
         }
 
-        private double? CalculateDurationInHours(DateTime? punchIn, DateTime punchOut)
+        private double? CalculateDurationInMinutes(DateTime? punchIn, DateTime punchOut)
         {
             if (punchIn == null) return null;
 
             var diff = punchOut - punchIn.Value;
-            return Math.Round(diff.TotalHours, 2);
+            return Math.Round(diff.TotalMinutes, 2);
         }
 
         public string GenerateGoogleMapLink(double? lat, double? lng)

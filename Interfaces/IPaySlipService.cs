@@ -14,6 +14,10 @@ namespace MobileWebApi.Interfaces
 		Task<MonthlyPaymentSummaryResponse> GetMonthlyPaymentSummaryAsync(
 			MonthlyPaymentSummaryRequest request);
 
+		// Same response structure as GetMonthlyPaymentSummaryAsync, but returns only published payroll records.
+		Task<MonthlyPaymentSummaryResponse> GetMonthlyPaymentSummaryPublishedAsync(
+			MonthlyPaymentSummaryRequest request);
+
 		Task<PaySlipDownloadResponse> DownloadPaySlipByMonthYearAsync(
 			PaySlipDownloadByMonthYearRequest request);
 		Task<PaySlipWithWeekOff?> GetPaySlipAsync(int employeeId, int tenantId, int month, int year);

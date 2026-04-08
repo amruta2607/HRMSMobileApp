@@ -349,7 +349,7 @@ namespace MobileWebApi.Controllers
 			};
 
 			var result = await _paySlipService
-				.GetMonthlyPaymentSummaryAsync(request);
+				.GetMonthlyPaymentSummaryPublishedAsync(request);
 
 			if (result.Success)
 				return Ok(result);

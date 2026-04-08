@@ -490,8 +490,7 @@ namespace MobileWebApi.Services
 					var status = MapDbStatusIdToText(lr.LeaveRequestStatus ?? 0);
 
 					// Only show approved leaves in leave history
-					if (string.Equals(status, STATUS_APPROVED, StringComparison.OrdinalIgnoreCase))
-					{
+				
 						items.Add(new LeaveHistorySummaryItem
 						{
 							LeaveRequestId = lr.Id,
@@ -503,7 +502,7 @@ namespace MobileWebApi.Services
 						});
 
 						usedLeavesApproved += usedDays;
-					}
+					
 				}
 
 				// EmployeeLeave.LeaveBalance is treated as the current available balance.
