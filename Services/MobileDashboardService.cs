@@ -6,8 +6,6 @@ using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using MobileWebApi.Resources;
 using MobileWebApi.Constants;
-using System.Net;
-using System.Text.RegularExpressions;
 
 namespace MobileWebApi.Services
 {
@@ -60,11 +58,6 @@ namespace MobileWebApi.Services
                 return result
                     .Where(a => a.Date.Date >= today)
                     .OrderBy(a => a.Date)
-                    .Select(a =>
-                    {
-                        a.Message = HtmlToPlainText(a.Message);
-                        return a;
-                    })
                     .ToList();
             }
             catch (Exception ex)
@@ -72,32 +65,6 @@ namespace MobileWebApi.Services
                 _logger.LogException(ExceptionCodes.MobileDashboard.GetLatestAnnouncements, nameof(GetLatestAnnouncementsAsync), ex);
                 throw;
             }
-        }
-
-        private static string? HtmlToPlainText(string? html)
-        {
-            if (string.IsNullOrWhiteSpace(html))
-                return html;
-
-            // Normalize common HTML blocks into line breaks first.
-            var text = html;
-            text = Regex.Replace(text, @"<\s*br\s*/?\s*>", "\n", RegexOptions.IgnoreCase);
-            text = Regex.Replace(text, @"<\s*/\s*p\s*>", "\n\n", RegexOptions.IgnoreCase);
-            text = Regex.Replace(text, @"<\s*p(\s+[^>]*)?\s*>", string.Empty, RegexOptions.IgnoreCase);
-
-            // Remove any remaining tags (keep inner text).
-            text = Regex.Replace(text, @"<[^>]+>", string.Empty);
-
-            // Decode HTML entities like &nbsp;
-            text = WebUtility.HtmlDecode(text);
-
-            // Clean up whitespace.
-            text = text.Replace("\r\n", "\n").Replace("\r", "\n");
-            text = Regex.Replace(text, @"[ \t\f\v]+", " ");
-            text = Regex.Replace(text, @"\n[ \t]+", "\n");
-            text = Regex.Replace(text, @"\n{3,}", "\n\n");
-
-            return text.Trim();
         }
 
         public async Task<IReadOnlyList<EventDto>> GetLatestEventsAsync(int tenantId)
