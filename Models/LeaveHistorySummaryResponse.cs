@@ -7,6 +7,7 @@ namespace MobileWebApi.Models
 
 		public int EmployeeId { get; set; }
 		public int AvailableLeaves { get; set; }
+		public decimal UsedLeaves { get; set; }
 		public int Year { get; set; }
 
 		public List<LeaveHistorySummaryItem>? LeaveHistory { get; set; }
@@ -18,7 +19,7 @@ namespace MobileWebApi.Models
 		public string LeaveDates { get; set; } = string.Empty; // "dd-MM-yyyy" or "dd-MM-yyyy - dd-MM-yyyy"
 		public string? LeaveType { get; set; }
 		public string? Reason { get; set; }
-		public int UsedDays { get; set; }
+		public decimal Duration { get; set; }
 		public string? Status { get; set; }
 	}
 }

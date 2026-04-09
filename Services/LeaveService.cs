@@ -477,31 +477,26 @@ namespace MobileWebApi.Services
 				}
 
 				var items = new List<LeaveHistorySummaryItem>();
-				var usedLeavesApproved = 0;
+				decimal usedLeaves = 0m;
 
 				foreach (var lr in leaveRequests.OrderByDescending(x => x.InsertDate ?? DateTime.MinValue).ThenByDescending(x => x.Id))
 				{
-					var tenantId = lr.OrganisationId ?? 0;
-					var holidayDates = tenantId != 0 && holidaysByTenant.TryGetValue(tenantId, out var list)
-						? list
-						: new List<DateTime>();
-
-					var usedDays = CalculateLeaveDays(lr.FromDate, lr.ToDate, holidayDates);
 					var status = MapDbStatusIdToText(lr.LeaveRequestStatus ?? 0);
 
-					// Only show approved leaves in leave history
-				
-						items.Add(new LeaveHistorySummaryItem
-						{
-							LeaveRequestId = lr.Id,
-							LeaveDates = FormatLeaveDates(lr.FromDate, lr.ToDate),
-							LeaveType = lr.LeaveTypeName,
-							Reason = lr.Description,
-							UsedDays = usedDays,
-							Status = status
-						});
+					// Leave history should include all statuses
+					items.Add(new LeaveHistorySummaryItem
+					{
+						LeaveRequestId = lr.Id,
+						LeaveDates = FormatLeaveDates(lr.FromDate, lr.ToDate),
+						LeaveType = lr.LeaveTypeName,
+						Reason = lr.Description,
+						Duration = lr.Duration,
+						Status = status
+					});
 
-						usedLeavesApproved += usedDays;
+					// UsedLeaves should count only Approved leave requests
+					if (string.Equals(status, STATUS_APPROVED, StringComparison.OrdinalIgnoreCase))
+						usedLeaves += lr.Duration;
 					
 				}
 
@@ -515,6 +510,7 @@ namespace MobileWebApi.Services
 					Message = LeaveMessages.LeaveHistoryFetchedSuccessfully,
 					EmployeeId = employeeId.Value,
 					AvailableLeaves = availableLeaves,
+					UsedLeaves = usedLeaves,
 					Year = year,
 					LeaveHistory = items
 				};
