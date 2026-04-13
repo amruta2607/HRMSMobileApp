@@ -15,11 +15,13 @@ namespace MobileWebApi.Controllers
         private readonly IAttendanceService _service;
         private readonly IEmployeeService _employeeService;
         private readonly IAttendanceOverviewService _attendanceOverviewService;
+        private readonly IMobileModuleAccessService _mobileModuleAccessService;
 
         public AttendanceController(
             IAttendanceService service,
             IEmployeeService employeeService,
             IAttendanceOverviewService attendanceOverviewService,
+            IMobileModuleAccessService mobileModuleAccessService,
             ITenantContext tenantContext,
             ILogger<AttendanceController> logger) 
             : base(tenantContext, logger)
@@ -27,6 +29,16 @@ namespace MobileWebApi.Controllers
             _service = service;
             _employeeService = employeeService;
             _attendanceOverviewService = attendanceOverviewService;
+            _mobileModuleAccessService = mobileModuleAccessService;
+        }
+
+        private async Task<IActionResult?> EnsureAttendanceAccessAsync(int tenantId)
+        {
+            var hasAccess = await _mobileModuleAccessService.HasAccess(tenantId, "Attendance");
+            if (hasAccess)
+                return null;
+
+            return StatusCode(403, new { Success = false, Message = "Attendance module access is disabled for this tenant." });
         }
 
         /// <summary>
@@ -107,6 +119,9 @@ namespace MobileWebApi.Controllers
         {
             try
             {
+                var accessDenied = await EnsureAttendanceAccessAsync(CurrentOrganisationId);
+                if (accessDenied != null) return accessDenied;
+
                 if (request == null)
                 {
                     return BadRequest(new { Success = false, Message = GeneralMessages.RequestBodyCannotBeNull });
@@ -160,6 +175,9 @@ namespace MobileWebApi.Controllers
         {
             try
             {
+                var accessDenied = await EnsureAttendanceAccessAsync(CurrentOrganisationId);
+                if (accessDenied != null) return accessDenied;
+
                 if (request == null)
                 {
                     return BadRequest(new { Success = false, Message = GeneralMessages.RequestBodyCannotBeNull });
@@ -214,6 +232,9 @@ namespace MobileWebApi.Controllers
         {
             try
             {
+                var accessDenied = await EnsureAttendanceAccessAsync(CurrentOrganisationId);
+                if (accessDenied != null) return accessDenied;
+
                 var today = DateTime.Today;
                 var organizationId = CurrentOrganisationId;
 
@@ -255,6 +276,9 @@ namespace MobileWebApi.Controllers
         {
             try
             {
+                var accessDenied = await EnsureAttendanceAccessAsync(CurrentOrganisationId);
+                if (accessDenied != null) return accessDenied;
+
                 // Validate UserId
                 if (user_id <= 0)
                 {
@@ -376,6 +400,10 @@ namespace MobileWebApi.Controllers
         {
             try
             {
+                var validatedOrgIdForAccess = GetValidatedOrganisationId(organization_id);
+                var accessDenied = await EnsureAttendanceAccessAsync(validatedOrgIdForAccess);
+                if (accessDenied != null) return accessDenied;
+
                 // Validate UserId
                 if (user_id <= 0)
                 {
@@ -383,7 +411,7 @@ namespace MobileWebApi.Controllers
                 }
 
                 // Validate tenant access - user can only access their own organisation's data
-                var validatedOrgId = GetValidatedOrganisationId(organization_id);
+                var validatedOrgId = validatedOrgIdForAccess;
 
                 // Enforce: users can only see their own attendance (unless HR/TenantAdmin)
                 if (!HasElevatedAccess && user_id != CurrentUserId)
@@ -424,6 +452,9 @@ namespace MobileWebApi.Controllers
         {
             try
             {
+                var accessDenied = await EnsureAttendanceAccessAsync(CurrentOrganisationId);
+                if (accessDenied != null) return accessDenied;
+
                 // Validate UserId
                 if (user_id <= 0)
                 {
@@ -564,6 +595,9 @@ namespace MobileWebApi.Controllers
         {
             try
             {
+                var accessDenied = await EnsureAttendanceAccessAsync(CurrentOrganisationId);
+                if (accessDenied != null) return accessDenied;
+
                 if (id <= 0)
                 {
                     return BadRequest(new AttendanceDeleteResponse
@@ -605,6 +639,9 @@ namespace MobileWebApi.Controllers
         {
             try
             {
+                var accessDenied = await EnsureAttendanceAccessAsync(CurrentOrganisationId);
+                if (accessDenied != null) return accessDenied;
+
                 // Validate parameters
                 if (userId <= 0)
                 {
@@ -667,6 +704,10 @@ namespace MobileWebApi.Controllers
         {
             try
             {
+                var validatedTenantIdForAccess = GetValidatedOrganisationId(organisationId);
+                var accessDenied = await EnsureAttendanceAccessAsync(validatedTenantIdForAccess);
+                if (accessDenied != null) return accessDenied;
+
                 // Validate parameters
                 if (userId <= 0)
                 {
@@ -709,7 +750,7 @@ namespace MobileWebApi.Controllers
                 }
 
                 // Validate tenant access - user can only access their own organisation's data
-                var validatedTenantId = GetValidatedOrganisationId(organisationId);
+                var validatedTenantId = validatedTenantIdForAccess;
 
                 // Enforce: users can only see their own attendance (unless HR/TenantAdmin)
                 if (!HasElevatedAccess && userId != CurrentUserId)
@@ -755,6 +796,9 @@ namespace MobileWebApi.Controllers
         {
             try
             {
+                var accessDenied = await EnsureAttendanceAccessAsync(CurrentOrganisationId);
+                if (accessDenied != null) return accessDenied;
+
                 var userId = CurrentUserId;
                 if (!userId.HasValue)
                 {

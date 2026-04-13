@@ -77,6 +77,8 @@ builder.Services.AddScoped<IDisputeRepository, DisputeRepository>();
 builder.Services.AddScoped<IDisputeService, DisputeService>();
 builder.Services.AddScoped<ITenantConfigurationRepository, TenantConfigurationRepository>();
 builder.Services.AddScoped<IGeoTenantLocationRepository, GeoTenantLocationRepository>();
+builder.Services.AddScoped<IMobileTenantConfigurationRepository, MobileTenantConfigurationRepository>();
+builder.Services.AddScoped<IMobileModuleAccessService, MobileModuleAccessService>();
 
 builder.Services.AddSingleton<ISqlConnections, MobileWebApi.Data.DefaultSqlConnections>();
 builder.Services.AddScoped<IAttendanceOverviewService, AttendanceOverviewService>();

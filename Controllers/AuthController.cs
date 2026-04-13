@@ -24,6 +24,7 @@ namespace MobileWebApi.Controllers
         private readonly ILogger<AuthController> _logger;
         private readonly IWebHostEnvironment _environment;
         private readonly ITenantConfigurationRepository _tenantConfigurationRepository;
+        private readonly IMobileModuleAccessService _mobileModuleAccessService;
 
         public AuthController(
             IUserRepository userRepository,
@@ -34,7 +35,8 @@ namespace MobileWebApi.Controllers
             ISmsService smsService,
             ILogger<AuthController> logger,
             IWebHostEnvironment environment,
-            ITenantConfigurationRepository tenantConfigurationRepository)
+            ITenantConfigurationRepository tenantConfigurationRepository,
+            IMobileModuleAccessService mobileModuleAccessService)
         {
             _userRepository = userRepository;
             _employeeRepository = employeeRepository;
@@ -45,6 +47,7 @@ namespace MobileWebApi.Controllers
             _logger = logger;
             _environment = environment;
             _tenantConfigurationRepository = tenantConfigurationRepository;
+            _mobileModuleAccessService = mobileModuleAccessService;
         }
 
         /// <summary>
@@ -83,6 +86,7 @@ namespace MobileWebApi.Controllers
 
                 var tenantConfig = await _tenantConfigurationRepository
                     .GetByTenantIdAsync(user.OrganisationId);
+                var moduleAccess = await _mobileModuleAccessService.GetModuleAccess(user.OrganisationId);
                 var token = _tokenService.GenerateToken(user);
 
                 _logger.LogInformation(LogMessages.Auth.LoginSuccessful, request.email);
@@ -97,7 +101,8 @@ namespace MobileWebApi.Controllers
                     Username = user.Username,
                     OrganisationId = user.OrganisationId,
                     IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
-                    IsGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false
+                    IsGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false,
+                    ModuleAccess = moduleAccess
                 };
 
                 return Ok(response);
@@ -456,6 +461,7 @@ namespace MobileWebApi.Controllers
                 // Get Tenant Configuration
                 var tenantConfig = await _tenantConfigurationRepository
                     .GetByTenantIdAsync(tenantId);
+                var moduleAccess = await _mobileModuleAccessService.GetModuleAccess(tenantId);
 
                 // Generate JWT token
                 var token = _tokenService.GenerateToken(user);
@@ -476,7 +482,8 @@ namespace MobileWebApi.Controllers
                     Username = user.Username,
                     OrganisationId = tenantId,
                     IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
-                    IsGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false
+                    IsGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false,
+                    ModuleAccess = moduleAccess
                 });
             }
             catch (Exception ex)

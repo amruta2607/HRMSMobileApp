@@ -12,14 +12,26 @@ namespace MobileWebApi.Controllers
     public class LeaveController : TenantBaseController
     {
         private readonly ILeaveService _leaveService;
+        private readonly IMobileModuleAccessService _mobileModuleAccessService;
 
         public LeaveController(
             ILeaveService leaveService, 
+            IMobileModuleAccessService mobileModuleAccessService,
             ITenantContext tenantContext,
             ILogger<LeaveController> logger)
             : base(tenantContext, logger)
         {
             _leaveService = leaveService;
+            _mobileModuleAccessService = mobileModuleAccessService;
+        }
+
+        private async Task<IActionResult?> EnsureLeaveAccessAsync(int tenantId)
+        {
+            var hasAccess = await _mobileModuleAccessService.HasAccess(tenantId, "Leave");
+            if (hasAccess)
+                return null;
+
+            return StatusCode(403, new { Success = false, Message = "Leave module access is disabled for this tenant." });
         }
 
         /// <summary>
@@ -29,6 +41,9 @@ namespace MobileWebApi.Controllers
         [HttpPost("request")]
         public async Task<IActionResult> CreateLeaveRequest([FromBody] LeaveRequestCreateRequest request)
         {
+            var accessDenied = await EnsureLeaveAccessAsync(CurrentOrganisationId);
+            if (accessDenied != null) return accessDenied;
+
             Logger.LogInformation(LogMessages.Leave.CreatingLeaveRequest, request.user);
             var result = await _leaveService.CreateLeaveRequestAsync(request);
 
@@ -48,6 +63,8 @@ namespace MobileWebApi.Controllers
 		{
 			// Validate tenant access - use user's org if not specified
 			var validatedOrgId = GetValidatedOrganisationId(organization_id);
+            var accessDenied = await EnsureLeaveAccessAsync(validatedOrgId);
+            if (accessDenied != null) return accessDenied;
 
 			// Validate user access - regular users can only see their own leave requests
 			int? validatedUserId;
@@ -89,6 +106,9 @@ namespace MobileWebApi.Controllers
 		[HttpPut("approve")]
         public async Task<IActionResult> ApproveLeaveRequest([FromBody] ApproveLeaveRequest request)
         {
+            var accessDenied = await EnsureLeaveAccessAsync(CurrentOrganisationId);
+            if (accessDenied != null) return accessDenied;
+
             if (request == null)
             {
                 Logger.LogWarning(GeneralMessages.RequestBodyCannotBeNull);
@@ -119,6 +139,9 @@ namespace MobileWebApi.Controllers
         [HttpPut("reject")]
         public async Task<IActionResult> RejectLeaveRequest([FromBody] RejectLeaveRequest request)
         {
+            var accessDenied = await EnsureLeaveAccessAsync(CurrentOrganisationId);
+            if (accessDenied != null) return accessDenied;
+
             if (request == null)
             {
                 Logger.LogWarning(GeneralMessages.RequestBodyCannotBeNull);
@@ -148,6 +171,9 @@ namespace MobileWebApi.Controllers
 		[HttpPut("withdraw")]
 		public async Task<IActionResult> WithdrawLeaveRequest([FromBody] WithdrawLeaveRequest request)
 		{
+            var accessDenied = await EnsureLeaveAccessAsync(CurrentOrganisationId);
+            if (accessDenied != null) return accessDenied;
+
 			if (request == null || request.Id <= 0)
 			{
 				return BadRequest(new
@@ -195,6 +221,9 @@ namespace MobileWebApi.Controllers
 		[HttpGet("history")]
 		public async Task<IActionResult> GetLeaveHistory()
 		{
+            var accessDenied = await EnsureLeaveAccessAsync(CurrentOrganisationId);
+            if (accessDenied != null) return accessDenied;
+
 			var userId = CurrentUserId;
 			if (!userId.HasValue)
 			{
@@ -222,6 +251,8 @@ namespace MobileWebApi.Controllers
         {
             // Validate tenant access - use user's org if not specified
             var validatedOrgId = GetValidatedOrganisationId(organization);
+            var accessDenied = await EnsureLeaveAccessAsync(validatedOrgId);
+            if (accessDenied != null) return accessDenied;
             
             // Validate user access - regular users can only see their own data
             int validatedUserId;
