@@ -12,27 +12,15 @@ namespace MobileWebApi.Controllers
 	public class PaySlipController : TenantBaseController
 	{
 		private readonly IPaySlipService _paySlipService;
-        private readonly IMobileModuleAccessService _mobileModuleAccessService;
 
 		public PaySlipController(
 			IPaySlipService paySlipService,
-            IMobileModuleAccessService mobileModuleAccessService,
 			ITenantContext tenantContext,
 			ILogger<PaySlipController> logger)
 			: base(tenantContext, logger)
 		{
 			_paySlipService = paySlipService;
-            _mobileModuleAccessService = mobileModuleAccessService;
 		}
-
-        private async Task<IActionResult?> EnsurePayrollAccessAsync(int tenantId)
-        {
-            var hasAccess = await _mobileModuleAccessService.HasAccess(tenantId, "Payroll");
-            if (hasAccess)
-                return null;
-
-            return StatusCode(403, new { Success = false, Message = "Payroll module access is disabled for this tenant." });
-        }
 
 		/// <summary>
 		/// Get list of pay slips for a user
@@ -72,9 +60,6 @@ namespace MobileWebApi.Controllers
 		[HttpGet("years")]
 		public async Task<IActionResult> GetPaySlipYears()
 		{
-            var accessDenied = await EnsurePayrollAccessAsync(CurrentOrganisationId);
-            if (accessDenied != null) return accessDenied;
-
 			var userId = CurrentUserId;
 			if (!userId.HasValue)
 				return Unauthorized(new { Success = false, Message = "User not authenticated" });
@@ -90,9 +75,6 @@ namespace MobileWebApi.Controllers
 		[HttpGet("months")]
 		public async Task<IActionResult> GetPaySlipMonths([FromQuery] int year)
 		{
-            var accessDenied = await EnsurePayrollAccessAsync(CurrentOrganisationId);
-            if (accessDenied != null) return accessDenied;
-
 			var userId = CurrentUserId;
 			if (!userId.HasValue)
 				return Unauthorized(new { Success = false, Message = "User not authenticated" });
@@ -118,8 +100,6 @@ namespace MobileWebApi.Controllers
 		{
 			// Validate tenant access - use user's org if not specified
 			var validatedOrgId = GetValidatedOrganisationId(organization);
-            var accessDenied = await EnsurePayrollAccessAsync(validatedOrgId);
-            if (accessDenied != null) return accessDenied;
 
 			// Validate user access - regular users can only see their own payslips
 			int validatedUserId;
@@ -163,9 +143,6 @@ namespace MobileWebApi.Controllers
 		[HttpGet("{id}")]
 		public async Task<IActionResult> GetPaySlipById(int id, [FromQuery] int user)
 		{
-            var accessDenied = await EnsurePayrollAccessAsync(CurrentOrganisationId);
-            if (accessDenied != null) return accessDenied;
-
 			// Validate user access - regular users can only see their own payslips
 			int validatedUserId;
 			try
@@ -288,9 +265,6 @@ namespace MobileWebApi.Controllers
 	[FromQuery] int month,
 	[FromQuery] int year)
 		{
-            var accessDenied = await EnsurePayrollAccessAsync(CurrentOrganisationId);
-            if (accessDenied != null) return accessDenied;
-
 			int validatedUserId;
 
 			try
@@ -331,9 +305,6 @@ namespace MobileWebApi.Controllers
 		[HttpGet("provident-fund")]
 		public async Task<IActionResult> GetProvidentFund([FromQuery] int user)
 		{
-            var accessDenied = await EnsurePayrollAccessAsync(CurrentOrganisationId);
-            if (accessDenied != null) return accessDenied;
-
 			int validatedUserId;
 
 			try
@@ -359,9 +330,6 @@ namespace MobileWebApi.Controllers
 	[FromQuery] int month,
 	[FromQuery] int year)
 		{
-            var accessDenied = await EnsurePayrollAccessAsync(CurrentOrganisationId);
-            if (accessDenied != null) return accessDenied;
-
 			int validatedUserId;
 
 			try
@@ -391,9 +359,6 @@ namespace MobileWebApi.Controllers
 			[HttpGet("last-month-payroll")]
 			public async Task<IActionResult> GetLastMonthPayroll([FromQuery] int user)
 			{
-                var accessDenied = await EnsurePayrollAccessAsync(CurrentOrganisationId);
-                if (accessDenied != null) return accessDenied;
-
 				int validatedUserId;
 
 				try
