@@ -23,7 +23,7 @@ namespace MobileWebApi.Repositories
             _queryProvider = queryProvider ?? throw new ArgumentNullException(nameof(queryProvider));
         }
 
-        public async Task<MobileTenantConfiguration?> GetByTenantIdAsync(int tenantId)
+        public async Task<MobileTenantConfiguration?> GetByTenantIdAsync(int organizationId)
         {
             try
             {
@@ -32,7 +32,7 @@ namespace MobileWebApi.Repositories
                 using var connection = _context.CreateConnection();
                 return await connection.QueryFirstOrDefaultAsync<MobileTenantConfiguration>(
                     query,
-                    new { TenantId = tenantId }
+                    new { TenantId = organizationId }
                 );
             }
             catch (Exception ex)

@@ -20,11 +20,11 @@ namespace MobileWebApi.Controllers
             _accessService = accessService;
         }
 
-        [HttpGet("{tenantId:int}")]
-        public async Task<IActionResult> GetModuleAccess([FromRoute] int tenantId)
+        [HttpGet("{organizationId:int}")]
+        public async Task<IActionResult> GetModuleAccess([FromRoute] int organizationId)
         {
-            var validatedTenantId = GetValidatedOrganisationId(tenantId);
-            var dto = await _accessService.GetModuleAccess(validatedTenantId);
+            var validatedOrganizationId = GetValidatedOrganisationId(organizationId);
+            var dto = await _accessService.GetModuleAccess(validatedOrganizationId);
             return Ok(dto);
         }
     }

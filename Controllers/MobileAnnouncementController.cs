@@ -27,8 +27,8 @@ namespace MobileWebApi.Controllers
         {
             try
             {
-                var tenantId = CurrentOrganisationId;
-                var result = await _mobileDashboardService.GetLatestAnnouncementsAsync(tenantId);
+                var organisationId = CurrentOrganisationId;
+                var result = await _mobileDashboardService.GetLatestAnnouncementsAsync(organisationId);
                 return Ok(result);
             }
             catch (Exception ex)

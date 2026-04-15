@@ -16,12 +16,12 @@ namespace MobileWebApi.Services
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<MobileAccessDto> GetModuleAccess(int tenantId)
+        public async Task<MobileAccessDto> GetModuleAccess(int organizationId)
         {
-            if (tenantId <= 0)
+            if (organizationId <= 0)
                 return new MobileAccessDto();
 
-            var cfg = await _repo.GetByTenantIdAsync(tenantId);
+            var cfg = await _repo.GetByTenantIdAsync(organizationId);
             if (cfg == null)
                 return new MobileAccessDto();
 
