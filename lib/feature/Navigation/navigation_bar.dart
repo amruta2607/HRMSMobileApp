@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/Theme/app_colors.dart';
 import '../../core/Utils/services/alert_service/alert_count_service.dart';
+import '../../core/Utils/services/token_storage.dart';
 
 class CustomNavigationBar extends StatefulWidget {
   final int currentIndex;
@@ -79,13 +80,14 @@ class _CustomNavigationBarState extends State<CustomNavigationBar> {
                   widget.onChanged(1);
                 },
               ),
-              _NavItem(
-                imagePath: 'img/AttendanceNav.png',
-                label: 'Attendance',
-                active: widget.currentIndex == 2,
-                scale: scale,
-                onTap: () => widget.onChanged(2),
-              ),
+              if (TokenStorage.isModuleEnabled('attendance'))
+                _NavItem(
+                  imagePath: 'img/AttendanceNav.png',
+                  label: 'Attendance',
+                  active: widget.currentIndex == 2,
+                  scale: scale,
+                  onTap: () => widget.onChanged(2),
+                ),
               _NavItem(
                 imagePath: 'img/menu.png',
                 label: 'Menu',
@@ -133,7 +135,6 @@ class _NavItem extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                // Icon or Image
                 if (imagePath != null)
                   Image.asset(
                     imagePath!,

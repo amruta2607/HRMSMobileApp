@@ -1,11 +1,84 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
+import '../Urls/urls.dart';
 import ' navigation_service.dart';
 import '../../../../feature/Profile/controller/profile_controller.dart';
 
 class TokenStorage {
+  static Map<String, bool> moduleAccessCache = {
+    'attendance': true,
+    'leave': true,
+    'payroll': true,
+  };
+
+  static Future<void> saveModuleAccess(Map<String, dynamic>? moduleAccess) async {
+    if (moduleAccess == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('module_isEnableMobile', moduleAccess['isEnableMobile'] == true);
+    await prefs.setBool('module_attendance', moduleAccess['attendance'] == true);
+    await prefs.setBool('module_leave', moduleAccess['leave'] == true);
+    await prefs.setBool('module_payroll', moduleAccess['payroll'] == true);
+  }
+
+  static Future<void> loadModuleAccessRaw() async {
+    final prefs = await SharedPreferences.getInstance();
+    bool isEnableMobile = prefs.getBool('module_isEnableMobile') ?? false;
+    bool attendance = prefs.getBool('module_attendance') ?? true;
+    bool leave = prefs.getBool('module_leave') ?? true;
+    bool payroll = prefs.getBool('module_payroll') ?? true;
+    _updateCache(isEnableMobile, attendance, leave, payroll);
+  }
+
+  static Future<void> loadModuleAccess() async {
+    await loadModuleAccessRaw();
+    final prefs = await SharedPreferences.getInstance();
+
+    try {
+      final orgId = prefs.getInt('organisationId');
+      final token = prefs.getString('token');
+      if (orgId != null && token != null) {
+        final response = await http.get(
+          Uri.parse('${BaseUrls.moduleAccess}/$orgId'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        );
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          await saveModuleAccess(data);
+          await loadModuleAccessRaw();
+        }
+      }
+    } catch (e) {
+      print('Error fetching module access dynamically: $e');
+    }
+  }
+
+  static void _updateCache(bool isEnableMobile, bool attendance, bool leave, bool payroll) {
+    if (!isEnableMobile) {
+      moduleAccessCache = {
+        'attendance': true,
+        'leave': true,
+        'payroll': true,
+      };
+    } else {
+      moduleAccessCache = {
+        'attendance': attendance,
+        'leave': leave,
+        'payroll': payroll,
+      };
+    }
+  }
+
+  static bool isModuleEnabled(String moduleName) {
+    return moduleAccessCache[moduleName] ?? true;
+  }
+
   static Future<void> saveLoginData({
     required String token,
     required String tokenExpiry,

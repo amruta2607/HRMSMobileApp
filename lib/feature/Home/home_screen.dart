@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/Theme/app_colors.dart';
 import '../../core/Utils/services/Time_Location/location_service.dart';
+import '../../core/Utils/services/token_storage.dart';
 import 'Widgets/home_up_next_section.dart';
 import 'widgets/home_header_section.dart';
 import 'widgets/home_workspace_section.dart';
@@ -50,10 +51,11 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _checkLocationPermission({bool requestIfDenied = true}) async {
+    if (!TokenStorage.isModuleEnabled('attendance')) return;
+
     if (_permissionChecked) return;
     _permissionChecked = true;
 
-    // 1️⃣ Permission
     final permissionGranted =
     await LocationService.ensurePermissionGranted(requestIfDenied: requestIfDenied);
 
@@ -66,7 +68,6 @@ class _HomeScreenState extends State<HomeScreen>
       return;
     }
 
-    // 2️⃣ GPS SERVICE (re-checked properly)
     final serviceOn =
     await LocationService.isLocationServiceOn();
 

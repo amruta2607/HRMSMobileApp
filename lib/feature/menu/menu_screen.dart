@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/Theme/app_colors.dart';
+import '../../core/Utils/services/token_storage.dart';
 import '../Holiday/holiday_screen.dart';
 import '../Reuse_Widgets/home_screen_constent.dart';
 import '../Reuse_Widgets/header_bg.dart';
@@ -22,37 +23,54 @@ class MenuScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final scale = (MediaQuery.of(context).size.width / 402).clamp(0.85, 1.1);
 
-    final menuItems = [
-      _MenuItem(
-        title: 'Payroll',
-        subtitle: 'View payslips & salary details',
-        imagePath: 'img/payrolll.png',
-        color: const Color(0xFFE8F5E9),
-        iconColor: const Color(0xFF2E7D32),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const PayrollScreen()),
+    final List<_MenuItem> menuItems = [];
+
+    if (TokenStorage.isModuleEnabled('payroll')) {
+      menuItems.add(
+        _MenuItem(
+          title: 'Payroll',
+          subtitle: 'View payslips & salary details',
+          imagePath: 'img/payrolll.png',
+          color: const Color(0xFFE8F5E9),
+          iconColor: const Color(0xFF2E7D32),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PayrollScreen()),
+          ),
         ),
-      ),
-      _MenuItem(
-        title: 'Leave',
-        subtitle: 'Apply & track leave requests',
-        imagePath: 'img/leave.png',
-        color: const Color(0xFFFFF3E0),
-        iconColor: const Color(0xFFE65100),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const LeaveScreen()),
+      );
+    }
+
+    if (TokenStorage.isModuleEnabled('leave')) {
+      menuItems.add(
+        _MenuItem(
+          title: 'Leave',
+          subtitle: 'Apply & track leave requests',
+          imagePath: 'img/leave.png',
+          color: const Color(0xFFFFF3E0),
+          iconColor: const Color(0xFFE65100),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const LeaveScreen()),
+          ),
         ),
-      ),
-      _MenuItem(
-        title: 'Attendance',
-        subtitle: 'Check in, history & reports',
-        imagePath: 'img/AttendanceNav.png',
-        color: const Color(0xFFE3F2FD),
-        iconColor: const Color(0xFF1565C0),
-        onTap: () => onNavigate?.call(2),
-      ),
+      );
+    }
+
+    if (TokenStorage.isModuleEnabled('attendance')) {
+      menuItems.add(
+        _MenuItem(
+          title: 'Attendance',
+          subtitle: 'Check in, history & reports',
+          imagePath: 'img/AttendanceNav.png',
+          color: const Color(0xFFE3F2FD),
+          iconColor: const Color(0xFF1565C0),
+          onTap: () => onNavigate?.call(2),
+        ),
+      );
+    }
+
+    menuItems.addAll([
       _MenuItem(
         title: 'Task',
         subtitle: 'Check in, notification & task',
@@ -83,7 +101,7 @@ class MenuScreen extends StatelessWidget {
           MaterialPageRoute(builder: (_) => const AnnouncementScreen()),
         ),
       ),
-    ];
+    ]);
 
     return HomeScreenConstent(
       body: Column(

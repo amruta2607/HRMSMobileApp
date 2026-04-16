@@ -33,6 +33,8 @@ class LoginController {
       username: model.username,
       organisationId: model.organisationId,
     );
+    await TokenStorage.saveModuleAccess(model.moduleAccess);
+    await TokenStorage.loadModuleAccessRaw();
 
     print(
       "LOGIN SUCCESS (EMAIL) → userId=${model.userId}, orgId=${model.organisationId}",
@@ -86,6 +88,8 @@ class LoginController {
       username: model.username,
       organisationId: model.organisationId,
     );
+    await TokenStorage.saveModuleAccess(model.moduleAccess);
+    await TokenStorage.loadModuleAccessRaw();
 
     print(
       "LOGIN SUCCESS (MOBILE OTP) → userId=${model.userId}, orgId=${model.organisationId}",

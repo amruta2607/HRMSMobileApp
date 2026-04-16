@@ -61,6 +61,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       return;
     }
 
+    await TokenStorage.loadModuleAccess();
     _goToMainNavigation();
   }
 

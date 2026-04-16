@@ -1,9 +1,9 @@
 class BaseUrls {
 
-//static const String base = "http://103.123.74.160:81"; //d
+     static const String base = "http://103.123.74.160:81"; //d
 
 
-  static const String base = "http://103.123.74.159:5005"; //p
+ // static const String base = "http://103.123.74.159:5005"; //p
 
   // AUTH
   static const String loginWithEmail = "$base/api/Auth/login-email";
@@ -11,9 +11,11 @@ class BaseUrls {
   static const String logout = "$base/api/Auth/logout";
 
   static const String forgotPassword = "$base/api/Auth/forgot-password";
+     static const String moduleAccess = "$base/api/mobile/module-access";
 
 
-  // ATTENDANCE
+
+     // ATTENDANCE
   static const String punchIn = "$base/attendance/punch-in";
   static const String punchOut = "$base/attendance/punch-out";
   static const String attendanceCalendar =

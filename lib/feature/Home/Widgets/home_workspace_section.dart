@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/Theme/app_colors.dart';
+import '../../../core/Utils/services/token_storage.dart';
 import '../../Announcement/announcement.dart';
 import '../../Holiday/holiday_screen.dart';
 import '../../leave/leave_screen.dart';
@@ -20,21 +21,27 @@ class HomeWorkspaceSection extends StatelessWidget {
 
         return Consumer<HomeController>(
           builder: (context, controller, child) {
-            final items = [
-              WorkspaceCard(
-                title: 'Payroll',
-                subtitle: 'Slip',
-                imagePath: 'img/payrolll.png',
-                iconBgColor: const Color(0x8FAFF8CC),
-                iconSize: 16,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const PayrollScreen()),
-                  );
-                },
-              ),
+            final List<Widget> items = [];
 
+            if (TokenStorage.isModuleEnabled('payroll')) {
+              items.add(
+                WorkspaceCard(
+                  title: 'Payroll',
+                  subtitle: 'Slip',
+                  imagePath: 'img/payrolll.png',
+                  iconBgColor: const Color(0x8FAFF8CC),
+                  iconSize: 16,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PayrollScreen()),
+                    );
+                  },
+                ),
+              );
+            }
+
+            items.add(
               WorkspaceCard(
                 title: 'Tasks',
                 subtitle: '${controller.taskCount} Pending',
@@ -55,39 +62,49 @@ class HomeWorkspaceSection extends StatelessWidget {
                   );
                 },
               ),
+            );
 
-              WorkspaceCard(
-                title: 'Leave',
-                subtitle: '${controller.availedLeaves} days',
-                imagePath: 'img/leave.png',
-                iconBgColor: const Color(0x8FAFF8CC),
-                iconSize: 16,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const LeaveScreen()),
-                  );
-                },
-              ),
+            if (TokenStorage.isModuleEnabled('leave')) {
+              items.add(
+                WorkspaceCard(
+                  title: 'Leave',
+                  subtitle: '${controller.availedLeaves} days',
+                  imagePath: 'img/leave.png',
+                  iconBgColor: const Color(0x8FAFF8CC),
+                  iconSize: 16,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const LeaveScreen()),
+                    );
+                  },
+                ),
+              );
+            }
 
-              WorkspaceCard(
-                title: 'Attendance',
-                subtitle: 'Punch In/Out',
-                icon: Icons.access_time,
-                iconColor: AppColors.attendanceBlue,
-                iconBgColor: const Color(0x8FAFF8CC),
-                iconSize: 22,
-                onTap: () {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const MainNavigationScreen(initialIndex: 2),
-                    ),
-                        (route) => false,
-                  );
-                },
-              ),
+            if (TokenStorage.isModuleEnabled('attendance')) {
+              items.add(
+                WorkspaceCard(
+                  title: 'Attendance',
+                  subtitle: 'Punch In/Out',
+                  icon: Icons.access_time,
+                  iconColor: AppColors.attendanceBlue,
+                  iconBgColor: const Color(0x8FAFF8CC),
+                  iconSize: 22,
+                  onTap: () {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const MainNavigationScreen(initialIndex: 2),
+                      ),
+                          (route) => false,
+                    );
+                  },
+                ),
+              );
+            }
 
+            items.add(
               WorkspaceCard(
                 title: 'Holiday',
                 subtitle: 'Holidays',
@@ -102,7 +119,9 @@ class HomeWorkspaceSection extends StatelessWidget {
                   );
                 },
               ),
+            );
 
+            items.add(
               WorkspaceCard(
                 title: 'Announcement',
                 subtitle: 'Company News',
@@ -117,7 +136,7 @@ class HomeWorkspaceSection extends StatelessWidget {
                   );
                 },
               ),
-            ];
+            );
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,

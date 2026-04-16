@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../../core/Utils/services/token_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -293,81 +294,82 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
                 },
               ),
               SizedBox(height: 24 * scale),
-              Consumer<HomeController>(
-                builder: (context, controller, child) {
-                  if (controller.isLoading) {
+              if (TokenStorage.isModuleEnabled('attendance'))
+                Consumer<HomeController>(
+                  builder: (context, controller, child) {
+                    if (controller.isLoading) {
+                      return Container(
+                        padding: EdgeInsets.symmetric(horizontal: 16 * scale, vertical: 14 * scale),
+                        decoration: BoxDecoration(color: AppColors.homeStatusCardBg, borderRadius: BorderRadius.circular(18 * scale)),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(width: 20 * scale, height: 20 * scale, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(AppColors.homeStatusTextGreen))),
+                            SizedBox(width: 12 * scale),
+                            Text('Loading attendance...', style: TextStyle(fontFamily: 'Inter', fontSize: 14 * scale, color: AppColors.textGrey)),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final status = controller.attendanceStatus;
+                    final bool clockedIn = AttendanceService.isClockedIn;
+
                     return Container(
                       padding: EdgeInsets.symmetric(horizontal: 16 * scale, vertical: 14 * scale),
                       decoration: BoxDecoration(color: AppColors.homeStatusCardBg, borderRadius: BorderRadius.circular(18 * scale)),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          SizedBox(width: 20 * scale, height: 20 * scale, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(AppColors.homeStatusTextGreen))),
+                          Container(
+                            width: 45 * scale,
+                            height: 45 * scale,
+                            decoration: BoxDecoration(
+                              color: clockedIn || status?.isMarked == true ? AppColors.homeStatusIconBg : Colors.red.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(16 * scale),
+                            ),
+                            child: clockedIn || status?.isMarked == true
+                                ? Center(child: Image.asset('img/presentd.png', width: 24 * scale, height: 24 * scale))
+                                : Icon(Icons.error_outline, size: 20 * scale, color: AppColors.textGrey),
+                          ),
                           SizedBox(width: 12 * scale),
-                          Text('Loading attendance...', style: TextStyle(fontFamily: 'Inter', fontSize: 14 * scale, color: AppColors.textGrey)),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Current Status', style: TextStyle(fontFamily: 'Inter', fontSize: 13 * scale, color: AppColors.textGrey)),
+                                Text(
+                                  clockedIn ? _format(_workedDuration) : (status?.isMarked == true ? '${status!.status} • On Time' : 'Not marked yet'),
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 15 * scale,
+                                    fontWeight: FontWeight.w500,
+                                    color: clockedIn || status?.isMarked == true ? AppColors.homeStatusTextGreen : AppColors.textGrey,
+                                  ),
+                                ),
+                                SizedBox(height: 4 * scale),
+                                FutureBuilder<String>(
+                                  future: _locationFuture,
+                                  builder: (context, snapshot) {
+                                    return Text(
+                                      snapshot.data ?? 'Fetching location...',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(fontFamily: 'Inter', fontSize: 11 * scale, color: AppColors.textGrey, fontWeight: FontWeight.w400),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          ClockActionButton(
+                            isClockedIn: clockedIn,
+                            onTap: () => _handleClockTap(context),
+                          ),
                         ],
                       ),
                     );
-                  }
-
-                  final status = controller.attendanceStatus;
-                  final bool clockedIn = AttendanceService.isClockedIn;
-
-                  return Container(
-                    padding: EdgeInsets.symmetric(horizontal: 16 * scale, vertical: 14 * scale),
-                    decoration: BoxDecoration(color: AppColors.homeStatusCardBg, borderRadius: BorderRadius.circular(18 * scale)),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 45 * scale,
-                          height: 45 * scale,
-                          decoration: BoxDecoration(
-                            color: clockedIn || status?.isMarked == true ? AppColors.homeStatusIconBg : Colors.red.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(16 * scale),
-                          ),
-                          child: clockedIn || status?.isMarked == true
-                              ? Center(child: Image.asset('img/presentd.png', width: 24 * scale, height: 24 * scale))
-                              : Icon(Icons.error_outline, size: 20 * scale, color: AppColors.textGrey),
-                        ),
-                        SizedBox(width: 12 * scale),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Current Status', style: TextStyle(fontFamily: 'Inter', fontSize: 13 * scale, color: AppColors.textGrey)),
-                              Text(
-                                clockedIn ? _format(_workedDuration) : (status?.isMarked == true ? '${status!.status} • On Time' : 'Not marked yet'),
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 15 * scale,
-                                  fontWeight: FontWeight.w500,
-                                  color: clockedIn || status?.isMarked == true ? AppColors.homeStatusTextGreen : AppColors.textGrey,
-                                ),
-                              ),
-                              SizedBox(height: 4 * scale),
-                              FutureBuilder<String>(
-                                future: _locationFuture,
-                                builder: (context, snapshot) {
-                                  return Text(
-                                    snapshot.data ?? 'Fetching location...',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(fontFamily: 'Inter', fontSize: 11 * scale, color: AppColors.textGrey, fontWeight: FontWeight.w400),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        ClockActionButton(
-                          isClockedIn: clockedIn,
-                          onTap: () => _handleClockTap(context),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+                  },
+                ),
             ],
           ),
         ),
