@@ -102,7 +102,9 @@ namespace MobileWebApi.Controllers
                     OrganisationId = user.OrganisationId,
                     IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
                     IsGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false,
+                    IsActive=tenantConfig?.IsActive ?? false,
                     ModuleAccess = moduleAccess
+
                 };
 
                 return Ok(response);
@@ -483,6 +485,7 @@ namespace MobileWebApi.Controllers
                     OrganisationId = tenantId,
                     IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
                     IsGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false,
+                    IsActive = tenantConfig?.IsActive ?? false,
                     ModuleAccess = moduleAccess
                 });
             }
