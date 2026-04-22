@@ -38,19 +38,22 @@ namespace MobileWebApi.Controllers
 				{
 					return Ok(new
 					{
-						IsEnabled = false
+						IsGeoFencingEnabled = false
 					});
 				}
 
 				return Ok(new
 				{
-					IsEnabled = true,
+					IsGeoFencingEnabled = true,
 					BranchId = geoFence.BranchId,
 					BranchName = geoFence.BranchName,
 					Latitude = geoFence.Latitude.ToString("F6"),
 					Longitude = geoFence.Longitude.ToString("F6"),
 					Radius = geoFence.Radius,
-					OrganisationId = geoFence.OrganisationId
+					OrganisationId = geoFence.OrganisationId,
+					IsActive=geoFence.IsActive,
+
+
 				});
 			}
 			catch (TenantAccessException)
