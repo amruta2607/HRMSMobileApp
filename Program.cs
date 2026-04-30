@@ -55,6 +55,7 @@ builder.Services.AddScoped<LocationRepository>();
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IImageUploadService, ImageUploadService>();
+builder.Services.AddScoped<BlobService>();
 builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 
@@ -88,6 +89,9 @@ builder.Services.AddScoped<IMobileDashboardService, MobileDashboardService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<IOtpService, OtpService>();
 builder.Services.AddHttpClient();
+
+// Background cleanup for punch images.
+builder.Services.AddHostedService<BlobCleanupService>();
 
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddScoped<IEmailService, EmailService>();

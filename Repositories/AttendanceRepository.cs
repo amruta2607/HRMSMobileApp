@@ -49,7 +49,14 @@ namespace MobileWebApi.Repositories
             return await conn.QueryFirstOrDefaultAsync<Punch>(query, new { EmployeeId = employeeId });
         }
 
-        public async Task<int> InsertPunchIn(int employeeId, DateTime punchIn, DateTime punchDate, string inSource, string? coordinateIn, string? linkIn)
+        public async Task<int> InsertPunchIn(
+            int employeeId,
+            DateTime punchIn,
+            DateTime punchDate,
+            string inSource,
+            string? coordinateIn,
+            string? linkIn,
+            string? imageUrl)
         {
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("InsertPunchIn");
@@ -62,11 +69,19 @@ namespace MobileWebApi.Repositories
                     PunchIn = punchIn,
                     InSource = inSource,
                     CoordinateIn = coordinateIn,
-                    LinkIn = linkIn
+                    LinkIn = linkIn,
+                    ImageUrl = imageUrl
                 });
         }
 
-        public async Task UpdatePunchOut(int punchId, DateTime punchOut, double? duration, string outSource, string? coordinateOut, string? linkOut)
+        public async Task UpdatePunchOut(
+            int punchId,
+            DateTime punchOut,
+            double? duration,
+            string outSource,
+            string? coordinateOut,
+            string? linkOut,
+            string? imageUrl)
         {
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("UpdatePunchOut");
@@ -79,7 +94,8 @@ namespace MobileWebApi.Repositories
                     Duration = duration,
                     OutSource = outSource,
                     CoordinateOut = coordinateOut,
-                    LinkOut = linkOut
+                    LinkOut = linkOut,
+                    ImageUrl = imageUrl
                 });
         }
 

@@ -459,6 +459,30 @@ namespace MobileWebApi.Constants
             public const string UsingSharedUploadRootPath = "Using shared upload root path from configuration: {Path}";
         }
 
+        // Azure Blob related logs (Punch image upload + cleanup)
+        public static class AzureBlob
+        {
+            // Configuration / initialization
+            public const string NotConfiguredUploadDisabled = "AzureBlob is not configured. Punch image upload will be disabled.";
+            public const string NotConfiguredCleanupDisabled = "AzureBlob is not configured. Blob cleanup job will be disabled.";
+            public const string InvalidConnectionStringCleanupDisabled = "Invalid AzureBlob:ConnectionString format. Blob cleanup job will be disabled.";
+            public const string InvalidConnectionStringUploadDisabled = "Invalid AzureBlob:ConnectionString format. Punch image upload will be disabled.";
+            public const string InitFailedCleanupDisabled = "Failed to initialize AzureBlob client. Blob cleanup job will be disabled.";
+            public const string InitFailedUploadDisabled = "Failed to initialize AzureBlob client. Punch image upload will be disabled.";
+
+            // Upload
+            public const string UploadingPunchImage = "Uploading punch image to blob '{BlobName}' for employee {EmpId}.";
+            public const string PunchImageUploadedSuccessfully = "Punch image uploaded successfully for employee {EmpId}. Url: {BlobUrl}";
+            public const string ErrorUploadingPunchImage = "Error uploading punch image for employee {EmpId}.";
+
+            // Cleanup job
+            public const string CleanupServiceDisabled = "BlobCleanupService is disabled due to missing/invalid AzureBlob configuration.";
+            public const string CleanupServiceStarted = "BlobCleanupService started. RetentionDays={RetentionDays}";
+            public const string CleanupRunFailed = "Blob cleanup run failed.";
+            public const string ContainerDoesNotExistSkippingCleanup = "Blob container does not exist. Skipping cleanup.";
+            public const string CleanupCompleted = "Blob cleanup completed. Checked={CheckedCount}, Deleted={DeletedCount}, CutoffUtc={CutoffUtc}";
+        }
+
         // Employee resolution logs (shared across services)
         public static class EmployeeResolution
         {

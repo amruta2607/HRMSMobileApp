@@ -6,6 +6,8 @@ namespace MobileWebApi.Interfaces
     {
         Task<string> PunchInAsync(PunchInRequest req);
         Task<string> PunchOutAsync(PunchOutRequest req);
+        Task<string> PunchInWithImageAsync(PunchInImageRequest req);
+        Task<string> PunchOutWithImageAsync(PunchOutImageRequest req);
         
         // Attendance Report Methods
         Task<AttendanceReportResponse> GetAttendanceReportAsync(AttendanceReportRequest request);

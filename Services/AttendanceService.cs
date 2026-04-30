@@ -14,6 +14,7 @@ namespace MobileWebApi.Services
         private readonly IEmployeeService _employeeService;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
+        private readonly BlobService _blobService;
         private readonly ILogger<AttendanceService> _logger;
 
         public AttendanceService(
@@ -22,6 +23,7 @@ namespace MobileWebApi.Services
             IEmployeeService employeeService,
             IHttpClientFactory httpClientFactory,
             IConfiguration configuration,
+            BlobService blobService,
             ILogger<AttendanceService> logger)
         {
             _repo = repo;
@@ -29,6 +31,7 @@ namespace MobileWebApi.Services
             _employeeService = employeeService;
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
+            _blobService = blobService;
             _logger = logger;
         }
 
@@ -95,7 +98,8 @@ namespace MobileWebApi.Services
                 attendanceDateLocal,
                 MobileSource,
                 coordinateIn,
-                linkIn
+                linkIn,
+                imageUrl: null
             );
 
             if (punchId > 0)
@@ -153,11 +157,118 @@ namespace MobileWebApi.Services
                 duration,
                 MobileSource,
                 coordinateOut,
-                linkOut
+                linkOut,
+                imageUrl: null
             );
 
             _logger.LogInformation(LogMessages.Attendance.PunchOutSuccessful, employeeId.Value);
             return AttendanceMessages.PunchOutSuccessful;
+        }
+
+        public async Task<string> PunchInWithImageAsync(PunchInImageRequest req)
+        {
+            // Punch image APIs are based on EmployeeId (empId) directly.
+            var employeeId = req.empId;
+            if (employeeId <= 0)
+                return "Invalid empId.";
+
+            _logger.LogInformation(LogMessages.Attendance.ProcessingPunchIn, employeeId);
+
+            var punchInLocal = ConvertToServerLocalTime(req.punchTime);
+            var attendanceDateLocal = punchInLocal.Date;
+
+            var existingPunch = await _repo.GetPunchByEmployeeAndDate(employeeId, attendanceDateLocal);
+            if (existingPunch != null && existingPunch.PunchIn != null)
+            {
+                _logger.LogWarning(AttendanceMessages.PunchInAlreadyDone);
+                return AttendanceMessages.PunchInAlreadyDone;
+            }
+
+            // Upload punch photo if provided.
+            string? imageUrl = null;
+            if (req.image != null)
+                imageUrl = await _blobService.UploadAsync(req.image, employeeId);
+
+            var punchId = await _repo.InsertPunchIn(
+                employeeId,
+                punchInLocal,
+                attendanceDateLocal,
+                MobileSource,
+                coordinateIn: null,
+                linkIn: null,
+                imageUrl: imageUrl
+            );
+
+            if (punchId > 0)
+            {
+                _logger.LogInformation(LogMessages.Attendance.PunchInSuccessful, employeeId);
+                return AttendanceMessages.PunchInSuccessful;
+            }
+
+            _logger.LogWarning(AttendanceMessages.PunchInFailed);
+            return AttendanceMessages.PunchInFailed;
+        }
+
+        public async Task<string> PunchOutWithImageAsync(PunchOutImageRequest req)
+        {
+            var employeeId = req.empId;
+            if (employeeId <= 0)
+                return "Invalid empId.";
+
+            _logger.LogInformation(LogMessages.Attendance.ProcessingPunchOut, employeeId);
+
+            var punchOutLocal = ConvertToServerLocalTime(req.punchTime);
+            var attendanceDateLocal = punchOutLocal.Date;
+
+            var punch = await _repo.GetOpenPunchByEmployeeId(employeeId);
+            if (punch == null || punch.PunchIn == null || punch.PunchDate.Date != attendanceDateLocal)
+            {
+                _logger.LogWarning(AttendanceMessages.CannotPunchOutWithoutPunchIn);
+                return AttendanceMessages.CannotPunchOutWithoutPunchIn;
+            }
+
+            if (punch.PunchOut != null)
+            {
+                _logger.LogWarning(AttendanceMessages.PunchOutAlreadyDone);
+                return AttendanceMessages.PunchOutAlreadyDone;
+            }
+
+            // Calculate duration in minutes (do not convert to hours)
+            double? duration = CalculateDurationInMinutes(punch.PunchIn, punchOutLocal);
+
+            // Upload punch photo if provided.
+            string? imageUrl = null;
+            if (req.image != null)
+                imageUrl = await _blobService.UploadAsync(req.image, employeeId);
+
+            await _repo.UpdatePunchOut(
+                punch.Id,
+                punchOutLocal,
+                duration,
+                MobileSource,
+                coordinateOut: null,
+                linkOut: null,
+                imageUrl: imageUrl
+            );
+
+            _logger.LogInformation(LogMessages.Attendance.PunchOutSuccessful, employeeId);
+            return AttendanceMessages.PunchOutSuccessful;
+        }
+
+        private static DateTime ConvertToServerLocalTime(DateTime dateTime)
+        {
+            // Align with controller behavior:
+            // - treat Utc => ToLocalTime
+            // - treat Unspecified => assume UTC from mobile and convert to local
+            if (dateTime.Kind == DateTimeKind.Utc)
+                return dateTime.ToLocalTime();
+
+            if (dateTime.Kind == DateTimeKind.Unspecified)
+            {
+                return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc).ToLocalTime();
+            }
+
+            return dateTime;
         }
 
         private double? CalculateDurationInMinutes(DateTime? punchIn, DateTime punchOut)
