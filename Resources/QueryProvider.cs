@@ -14,7 +14,14 @@ namespace MobileWebApi.Resources
 
         public string Get(string key)
         {
-            return _config[$"SQLQueries:{key}"];
+            var sql = _config[$"SQLQueries:{key}"];
+            if (string.IsNullOrWhiteSpace(sql))
+            {
+                throw new InvalidOperationException(
+                    $"SQL query '{key}' is missing or empty. Ensure Resources/queries.json defines SQLQueries:{key} and that the file is deployed with the application (same folder layout as development).");
+            }
+
+            return sql;
         }
     }
 
