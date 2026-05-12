@@ -383,6 +383,15 @@ namespace MobileWebApi.Constants
     }
 
     /// <summary>
+    /// Tenant / organisation configuration messages
+    /// </summary>
+    public static class TenantMessages
+    {
+        public const string TenantConfigurationNotFound = "Tenant configuration was not found for your organization.";
+        public const string CompanyLogoRetrievedSuccessfully = "Company logo retrieved successfully.";
+    }
+
+    /// <summary>
     /// General messages used across the application
     /// </summary>
     public static class GeneralMessages

@@ -42,6 +42,25 @@ namespace MobileWebApi.Repositories
 			}
 
 		}
+
+		public async Task<TenantConfigurationRow?> GetTenantConfigurationRowByTenantIdAsync(int tenantId)
+		{
+			try
+			{
+				string query = _queryProvider.Get("GetTenantConfigurationRowByTenantId");
+
+				using var connection = _context.CreateConnection();
+				return await connection.QueryFirstOrDefaultAsync<TenantConfigurationRow>(
+					query,
+					new { TenantId = tenantId }
+				);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, LogMessages.User.ErrorFetchingTenantConfigurationByOrganisationId);
+				throw;
+			}
+		}
 	}
 
 }

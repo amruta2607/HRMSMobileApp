@@ -145,6 +145,18 @@ builder.Services.AddSwaggerGen(c =>
 // ----------------------
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var secretKey = jwtSettings["Key"];
+if (string.IsNullOrWhiteSpace(secretKey))
+{
+	throw new InvalidOperationException(
+		"Jwt:Key is missing or empty. Set Jwt:Key in appsettings.json, use dotnet user-secrets set \"Jwt:Key\" \"<your-secret>\", or set environment variable Jwt__Key. Use at least 32 characters.");
+}
+
+var jwtKeyBytes = Encoding.UTF8.GetBytes(secretKey);
+if (jwtKeyBytes.Length < 32)
+{
+	throw new InvalidOperationException(
+		"Jwt:Key must be at least 32 bytes when UTF-8 encoded (Microsoft.IdentityModel recommends a sufficiently long symmetric key for HMAC-SHA256).");
+}
 
 builder.Services.AddAuthentication(options =>
 {
@@ -161,7 +173,7 @@ builder.Services.AddAuthentication(options =>
 		ValidateIssuerSigningKey = true,
 		ValidIssuer = jwtSettings["Issuer"],
 		ValidAudience = jwtSettings["Audience"],
-		IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
+		IssuerSigningKey = new SymmetricSecurityKey(jwtKeyBytes)
 	};
 
 	options.Events = new JwtBearerEvents

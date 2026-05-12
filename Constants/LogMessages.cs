@@ -28,6 +28,7 @@ namespace MobileWebApi.Constants
             public const string ErrorFetchingUsersByOrganisationId = "Error fetching users by OrganisationId.";
 
 			public const string ErrorFetchingTenantConfigurationByOrganisationId = "Error fetching TenantConfiguration by OrganisationId.";
+			public const string RetrievingCompanyLogoForOrganisation = "Retrieving company logo for organisation: {OrganisationId}";
 
 
 		}
