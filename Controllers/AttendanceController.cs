@@ -98,13 +98,14 @@ namespace MobileWebApi.Controllers
             return null; // Access granted
         }
 
-        /// <summary>
-        /// Punch In
-        /// POST: attendance/punch-in
-        /// </summary>
-        [HttpPost("punch-in")]
-        public async Task<IActionResult> PunchIn([FromBody] PunchInRequest request)
-        {
+		/// <summary>
+		/// Punch In
+		/// POST: attendance/punch-in
+		/// </summary>
+		[HttpPost("punch-in")]
+		[Consumes("multipart/form-data")]
+		public async Task<IActionResult> PunchIn([FromForm] PunchInRequest request)
+		{
             try
             {
                 if (request == null)
@@ -156,50 +157,51 @@ namespace MobileWebApi.Controllers
         ///// Endpoint consumes multipart/form-data to support IFormFile.
         ///// POST: attendance/punch-in (multipart/form-data)
         ///// </summary>
-        [HttpPost("punch-in-with-image")]
-        [Consumes("multipart/form-data")]
-        public async Task<IActionResult> PunchInWithImage([FromForm] PunchInImageRequest request)
-        {
-            try
-            {
-                if (request == null)
-                    return BadRequest(new { Success = false, Message = GeneralMessages.RequestBodyCannotBeNull });
+        //[HttpPost("punch-in-with-image")]
+        //[Consumes("multipart/form-data")]
+        //public async Task<IActionResult> PunchInWithImage([FromForm] PunchInImageRequest request)
+        //{
+        //    try
+        //    {
+        //        if (request == null)
+        //            return BadRequest(new { Success = false, Message = GeneralMessages.RequestBodyCannotBeNull });
 
-                if (request.empId <= 0)
-                    return BadRequest(new { Success = false, Message = "empId is required." });
+        //        if (request.empId <= 0)
+        //            return BadRequest(new { Success = false, Message = "empId is required." });
 
-                // Enforce: regular users can punch only for their own employees.
-                var accessValidation = await ValidateEmployeeAccessAsync(request.empId);
-                if (accessValidation != null)
-                    return accessValidation;
+        //        // Enforce: regular users can punch only for their own employees.
+        //        var accessValidation = await ValidateEmployeeAccessAsync(request.empId);
+        //        if (accessValidation != null)
+        //            return accessValidation;
 
-                // Validate that punchTime is today's date (server local date).
-                var dateValidation = ValidateDateIsToday(request.punchTime, "Punch In");
-                if (dateValidation != null)
-                    return dateValidation;
+        //        // Validate that punchTime is today's date (server local date).
+        //        var dateValidation = ValidateDateIsToday(request.punchTime, "Punch In");
+        //        if (dateValidation != null)
+        //            return dateValidation;
 
-                Logger.LogInformation(LogMessages.Attendance.ProcessingPunchIn, request.empId);
-                var result = await _service.PunchInWithImageAsync(request);
-                return Ok(new { message = result });
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { Success = false, Message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                Logger.LogException(ExceptionCodes.Attendance.PunchIn, nameof(PunchInWithImage), ex, request.empId);
-                return StatusCode(500, new { Success = false, Message = GeneralMessages.SomethingWentWrongContactAdmin });
-            }
-        }
+        //        Logger.LogInformation(LogMessages.Attendance.ProcessingPunchIn, request.empId);
+        //        var result = await _service.PunchInWithImageAsync(request);
+        //        return Ok(new { message = result });
+        //    }
+        //    catch (ArgumentException ex)
+        //    {
+        //        return BadRequest(new { Success = false, Message = ex.Message });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Logger.LogException(ExceptionCodes.Attendance.PunchIn, nameof(PunchInWithImage), ex, request.empId);
+        //        return StatusCode(500, new { Success = false, Message = GeneralMessages.SomethingWentWrongContactAdmin });
+        //    }
+        //}
 
-        /// <summary>
-        /// Punch Out
-        /// POST: attendance/punch-out
-        /// </summary>
-        [HttpPost("punch-out")]
-        public async Task<IActionResult> PunchOut([FromBody] PunchOutRequest request)
-        {
+		/// <summary>
+		/// Punch Out
+		/// POST: attendance/punch-out
+		/// </summary>
+		[HttpPost("punch-out")]
+		[Consumes("multipart/form-data")]
+		public async Task<IActionResult> PunchOut([FromForm] PunchOutRequest request)
+		{
             try
             {
                 if (request == null)
@@ -251,42 +253,42 @@ namespace MobileWebApi.Controllers
         ///// Endpoint consumes multipart/form-data to support IFormFile.
         ///// POST: attendance/punch-out (multipart/form-data)
         ///// </summary>
-        [HttpPost("punch-out-with-image")]
-        [Consumes("multipart/form-data")]
-        public async Task<IActionResult> PunchOutWithImage([FromForm] PunchOutImageRequest request)
-        {
-            try
-            {
-                if (request == null)
-                    return BadRequest(new { Success = false, Message = GeneralMessages.RequestBodyCannotBeNull });
+        //[HttpPost("punch-out-with-image")]
+        //[Consumes("multipart/form-data")]
+        //public async Task<IActionResult> PunchOutWithImage([FromForm] PunchOutImageRequest request)
+        //{
+        //    try
+        //    {
+        //        if (request == null)
+        //            return BadRequest(new { Success = false, Message = GeneralMessages.RequestBodyCannotBeNull });
 
-                if (request.empId <= 0)
-                    return BadRequest(new { Success = false, Message = "empId is required." });
+        //        if (request.empId <= 0)
+        //            return BadRequest(new { Success = false, Message = "empId is required." });
 
-                // Enforce: regular users can punch only for their own employees.
-                var accessValidation = await ValidateEmployeeAccessAsync(request.empId);
-                if (accessValidation != null)
-                    return accessValidation;
+        //        // Enforce: regular users can punch only for their own employees.
+        //        var accessValidation = await ValidateEmployeeAccessAsync(request.empId);
+        //        if (accessValidation != null)
+        //            return accessValidation;
 
-                // Validate that punchTime is today's date (server local date).
-                var dateValidation = ValidateDateIsToday(request.punchTime, "Punch Out");
-                if (dateValidation != null)
-                    return dateValidation;
+        //        // Validate that punchTime is today's date (server local date).
+        //        var dateValidation = ValidateDateIsToday(request.punchTime, "Punch Out");
+        //        if (dateValidation != null)
+        //            return dateValidation;
 
-                Logger.LogInformation(LogMessages.Attendance.ProcessingPunchOut, request.empId);
-                var result = await _service.PunchOutWithImageAsync(request);
-                return Ok(new { message = result });
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { Success = false, Message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                Logger.LogException(ExceptionCodes.Attendance.PunchOut, nameof(PunchOutWithImage), ex, request.empId);
-                return StatusCode(500, new { Success = false, Message = GeneralMessages.SomethingWentWrongContactAdmin });
-            }
-        }
+        //        Logger.LogInformation(LogMessages.Attendance.ProcessingPunchOut, request.empId);
+        //        var result = await _service.PunchOutWithImageAsync(request);
+        //        return Ok(new { message = result });
+        //    }
+        //    catch (ArgumentException ex)
+        //    {
+        //        return BadRequest(new { Success = false, Message = ex.Message });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Logger.LogException(ExceptionCodes.Attendance.PunchOut, nameof(PunchOutWithImage), ex, request.empId);
+        //        return StatusCode(500, new { Success = false, Message = GeneralMessages.SomethingWentWrongContactAdmin });
+        //    }
+        //}
 
         /// <summary>
         /// Get today's attendance for all employees in the organization

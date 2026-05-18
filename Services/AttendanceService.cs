@@ -59,113 +59,196 @@ namespace MobileWebApi.Services
             }
         }
 
-        public async Task<string> PunchInAsync(PunchInRequest req)
-        {
-            // Resolve EmployeeId from UserId
-            var employeeId = await ResolveEmployeeIdFromUserIdAsync(req.userId);
-            if (!employeeId.HasValue)
-            {
-                _logger.LogWarning(LogMessages.EmployeeResolution.NoEmployeeFoundForUserId, req.userId);
-                return "No employee found for the specified UserId.";
-            }
+		public async Task<string> PunchInAsync(PunchInRequest req)
+		{
+			try
+			{
+				var employeeId = await ResolveEmployeeIdFromUserIdAsync(req.userId);
 
-            _logger.LogInformation(LogMessages.Attendance.ProcessingPunchIn, employeeId.Value);
+				if (!employeeId.HasValue)
+				{
+					_logger.LogWarning(
+						LogMessages.EmployeeResolution.NoEmployeeFoundForUserId,
+						req.userId);
 
-            // Convert incoming UTC timestamps (from mobile) to server local time for storage
-            // JSON like "2025-12-15T12:11:08.669Z" is UTC; ToLocalTime will convert to local zone (e.g. IST)
-            var punchInLocal = DateTime.SpecifyKind(req.punch_in_time, DateTimeKind.Utc).ToLocalTime();
-            var attendanceDateLocal = DateTime.SpecifyKind(req.attendance_date, DateTimeKind.Utc).ToLocalTime().Date;
+					return "No employee found for the specified UserId.";
+				}
 
-            // Check if already punched in for this date (prevent double punch-in)
-            var existingPunch = await _repo.GetPunchByEmployeeAndDate(employeeId.Value, attendanceDateLocal);
+				_logger.LogInformation(
+					LogMessages.Attendance.ProcessingPunchIn,
+					employeeId.Value);
 
-            if (existingPunch != null && existingPunch.PunchIn != null)
-            {
-                _logger.LogWarning(AttendanceMessages.PunchInAlreadyDone);
-                return AttendanceMessages.PunchInAlreadyDone;
-            }
+				var punchInLocal = ConvertToServerLocalTime(req.punch_in_time);
 
-          
+				var attendanceDateLocal = ConvertToServerLocalTime(req.attendance_date)
+					.Date;
 
-            var coordinateIn = BuildCoordinate(req.latitude, req.longitude);
-            var linkIn = GenerateGoogleMapLink(req.latitude, req.longitude);
-            _ = await TryGetReverseGeocodedAddressAsync(req.latitude, req.longitude);
+				// Prevent duplicate punch in
+				var existingPunch = await _repo.GetPunchByEmployeeAndDate(
+					employeeId.Value,
+					attendanceDateLocal);
 
-            // Insert punch-in with location data
-            var punchId = await _repo.InsertPunchIn(
-                employeeId.Value,
-                punchInLocal,
-                attendanceDateLocal,
-                MobileSource,
-                coordinateIn,
-                linkIn,
-                imageUrl: null
-            );
+				if (existingPunch != null && existingPunch.PunchIn != null)
+				{
+					_logger.LogWarning(AttendanceMessages.PunchInAlreadyDone);
 
-            if (punchId > 0)
-            {
-                _logger.LogInformation(LogMessages.Attendance.PunchInSuccessful, employeeId.Value);
-                return AttendanceMessages.PunchInSuccessful;
-            }
-            
-            _logger.LogWarning(AttendanceMessages.PunchInFailed);
-            return AttendanceMessages.PunchInFailed;
-        }
+					return AttendanceMessages.PunchInAlreadyDone;
+				}
 
-        public async Task<string> PunchOutAsync(PunchOutRequest req)
-        {
-            // Resolve EmployeeId from UserId
-            var employeeId = await ResolveEmployeeIdFromUserIdAsync(req.userId);
-            if (!employeeId.HasValue)
-            {
-                _logger.LogWarning(LogMessages.EmployeeResolution.NoEmployeeFoundForUserId, req.userId);
-                return "No employee found for the specified UserId.";
-            }
+				// Upload image to Azure Blob, then persist blob URL in Punch.ImageUrl
+				string? imageUrl = null;
+				if (req.image != null && req.image.Length > 0)
+				{
+					imageUrl = await _blobService.UploadAsync(req.image, employeeId.Value);
+					_logger.LogInformation("Punch-in image uploaded for employee {EmployeeId}", employeeId.Value);
+				}
 
-            _logger.LogInformation(LogMessages.Attendance.ProcessingPunchOut, employeeId.Value);
+				// Location
+				var coordinateIn = BuildCoordinate(
+					req.latitude,
+					req.longitude);
 
-            // Convert incoming UTC timestamps (from mobile) to server local time
-            var punchOutLocal = DateTime.SpecifyKind(req.punch_out_time, DateTimeKind.Utc).ToLocalTime();
-            var attendanceDateLocal = DateTime.SpecifyKind(req.attendance_date, DateTimeKind.Utc).ToLocalTime().Date;
-            
-            // Check if punch-in exists (prevent punch-out without punch-in)
-            var punch = await _repo.GetOpenPunchByEmployeeId(employeeId.Value);
+				var linkIn = GenerateGoogleMapLink(
+					req.latitude,
+					req.longitude);
 
-            if (punch == null || punch.PunchIn == null || punch.PunchDate.Date != attendanceDateLocal)
-            {
-                _logger.LogWarning(AttendanceMessages.CannotPunchOutWithoutPunchIn);
-                return AttendanceMessages.CannotPunchOutWithoutPunchIn;
-            }
+				_ = await TryGetReverseGeocodedAddressAsync(
+					req.latitude,
+					req.longitude);
 
-            // Check if already punched out (prevent double punch-out)
-            if (punch.PunchOut != null)
-            {
-                _logger.LogWarning(AttendanceMessages.PunchOutAlreadyDone);
-                return AttendanceMessages.PunchOutAlreadyDone;
-            }
+				// Insert attendance
+				var punchId = await _repo.InsertPunchIn(
+					employeeId.Value,
+					punchInLocal,
+					attendanceDateLocal,
+					MobileSource,
+					coordinateIn,
+					linkIn,
+					imageUrl
+				);
 
-            // Calculate duration in minutes (do not convert to hours)
-            double? duration = CalculateDurationInMinutes(punch.PunchIn, punchOutLocal);
-            var coordinateOut = BuildCoordinate(req.latitude, req.longitude);
-            var linkOut = GenerateGoogleMapLink(req.latitude, req.longitude);
-            _ = await TryGetReverseGeocodedAddressAsync(req.latitude, req.longitude);
+				if (punchId > 0)
+				{
+					_logger.LogInformation(
+						LogMessages.Attendance.PunchInSuccessful,
+						employeeId.Value);
 
-            // Update punch-out with location data
-            await _repo.UpdatePunchOut(
-                punch.Id,
-                punchOutLocal,
-                duration,
-                MobileSource,
-                coordinateOut,
-                linkOut,
-                imageUrl: null
-            );
+					return AttendanceMessages.PunchInSuccessful;
+				}
 
-            _logger.LogInformation(LogMessages.Attendance.PunchOutSuccessful, employeeId.Value);
-            return AttendanceMessages.PunchOutSuccessful;
-        }
+				_logger.LogWarning(AttendanceMessages.PunchInFailed);
 
-        public async Task<string> PunchInWithImageAsync(PunchInImageRequest req)
+				return AttendanceMessages.PunchInFailed;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error while processing punch in");
+
+				return "Error while processing punch in.";
+			}
+		}
+
+		/// <summary>
+		/// Punch Out
+		/// Supports image upload + geo location
+		/// Supports overnight shifts
+		/// </summary>
+		public async Task<string> PunchOutAsync(PunchOutRequest req)
+		{
+			try
+			{
+				var employeeId = await ResolveEmployeeIdFromUserIdAsync(req.userId);
+
+				if (!employeeId.HasValue)
+				{
+					_logger.LogWarning(
+						LogMessages.EmployeeResolution.NoEmployeeFoundForUserId,
+						req.userId);
+
+					return "No employee found for the specified UserId.";
+				}
+
+				_logger.LogInformation(
+					LogMessages.Attendance.ProcessingPunchOut,
+					employeeId.Value);
+
+				var punchOutLocal = ConvertToServerLocalTime(
+					req.punch_out_time);
+
+				// Get open attendance
+				var punch = await _repo.GetOpenPunchByEmployeeId(
+					employeeId.Value);
+
+				// Cross-day support
+				if (punch == null || punch.PunchIn == null)
+				{
+					_logger.LogWarning(
+						AttendanceMessages.CannotPunchOutWithoutPunchIn);
+
+					return AttendanceMessages.CannotPunchOutWithoutPunchIn;
+				}
+
+				// Prevent duplicate punch out
+				if (punch.PunchOut != null)
+				{
+					_logger.LogWarning(
+						AttendanceMessages.PunchOutAlreadyDone);
+
+					return AttendanceMessages.PunchOutAlreadyDone;
+				}
+
+				// Duration
+				double? duration = CalculateDurationInMinutes(
+					punch.PunchIn,
+					punchOutLocal);
+
+				// Upload image to Azure Blob, then persist blob URL in Punch.ImageUrl
+				string? imageUrl = null;
+				if (req.image != null && req.image.Length > 0)
+				{
+					imageUrl = await _blobService.UploadAsync(req.image, employeeId.Value);
+					_logger.LogInformation("Punch-out image uploaded for employee {EmployeeId}", employeeId.Value);
+				}
+
+				// Location
+				var coordinateOut = BuildCoordinate(
+					req.latitude,
+					req.longitude);
+
+				var linkOut = GenerateGoogleMapLink(
+					req.latitude,
+					req.longitude);
+
+				_ = await TryGetReverseGeocodedAddressAsync(
+					req.latitude,
+					req.longitude);
+
+				// Update punch out
+				await _repo.UpdatePunchOut(
+					punch.Id,
+					punchOutLocal,
+					duration,
+					MobileSource,
+					coordinateOut,
+					linkOut,
+					imageUrl
+				);
+
+				_logger.LogInformation(
+					LogMessages.Attendance.PunchOutSuccessful,
+					employeeId.Value);
+
+				return AttendanceMessages.PunchOutSuccessful;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error while processing punch out");
+
+				return "Error while processing punch out.";
+			}
+		}
+
+		public async Task<string> PunchInWithImageAsync(PunchInImageRequest req)
         {
             // Punch image APIs are based on EmployeeId (empId) directly.
             var employeeId = req.empId;
@@ -707,6 +790,7 @@ namespace MobileWebApi.Services
                         dayAttendance.CoordinateOut = attendance.CoordinateOut;
                         dayAttendance.LinkIn = attendance.LinkIn;
                         dayAttendance.LinkOut = attendance.LinkOut;
+                        dayAttendance.ImageUrl = attendance.ImageUrl;
 
                         var hasPunchIn = attendance.PunchIn.HasValue;
                         var hasPunchOut = attendance.PunchOut.HasValue;

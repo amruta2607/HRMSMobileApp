@@ -11,6 +11,8 @@
 
         public double? longitude { get; set; }
         public double? latitude { get; set; }
+		public IFormFile? image { get; set; }
 
-    }
+
+	}
 }
