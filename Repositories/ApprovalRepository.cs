@@ -1,4 +1,4 @@
-﻿using Dapper;
+using Dapper;
 using MobileWebApi.Data;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
@@ -25,68 +25,128 @@ namespace MobileWebApi.Repositories
 
         public async Task<int> InsertEventAsync(int userId, int eventTypeId, string eventData, string state, string status, int tenantId, int insertUserId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("InsertEvent");
-
-            return await conn.ExecuteScalarAsync<int>(query, new
+            try
             {
-                UserId = userId,
-                EventTypeId = eventTypeId,
-                EventData = eventData,
-                State = state,
-                Status = status,
-                TenantId = tenantId,
-                InsertUserId = insertUserId
-            });
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("InsertEvent");
+
+                return await conn.ExecuteScalarAsync<int>(query, new
+                {
+                    UserId = userId,
+                    EventTypeId = eventTypeId,
+                    EventData = eventData,
+                    State = state,
+                    Status = status,
+                    TenantId = tenantId,
+                    InsertUserId = insertUserId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(InsertEventAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalInsertEventDatabaseError}: Failed to insert event",
+                    ex);
+            }
         }
 
         public async Task<Event?> GetEventByIdAsync(int eventId, int tenantId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetEventById");
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("GetEventById");
 
-            return await conn.QueryFirstOrDefaultAsync<Event>(query, new { Id = eventId, TenantId = tenantId });
+                return await conn.QueryFirstOrDefaultAsync<Event>(query, new { Id = eventId, TenantId = tenantId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetEventByIdAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalGetEventByIdDatabaseError}: Failed to fetch event by id",
+                    ex);
+            }
         }
 
         public async Task<bool> UpdateEventStatusAsync(int eventId, string state, string status, int updateUserId, int tenantId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("UpdateEventStatus");
-
-            var rowsAffected = await conn.ExecuteAsync(query, new
+            try
             {
-                EventId = eventId,
-                State = state,
-                Status = status,
-                UpdateUserId = updateUserId,
-                TenantId = tenantId
-            });
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("UpdateEventStatus");
 
-            return rowsAffected > 0;
+                var rowsAffected = await conn.ExecuteAsync(query, new
+                {
+                    EventId = eventId,
+                    State = state,
+                    Status = status,
+                    UpdateUserId = updateUserId,
+                    TenantId = tenantId
+                });
+
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(UpdateEventStatusAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalUpdateEventStatusDatabaseError}: Failed to update event status",
+                    ex);
+            }
         }
 
         public async Task<int> GetEventTypeIdAsync(string eventName, int tenantId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetEventTypeIdByName");
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("GetEventTypeIdByName");
 
-            return await conn.QueryFirstOrDefaultAsync<int>(query, new { EventName = eventName, TenantId = tenantId });
+                return await conn.QueryFirstOrDefaultAsync<int>(query, new { EventName = eventName, TenantId = tenantId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetEventTypeIdAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalGetEventTypeIdDatabaseError}: Failed to fetch event type id",
+                    ex);
+            }
         }
 
         public async Task<EventType?> GetEventTypeByIdAsync(int eventTypeId, int tenantId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetEventTypeById");
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("GetEventTypeById");
 
-            return await conn.QueryFirstOrDefaultAsync<EventType>(query, new { Id = eventTypeId, TenantId = tenantId });
+                return await conn.QueryFirstOrDefaultAsync<EventType>(query, new { Id = eventTypeId, TenantId = tenantId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetEventTypeByIdAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalGetEventTypeByIdDatabaseError}: Failed to fetch event type by id",
+                    ex);
+            }
         }
 
         public async Task<bool> IsEventTypeActiveAsync(int eventTypeId, int tenantId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("IsEventTypeActive");
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("IsEventTypeActive");
 
-            return await conn.QueryFirstOrDefaultAsync<bool>(query, new { Id = eventTypeId, TenantId = tenantId });
+                return await conn.QueryFirstOrDefaultAsync<bool>(query, new { Id = eventTypeId, TenantId = tenantId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(IsEventTypeActiveAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalIsEventTypeActiveDatabaseError}: Failed to check event type active status",
+                    ex);
+            }
         }
 
         #endregion
@@ -95,31 +155,61 @@ namespace MobileWebApi.Repositories
 
         public async Task<string?> GetFirstLevelNameAsync(int eventTypeId, int tenantId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetFirstApprovalLevelName");
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("GetFirstApprovalLevelName");
 
-            return await conn.QueryFirstOrDefaultAsync<string>(query, new { EventTypeId = eventTypeId, TenantId = tenantId });
+                return await conn.QueryFirstOrDefaultAsync<string>(query, new { EventTypeId = eventTypeId, TenantId = tenantId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetFirstLevelNameAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalGetFirstLevelNameDatabaseError}: Failed to fetch first approval level name",
+                    ex);
+            }
         }
 
         public async Task<ApprovalStage?> GetApprovalStageByLevelNameAsync(int eventTypeId, string levelName, int tenantId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetApprovalStageByLevelName");
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("GetApprovalStageByLevelName");
 
-            return await conn.QueryFirstOrDefaultAsync<ApprovalStage>(query, new 
-            { 
-                EventTypeId = eventTypeId, 
-                LevelName = levelName, 
-                TenantId = tenantId 
-            });
+                return await conn.QueryFirstOrDefaultAsync<ApprovalStage>(query, new
+                {
+                    EventTypeId = eventTypeId,
+                    LevelName = levelName,
+                    TenantId = tenantId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetApprovalStageByLevelNameAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalGetApprovalStageByLevelNameDatabaseError}: Failed to fetch approval stage by level name",
+                    ex);
+            }
         }
 
         public async Task<bool> IsApprovalStageActiveAsync(int stageId, int tenantId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("IsApprovalStageActive");
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("IsApprovalStageActive");
 
-            return await conn.QueryFirstOrDefaultAsync<bool>(query, new { Id = stageId, TenantId = tenantId });
+                return await conn.QueryFirstOrDefaultAsync<bool>(query, new { Id = stageId, TenantId = tenantId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(IsApprovalStageActiveAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalIsApprovalStageActiveDatabaseError}: Failed to check approval stage active status",
+                    ex);
+            }
         }
 
         #endregion
@@ -129,62 +219,92 @@ namespace MobileWebApi.Repositories
         public async Task<IEnumerable<ApproverInfo>> GetApproversForStageAsync(
         int stageId, int? workRoleId, string explicitUserIds, int tenantId)
         {
-            using var conn = _context.CreateConnection();
-
-            var approvers = new List<ApproverInfo>();
-
-            // 1️⃣ Get approvers by Work Role
-            if (workRoleId.HasValue && workRoleId > 0)
+            try
             {
-                string roleQuery = _queryProvider.Get("GetApproversByWorkRole");
+                using var conn = _context.CreateConnection();
 
-                var roleApprovers = await conn.QueryAsync<ApproverInfo>(roleQuery, new
+                var approvers = new List<ApproverInfo>();
+
+                // 1️⃣ Get approvers by Work Role
+                if (workRoleId.HasValue && workRoleId > 0)
                 {
-                    WorkRoleId = workRoleId,
-                    TenantId = tenantId
-                });
+                    string roleQuery = _queryProvider.Get("GetApproversByWorkRole");
 
-                approvers.AddRange(roleApprovers);
+                    var roleApprovers = await conn.QueryAsync<ApproverInfo>(roleQuery, new
+                    {
+                        WorkRoleId = workRoleId,
+                        TenantId = tenantId
+                    });
+
+                    approvers.AddRange(roleApprovers);
+                }
+
+                // 2️⃣ Get explicit approvers from CSV list
+                if (!string.IsNullOrWhiteSpace(explicitUserIds))
+                {
+                    // Convert "229,230,231" → List<int> {229,230,231}
+                    var userIdList = explicitUserIds
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(id => int.Parse(id.Trim()))
+                        .ToList();
+
+                    string explicitQuery = _queryProvider.Get("GetApproversByUserIds");
+
+                    var explicitApprovers = await conn.QueryAsync<ApproverInfo>(explicitQuery, new
+                    {
+                        UserIds = userIdList,
+                        TenantId = tenantId
+                    });
+
+                    approvers.AddRange(explicitApprovers);
+                }
+
+                // 3️⃣ Remove duplicates by UserId
+                return approvers.DistinctBy(x => x.UserId);
             }
-
-            // 2️⃣ Get explicit approvers from CSV list
-            if (!string.IsNullOrWhiteSpace(explicitUserIds))
+            catch (Exception ex)
             {
-                // Convert "229,230,231" → List<int> {229,230,231}
-                var userIdList = explicitUserIds
-                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(id => int.Parse(id.Trim()))
-                    .ToList();
-
-                string explicitQuery = _queryProvider.Get("GetApproversByUserIds");
-
-                var explicitApprovers = await conn.QueryAsync<ApproverInfo>(explicitQuery, new
-                {
-                    UserIds = userIdList,
-                    TenantId = tenantId
-                });
-
-                approvers.AddRange(explicitApprovers);
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetApproversForStageAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalGetApproversForStageDatabaseError}: Failed to fetch approvers for stage",
+                    ex);
             }
-
-            // 3️⃣ Remove duplicates by UserId
-            return approvers.DistinctBy(x => x.UserId);
         }
 
         public async Task<int> GetUserIdByEmployeeIdAsync(int employeeId, int tenantId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetUserIdByEmployeeId");
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("GetUserIdByEmployeeId");
 
-            return await conn.QueryFirstOrDefaultAsync<int>(query, new { EmployeeId = employeeId, TenantId = tenantId });
+                return await conn.QueryFirstOrDefaultAsync<int>(query, new { EmployeeId = employeeId, TenantId = tenantId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetUserIdByEmployeeIdAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalGetUserIdByEmployeeIdDatabaseError}: Failed to fetch user id by employee id",
+                    ex);
+            }
         }
 
         public async Task<IEnumerable<string>> GetEmployeeNamesByUserIdsAsync(IEnumerable<int> userIds, int tenantId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetEmployeeNamesByUserIds");
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("GetEmployeeNamesByUserIds");
 
-            return await conn.QueryAsync<string>(query, new { UserIds = userIds.ToList(), TenantId = tenantId });
+                return await conn.QueryAsync<string>(query, new { UserIds = userIds.ToList(), TenantId = tenantId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetEmployeeNamesByUserIdsAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalGetEmployeeNamesByUserIdsDatabaseError}: Failed to fetch employee names by user ids",
+                    ex);
+            }
         }
 
         #endregion
@@ -193,43 +313,73 @@ namespace MobileWebApi.Repositories
 
         public async Task<int> InsertApprovalAsync(int eventId, int stageId, int approverId, int insertUserId, int tenantId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("InsertApproval");
-
-            return await conn.ExecuteScalarAsync<int>(query, new
+            try
             {
-                EventId = eventId,
-                StageId = stageId,
-                ApproverId = approverId,
-                Action = EventConstants.ApprovalStatusPending,
-                TenantId = tenantId,
-                InsertUserId = insertUserId
-            });
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("InsertApproval");
+
+                return await conn.ExecuteScalarAsync<int>(query, new
+                {
+                    EventId = eventId,
+                    StageId = stageId,
+                    ApproverId = approverId,
+                    Action = EventConstants.ApprovalStatusPending,
+                    TenantId = tenantId,
+                    InsertUserId = insertUserId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(InsertApprovalAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalInsertApprovalDatabaseError}: Failed to insert approval",
+                    ex);
+            }
         }
 
         public async Task<bool> UpdateApprovalStatusAsync(int approvalId, string status, string? comments, int updateUserId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("UpdateApprovalStatus");
-
-            var rowsAffected = await conn.ExecuteAsync(query, new
+            try
             {
-                Id = approvalId,
-                Action = status,
-                Comments = comments,
-                ActionDate = DateTime.Now,
-                UpdateUserId = updateUserId
-            });
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("UpdateApprovalStatus");
 
-            return rowsAffected > 0;
+                var rowsAffected = await conn.ExecuteAsync(query, new
+                {
+                    Id = approvalId,
+                    Action = status,
+                    Comments = comments,
+                    ActionDate = DateTime.Now,
+                    UpdateUserId = updateUserId
+                });
+
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(UpdateApprovalStatusAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalUpdateApprovalStatusDatabaseError}: Failed to update approval status",
+                    ex);
+            }
         }
 
         public async Task<IEnumerable<Approval>> GetApprovalsByEventIdAsync(int eventId, int tenantId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetApprovalsByEventId");
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("GetApprovalsByEventId");
 
-            return await conn.QueryAsync<Approval>(query, new { EventId = eventId, TenantId = tenantId });
+                return await conn.QueryAsync<Approval>(query, new { EventId = eventId, TenantId = tenantId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetApprovalsByEventIdAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalGetApprovalsByEventIdDatabaseError}: Failed to fetch approvals by event id",
+                    ex);
+            }
         }
 
         #endregion
@@ -238,20 +388,53 @@ namespace MobileWebApi.Repositories
 
         public async Task<int> InsertScreenNotificationAsync(int userId, int? eventId, string title, string message, int tenantId, int insertUserId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("InsertScreenNotification");
-
-            return await conn.ExecuteScalarAsync<int>(query, new
+            try
             {
-                UserId = userId,
-                EventId = eventId,
-                Title = title,
-                Message = message,
-                IsRead = false,
-                IsActive = true,
-                TenantId = tenantId,
-                InsertUserId = insertUserId
-            });
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("InsertScreenNotification");
+
+                return await conn.ExecuteScalarAsync<int>(query, new
+                {
+                    UserId = userId,
+                    EventId = eventId,
+                    Title = title,
+                    Message = message,
+                    IsRead = false,
+                    IsActive = true,
+                    TenantId = tenantId,
+                    InsertUserId = insertUserId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(InsertScreenNotificationAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalInsertScreenNotificationDatabaseError}: Failed to insert screen notification",
+                    ex);
+            }
+        }
+
+        public async Task<int> MarkScreenNotificationsReadByLeaveRequestIdAsync(int leaveRequestId, int tenantId, int updateUserId)
+        {
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("MarkScreenNotificationsReadByLeaveRequestId");
+
+                return await conn.ExecuteAsync(query, new
+                {
+                    LeaveRequestId = leaveRequestId,
+                    TenantId = tenantId,
+                    UpdateUserId = updateUserId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(MarkScreenNotificationsReadByLeaveRequestIdAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalInsertScreenNotificationDatabaseError}: Failed to mark screen notifications as read for withdrawn leave request",
+                    ex);
+            }
         }
 
         #endregion
@@ -260,44 +443,74 @@ namespace MobileWebApi.Repositories
 
         public async Task<int> InsertEmailNotificationAsync(string toEmail, string subject, string body, int tenantId, int insertUserId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("InsertEmailNotification");
-
-            return await conn.ExecuteScalarAsync<int>(query, new
+            try
             {
-                ToEmail = toEmail,
-                Subject = subject,
-                Body = body,
-                TenantId = tenantId,
-                InsertUserId = insertUserId
-            });
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("InsertEmailNotification");
+
+                return await conn.ExecuteScalarAsync<int>(query, new
+                {
+                    ToEmail = toEmail,
+                    Subject = subject,
+                    Body = body,
+                    TenantId = tenantId,
+                    InsertUserId = insertUserId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(InsertEmailNotificationAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalInsertEmailNotificationDatabaseError}: Failed to insert email notification",
+                    ex);
+            }
         }
 
         public async Task<EmailTemplate?> GetEmailTemplateAsync(string eventName, string actionType, int tenantId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetEmailTemplate");
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("GetEmailTemplate");
 
-            return await conn.QueryFirstOrDefaultAsync<EmailTemplate>(query, new 
-            { 
-                EventName = eventName, 
-                ActionType = actionType, 
-                TenantId = tenantId 
-            });
+                return await conn.QueryFirstOrDefaultAsync<EmailTemplate>(query, new
+                {
+                    EventName = eventName,
+                    ActionType = actionType,
+                    TenantId = tenantId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetEmailTemplateAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalGetEmailTemplateDatabaseError}: Failed to fetch email template",
+                    ex);
+            }
         }
 
         public async Task<NotificationTemplate?> GetNotificationTemplateAsync(string templateName, string templateType, string actionType, int tenantId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetNotificationTemplate");
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("GetNotificationTemplate");
 
-            return await conn.QueryFirstOrDefaultAsync<NotificationTemplate>(query, new 
-            { 
-                TemplateName = templateName, 
-                TemplateType = templateType,
-                ActionType = actionType, 
-                TenantId = tenantId 
-            });
+                return await conn.QueryFirstOrDefaultAsync<NotificationTemplate>(query, new
+                {
+                    TemplateName = templateName,
+                    TemplateType = templateType,
+                    ActionType = actionType,
+                    TenantId = tenantId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetNotificationTemplateAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalGetNotificationTemplateDatabaseError}: Failed to fetch notification template",
+                    ex);
+            }
         }
 
         #endregion
@@ -306,10 +519,20 @@ namespace MobileWebApi.Repositories
 
         public async Task<string?> GetTenantNameAsync(int tenantId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetTenantName");
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("GetTenantName");
 
-            return await conn.QueryFirstOrDefaultAsync<string>(query, new { TenantId = tenantId });
+                return await conn.QueryFirstOrDefaultAsync<string>(query, new { TenantId = tenantId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetTenantNameAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalGetTenantNameDatabaseError}: Failed to fetch tenant name",
+                    ex);
+            }
         }
 
         #endregion
@@ -318,10 +541,20 @@ namespace MobileWebApi.Repositories
 
         public async Task<Employee?> GetEmployeeByUserIdAsync(int userId)
         {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetEmployeeByUserId");
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("GetEmployeeByUserId");
 
-            return await conn.QueryFirstOrDefaultAsync<Employee>(query, new { SystemUserId = userId });
+                return await conn.QueryFirstOrDefaultAsync<Employee>(query, new { SystemUserId = userId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetEmployeeByUserIdAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalGetEmployeeByUserIdDatabaseError}: Failed to fetch employee by user id",
+                    ex);
+            }
         }
 
         #endregion

@@ -97,8 +97,8 @@ namespace MobileWebApi.Controllers
 
             if (request.Id <= 0)
             {
-                Logger.LogWarning("Invalid leave request ID");
-                return BadRequest(new { Success = false, Message = "Leave request ID is required and must be greater than 0" });
+                Logger.LogWarning(LeaveMessages.LeaveRequestIdRequired);
+                return BadRequest(new { Success = false, Message = LeaveMessages.LeaveRequestIdRequired });
             }
 
             Logger.LogInformation(LogMessages.Leave.ApprovingLeaveRequest, request.Id);
@@ -127,8 +127,8 @@ namespace MobileWebApi.Controllers
 
             if (request.Id <= 0)
             {
-                Logger.LogWarning("Invalid leave request ID");
-                return BadRequest(new { Success = false, Message = "Leave request ID is required and must be greater than 0" });
+                Logger.LogWarning(LeaveMessages.LeaveRequestIdRequired);
+                return BadRequest(new { Success = false, Message = LeaveMessages.LeaveRequestIdRequired });
             }
 
             Logger.LogInformation(LogMessages.Leave.RejectingLeaveRequest, request.Id);
@@ -153,20 +153,61 @@ namespace MobileWebApi.Controllers
 				return BadRequest(new
 				{
 					Success = false,
-					Message = "Leave request ID is required"
+                    Message = LeaveMessages.LeaveRequestIdRequired
 				});
 			}
 
-			Logger.LogInformation("Withdraw leave request {Id}", request.Id);
+			var loggedInUserId = CurrentUserId;
+			if (!loggedInUserId.HasValue)
+			{
+				return Unauthorized(new { Success = false, Message = TenantAccessMessages.UserNotAuthenticated });
+			}
+
+			// Do not trust client-provided userId; enforce it matches authenticated user
+			if (request.UserId != loggedInUserId.Value)
+			{
+				Logger.LogWarning(LogMessages.TenantAccess.UnauthorizedUpdatePersonalDetails, loggedInUserId.Value, request.UserId);
+				return UserAccessDenied();
+			}
+
+            Logger.LogInformation(LogMessages.Leave.CancellingLeaveRequest, request.Id);
 
 			var result = await _leaveService.WithdrawLeaveRequestAsync(
 				request.Id,
-				request.UserId,
+				loggedInUserId.Value,
 				request.Reason
 			);
 
 			if (result.Success)
 				return Ok(result);
+
+			// If the service denied access (leave doesn't belong to the logged-in user), return 403
+			if (string.Equals(result.Message, TenantAccessMessages.UserAccessDeniedSimple, System.StringComparison.OrdinalIgnoreCase))
+				return UserAccessDenied();
+
+			return BadRequest(result);
+		}
+
+		/// <summary>
+		/// Get leave history (summary per request) for the logged-in user
+		/// GET: api/leave/history
+		/// </summary>
+		[HttpGet("history")]
+		public async Task<IActionResult> GetLeaveHistory()
+		{
+			var userId = CurrentUserId;
+			if (!userId.HasValue)
+			{
+                return Unauthorized(new { Success = false, Message = TenantAccessMessages.UserNotAuthenticated });
+			}
+
+            Logger.LogInformation(LogMessages.Leave.FetchingLeaveHistory, userId.Value);
+			var result = await _leaveService.GetLeaveHistorySummaryAsync(userId.Value);
+
+			if (result.Success)
+			{
+				return Ok(result);
+			}
 
 			return BadRequest(result);
 		}

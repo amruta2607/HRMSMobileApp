@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Microsoft.Extensions.FileProviders;
@@ -10,10 +10,13 @@ using MobileWebApi.Repositories;
 using MobileWebApi.Services;
 using MobileWebApi.Models;
 using MobileWebApi.Middleware;
+using MobileWebApi.Swagger;
 using Serilog;
 using MobileWebApi.Helper;
 using MobileWebApi.Resources;
+using QuestPDF.Infrastructure;
 
+QuestPDF.Settings.License = LicenseType.Community;
 var builder = WebApplication.CreateBuilder(args);
 
 // ----------------------
@@ -52,6 +55,7 @@ builder.Services.AddScoped<LocationRepository>();
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IImageUploadService, ImageUploadService>();
+builder.Services.AddScoped<BlobService>();
 builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 
@@ -72,12 +76,22 @@ builder.Services.AddScoped<IPaySlipService, PaySlipService>();
 
 builder.Services.AddScoped<IDisputeRepository, DisputeRepository>();
 builder.Services.AddScoped<IDisputeService, DisputeService>();
+builder.Services.AddScoped<ITenantConfigurationRepository, TenantConfigurationRepository>();
+builder.Services.AddScoped<IGeoTenantLocationRepository, GeoTenantLocationRepository>();
+builder.Services.AddScoped<IMobileTenantConfigurationRepository, MobileTenantConfigurationRepository>();
+builder.Services.AddScoped<IMobileModuleAccessService, MobileModuleAccessService>();
 
 builder.Services.AddSingleton<ISqlConnections, MobileWebApi.Data.DefaultSqlConnections>();
 builder.Services.AddScoped<IAttendanceOverviewService, AttendanceOverviewService>();
 
+builder.Services.AddScoped<IMobileDashboardService, MobileDashboardService>();
+
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<IOtpService, OtpService>();
+builder.Services.AddHttpClient();
+
+// Background cleanup for punch images.
+builder.Services.AddHostedService<BlobCleanupService>();
 
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddScoped<IEmailService, EmailService>();
@@ -122,6 +136,8 @@ builder.Services.AddSwaggerGen(c =>
 			Array.Empty<string>()
 		}
 	});
+
+	c.OperationFilter<HideMobileDashboardResponseSchemaFilter>();
 });
 
 // ----------------------
@@ -129,6 +145,18 @@ builder.Services.AddSwaggerGen(c =>
 // ----------------------
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var secretKey = jwtSettings["Key"];
+if (string.IsNullOrWhiteSpace(secretKey))
+{
+	throw new InvalidOperationException(
+		"Jwt:Key is missing or empty. Set Jwt:Key in appsettings.json, use dotnet user-secrets set \"Jwt:Key\" \"<your-secret>\", or set environment variable Jwt__Key. Use at least 32 characters.");
+}
+
+var jwtKeyBytes = Encoding.UTF8.GetBytes(secretKey);
+if (jwtKeyBytes.Length < 32)
+{
+	throw new InvalidOperationException(
+		"Jwt:Key must be at least 32 bytes when UTF-8 encoded (Microsoft.IdentityModel recommends a sufficiently long symmetric key for HMAC-SHA256).");
+}
 
 builder.Services.AddAuthentication(options =>
 {
@@ -145,7 +173,7 @@ builder.Services.AddAuthentication(options =>
 		ValidateIssuerSigningKey = true,
 		ValidIssuer = jwtSettings["Issuer"],
 		ValidAudience = jwtSettings["Audience"],
-		IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
+		IssuerSigningKey = new SymmetricSecurityKey(jwtKeyBytes)
 	};
 
 	options.Events = new JwtBearerEvents

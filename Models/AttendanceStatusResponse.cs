@@ -49,6 +49,13 @@ namespace MobileWebApi.Models
         /// Attendance date
         /// </summary>
         public DateTime date { get; set; }
+
+        public string? inSource { get; set; }
+        public string? outSource { get; set; }
+        public string? coordinateIn { get; set; }
+        public string? coordinateOut { get; set; }
+        public string? linkIn { get; set; }
+        public string? linkOut { get; set; }
     }
 }
 

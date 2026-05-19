@@ -4,6 +4,7 @@ using MobileWebApi.Constants;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using MobileWebApi.Resources;
+using MobileWebApi.Helper;
 using System;
 using System.Data;
 
@@ -61,7 +62,7 @@ namespace MobileWebApi.Services
                     return new AttendanceOverviewResponse
                     {
                         Success = false,
-                        Message = "No employee found for the specified UserId.",
+                        Message = EmployeeMessages.EmployeeNotFoundForUserId,
                         Data = null
                     };
                 }
@@ -124,7 +125,7 @@ namespace MobileWebApi.Services
                 // 3. ExpectedHours = WorkingHours × WorkingDays
                 var expectedHours = workingHours.Value * workingDays;
 
-                // 4. Fetch actual worked hours by summing Duration from Punch table
+                // 4. Actual worked hours (elapsed from PunchIn to PunchOut)
                 var actualHours = await GetActualHoursAsync(connection, employeeId.Value, request.organisationId, fromDate, toDate);
 
                 // 5. ShortfallHours = ExpectedHours − ActualHours (minimum 0)
@@ -148,11 +149,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Attendance.ErrorFetchingAttendanceOverview, request.UserId);
+                _logger.LogException(ExceptionCodes.AttendanceOverview.GetOverview, nameof(GetAttendanceOverviewAsync), ex, request.UserId);
                 return new AttendanceOverviewResponse
                 {
                     Success = false,
-                    Message = string.Format(AttendanceMessages.ErrorFetchingAttendanceOverview, ex.Message),
+                    Message = $"Something went wrong. Please contact the administration team. (Error Code: {ExceptionCodes.AttendanceOverview.GetOverview})",
                     Data = null
                 };
             }

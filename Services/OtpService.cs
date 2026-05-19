@@ -1,5 +1,6 @@
 using MobileWebApi.Interfaces;
 using MobileWebApi.Constants;
+using MobileWebApi.Helper;
 using MobileWebApi.Models;
 using Microsoft.Extensions.Caching.Memory;
 using System.Security.Cryptography;
@@ -25,174 +26,251 @@ namespace MobileWebApi.Services
 
         public string GenerateOtp(string identifier)
         {
-            // Generate a 6-digit OTP
-            string otp = GenerateRandomOtp(6);
+            try
+            {
+                // Generate a 6-digit OTP
+                string otp = GenerateRandomOtp(6);
 
-            // Store OTP in cache with expiration
-            var cacheKey = GetCacheKey(identifier);
-            _cache.Set(cacheKey, otp, _otpExpiry);
+                // Store OTP in cache with expiration
+                var cacheKey = GetCacheKey(identifier);
+                _cache.Set(cacheKey, otp, _otpExpiry);
 
-            _logger.LogInformation(LogMessages.Otp.OtpGenerated, MaskIdentifier(identifier));
+                _logger.LogInformation(LogMessages.Otp.OtpGenerated, MaskIdentifier(identifier));
 
-            return otp;
+                return otp;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ExceptionCodes.Otp.GenerateOtp, nameof(GenerateOtp), ex);
+                return string.Empty;
+            }
         }
 
         public (string otp, int resendAfterSeconds, bool canSend) GenerateMobileOtp(string mobileNumber)
         {
-            if (string.IsNullOrWhiteSpace(mobileNumber))
+            try
             {
+                if (string.IsNullOrWhiteSpace(mobileNumber))
+                {
+                    return (string.Empty, 0, false);
+                }
+
+                var cacheKey = GetMobileOtpCacheKey(mobileNumber);
+                var now = DateTime.UtcNow;
+
+                // Check if OTP already exists and resend cooldown hasn't elapsed
+                if (_cache.TryGetValue(cacheKey, out OtpCacheData? existingData))
+                {
+                    // Check rate limiting (max 5 OTPs per hour)
+                    if (existingData.FirstOtpSentAt.Add(_rateLimitWindow) > now && existingData.OtpSentCount >= _maxOtpsPerHour)
+                    {
+                        var resetTime = existingData.FirstOtpSentAt.Add(_rateLimitWindow);
+                        var remainingSeconds = (int)(resetTime - now).TotalSeconds;
+                        _logger.LogWarning(LogMessages.Otp.RateLimitExceeded,
+                            MaskIdentifier(mobileNumber), remainingSeconds);
+                        return (string.Empty, remainingSeconds, false);
+                    }
+
+                    // Check resend cooldown
+                    if (existingData.ResendAvailableAt > now)
+                    {
+                        var remainingSeconds = (int)(existingData.ResendAvailableAt - now).TotalSeconds;
+                        _logger.LogWarning(LogMessages.Otp.ResendCooldownActive,
+                            MaskIdentifier(mobileNumber), remainingSeconds);
+                        return (string.Empty, remainingSeconds, false);
+                    }
+
+                    // Reset rate limit window if hour has passed
+                    if (existingData.FirstOtpSentAt.Add(_rateLimitWindow) <= now)
+                    {
+                        existingData.FirstOtpSentAt = now;
+                        existingData.OtpSentCount = 0;
+                    }
+
+                    // Generate 6-digit numeric OTP
+                    string otpExisting = GenerateRandomOtp(6);
+
+                    // Hash OTP using SHA256
+                    string otpHashExisting = HashOtp(otpExisting);
+
+                    // Update cache data
+                    existingData.OtpHash = otpHashExisting;
+                    existingData.ExpiryTime = now.Add(_mobileOtpExpiry);
+                    existingData.ResendAvailableAt = now.Add(_resendCooldown);
+                    existingData.OtpAttemptCount = 0;
+                    existingData.OtpSentCount++;
+
+                    var cacheOptionsExisting = new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpiration = existingData.ExpiryTime
+                    };
+
+                    _cache.Set(cacheKey, existingData, cacheOptionsExisting);
+
+                    _logger.LogInformation(LogMessages.Otp.MobileOtpGenerated,
+                        MaskIdentifier(mobileNumber), (int)_resendCooldown.TotalSeconds);
+
+                    return (otpExisting, (int)_resendCooldown.TotalSeconds, true);
+                }
+
+                // Generate 6-digit numeric OTP
+                string otp = GenerateRandomOtp(6);
+
+                // Hash OTP using SHA256
+                string otpHash = HashOtp(otp);
+
+                // Create cache data
+                var cacheData = new OtpCacheData
+                {
+                    FirstOtpSentAt = now,
+                    OtpSentCount = 1,
+                    OtpHash = otpHash,
+                    ExpiryTime = now.Add(_mobileOtpExpiry),
+                    ResendAvailableAt = now.Add(_resendCooldown),
+                    OtpAttemptCount = 0
+                };
+
+                // Store in cache with expiry time
+                var cacheOptions = new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpiration = cacheData.ExpiryTime
+                };
+
+                _cache.Set(cacheKey, cacheData, cacheOptions);
+
+                _logger.LogInformation(LogMessages.Otp.MobileOtpGenerated,
+                    MaskIdentifier(mobileNumber), (int)_resendCooldown.TotalSeconds);
+
+                return (otp, (int)_resendCooldown.TotalSeconds, true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ExceptionCodes.Otp.GenerateMobileOtp, nameof(GenerateMobileOtp), ex);
                 return (string.Empty, 0, false);
             }
-
-            var cacheKey = GetMobileOtpCacheKey(mobileNumber);
-            var now = DateTime.UtcNow;
-
-            // Check if OTP already exists and resend cooldown hasn't elapsed
-            if (_cache.TryGetValue(cacheKey, out OtpCacheData? existingData))
-            {
-                // Check rate limiting (max 5 OTPs per hour)
-                if (existingData.FirstOtpSentAt.Add(_rateLimitWindow) > now && existingData.OtpSentCount >= _maxOtpsPerHour)
-                {
-                    var resetTime = existingData.FirstOtpSentAt.Add(_rateLimitWindow);
-                    var remainingSeconds = (int)(resetTime - now).TotalSeconds;
-                    _logger.LogWarning(LogMessages.Otp.RateLimitExceeded, 
-                        MaskIdentifier(mobileNumber), remainingSeconds);
-                    return (string.Empty, remainingSeconds, false);
-                }
-
-                // Check resend cooldown
-                if (existingData.ResendAvailableAt > now)
-                {
-                    var remainingSeconds = (int)(existingData.ResendAvailableAt - now).TotalSeconds;
-                    _logger.LogWarning(LogMessages.Otp.ResendCooldownActive, 
-                        MaskIdentifier(mobileNumber), remainingSeconds);
-                    return (string.Empty, remainingSeconds, false);
-                }
-
-                // Reset rate limit window if hour has passed
-                if (existingData.FirstOtpSentAt.Add(_rateLimitWindow) <= now)
-                {
-                    existingData.FirstOtpSentAt = now;
-                    existingData.OtpSentCount = 0;
-                }
-            }
-
-            // Generate 6-digit numeric OTP
-            string otp = GenerateRandomOtp(6);
-
-            // Hash OTP using SHA256
-            string otpHash = HashOtp(otp);
-
-            // Create or update cache data
-            var cacheData = existingData ?? new OtpCacheData
-            {
-                FirstOtpSentAt = now,
-                OtpSentCount = 0
-            };
-
-            cacheData.OtpHash = otpHash;
-            cacheData.ExpiryTime = now.Add(_mobileOtpExpiry);
-            cacheData.ResendAvailableAt = now.Add(_resendCooldown);
-            cacheData.OtpAttemptCount = 0;
-            cacheData.OtpSentCount++;
-
-            // Store in cache with expiry time
-            var cacheOptions = new MemoryCacheEntryOptions
-            {
-                AbsoluteExpiration = cacheData.ExpiryTime
-            };
-
-            _cache.Set(cacheKey, cacheData, cacheOptions);
-
-            _logger.LogInformation(LogMessages.Otp.MobileOtpGenerated, 
-                MaskIdentifier(mobileNumber), (int)_resendCooldown.TotalSeconds);
-
-            return (otp, (int)_resendCooldown.TotalSeconds, true);
         }
 
         public bool ValidateOtp(string identifier, string otp)
         {
-            var cacheKey = GetCacheKey(identifier);
-
-            if (_cache.TryGetValue(cacheKey, out string? storedOtp))
+            try
             {
-                return string.Equals(storedOtp, otp, StringComparison.OrdinalIgnoreCase);
-            }
+                var cacheKey = GetCacheKey(identifier);
 
-            return false;
+                if (_cache.TryGetValue(cacheKey, out string? storedOtp))
+                {
+                    return string.Equals(storedOtp, otp, StringComparison.OrdinalIgnoreCase);
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ExceptionCodes.Otp.ValidateOtp, nameof(ValidateOtp), ex);
+                return false;
+            }
         }
 
         public bool ValidateMobileOtp(string mobileNumber, string otp)
         {
-            if (string.IsNullOrWhiteSpace(mobileNumber) || string.IsNullOrWhiteSpace(otp))
+            try
             {
+                if (string.IsNullOrWhiteSpace(mobileNumber) || string.IsNullOrWhiteSpace(otp))
+                {
+                    return false;
+                }
+
+                var cacheKey = GetMobileOtpCacheKey(mobileNumber);
+
+                if (!_cache.TryGetValue(cacheKey, out OtpCacheData? cacheData))
+                {
+                    _logger.LogWarning(LogMessages.Otp.MobileOtpNotFoundOrExpired, MaskIdentifier(mobileNumber));
+                    return false;
+                }
+
+                // Check if OTP has expired
+                if (DateTime.UtcNow > cacheData.ExpiryTime)
+                {
+                    _cache.Remove(cacheKey);
+                    _logger.LogWarning(LogMessages.Otp.MobileOtpExpired, MaskIdentifier(mobileNumber));
+                    return false;
+                }
+
+                // Increment attempt count
+                cacheData.OtpAttemptCount++;
+
+                // Hash the incoming OTP and compare
+                string otpHash = HashOtp(otp);
+                bool isValid = cacheData.OtpHash.Equals(otpHash, StringComparison.Ordinal);
+
+                if (isValid)
+                {
+                    // Remove OTP from cache on successful validation
+                    _cache.Remove(cacheKey);
+                    _logger.LogInformation(LogMessages.Otp.MobileOtpValidatedSuccessfully, MaskIdentifier(mobileNumber));
+                }
+                else
+                {
+                    _logger.LogWarning(LogMessages.Otp.InvalidMobileOtpAttempt,
+                        cacheData.OtpAttemptCount, MaskIdentifier(mobileNumber));
+                }
+
+                return isValid;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ExceptionCodes.Otp.ValidateMobileOtp, nameof(ValidateMobileOtp), ex);
                 return false;
             }
-
-            var cacheKey = GetMobileOtpCacheKey(mobileNumber);
-
-            if (!_cache.TryGetValue(cacheKey, out OtpCacheData? cacheData))
-            {
-                _logger.LogWarning(LogMessages.Otp.MobileOtpNotFoundOrExpired, MaskIdentifier(mobileNumber));
-                return false;
-            }
-
-            // Check if OTP has expired
-            if (DateTime.UtcNow > cacheData.ExpiryTime)
-            {
-                _cache.Remove(cacheKey);
-                _logger.LogWarning(LogMessages.Otp.MobileOtpExpired, MaskIdentifier(mobileNumber));
-                return false;
-            }
-
-            // Increment attempt count
-            cacheData.OtpAttemptCount++;
-
-            // Hash the incoming OTP and compare
-            string otpHash = HashOtp(otp);
-            bool isValid = cacheData.OtpHash.Equals(otpHash, StringComparison.Ordinal);
-
-            if (isValid)
-            {
-                // Remove OTP from cache on successful validation
-                _cache.Remove(cacheKey);
-                _logger.LogInformation(LogMessages.Otp.MobileOtpValidatedSuccessfully, MaskIdentifier(mobileNumber));
-            }
-            else
-            {
-                _logger.LogWarning(LogMessages.Otp.InvalidMobileOtpAttempt, 
-                    cacheData.OtpAttemptCount, MaskIdentifier(mobileNumber));
-            }
-
-            return isValid;
         }
 
         public void RemoveOtp(string identifier)
         {
-            var cacheKey = GetCacheKey(identifier);
-            _cache.Remove(cacheKey);
+            try
+            {
+                var cacheKey = GetCacheKey(identifier);
+                _cache.Remove(cacheKey);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ExceptionCodes.Otp.RemoveOtp, nameof(RemoveOtp), ex);
+            }
         }
 
         public void RemoveMobileOtp(string mobileNumber)
         {
-            var cacheKey = GetMobileOtpCacheKey(mobileNumber);
-            _cache.Remove(cacheKey);
+            try
+            {
+                var cacheKey = GetMobileOtpCacheKey(mobileNumber);
+                _cache.Remove(cacheKey);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ExceptionCodes.Otp.RemoveMobileOtp, nameof(RemoveMobileOtp), ex);
+            }
         }
 
         public int GetResendCooldownSeconds(string mobileNumber)
         {
-            var cacheKey = GetMobileOtpCacheKey(mobileNumber);
-            
-            if (_cache.TryGetValue(cacheKey, out OtpCacheData? cacheData))
+            try
             {
-                var now = DateTime.UtcNow;
-                if (cacheData.ResendAvailableAt > now)
-                {
-                    return (int)(cacheData.ResendAvailableAt - now).TotalSeconds;
-                }
-            }
+                var cacheKey = GetMobileOtpCacheKey(mobileNumber);
 
-            return 0;
+                if (_cache.TryGetValue(cacheKey, out OtpCacheData? cacheData))
+                {
+                    var now = DateTime.UtcNow;
+                    if (cacheData.ResendAvailableAt > now)
+                    {
+                        return (int)(cacheData.ResendAvailableAt - now).TotalSeconds;
+                    }
+                }
+
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ExceptionCodes.Otp.GetResendCooldownSeconds, nameof(GetResendCooldownSeconds), ex);
+                return 0;
+            }
         }
 
         private static string GenerateRandomOtp(int length)

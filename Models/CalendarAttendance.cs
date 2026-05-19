@@ -28,6 +28,13 @@ namespace MobileWebApi.Models
         public double? WorkingHours { get; set; }
         public string? Status { get; set; } // "Present", "Absent", "Leave", "Holiday", "Weekend", "Future"
         public string? Remarks { get; set; }
+        public string? InSource { get; set; }
+        public string? OutSource { get; set; }
+        public string? CoordinateIn { get; set; }
+        public string? CoordinateOut { get; set; }
+        public string? LinkIn { get; set; }
+        public string? LinkOut { get; set; }
+        public string? ImageUrl { get; set; }
     }
 
     /// <summary>

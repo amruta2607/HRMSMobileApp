@@ -1,6 +1,7 @@
-﻿using MobileWebApi.Interfaces;
+using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using MobileWebApi.Constants;
+using MobileWebApi.Helper;
 
 namespace MobileWebApi.Services
 {
@@ -71,7 +72,7 @@ namespace MobileWebApi.Services
                 return new PersonalDetailServiceResponse
                 {
                     Success = false,
-                    Message = string.Format(EmployeeMessages.ErrorRetrievingEmployee, ex.Message),
+                    Message = EmployeeMessages.ErrorRetrievingEmployee,
                     Data = null
                 };
             }
@@ -119,11 +120,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Employee.ErrorRetrievingEmployeeByUser, userId);
+                _logger.LogException(ExceptionCodes.Employee.GetLoggedInEmployee, nameof(GetLoggedInEmployeeAsync), ex);
                 return new PersonalDetailServiceResponse
                 {
                     Success = false,
-                    Message = string.Format(EmployeeMessages.ErrorRetrievingEmployee, ex.Message),
+                    Message = EmployeeMessages.ErrorRetrievingEmployee,
                     Data = null
                 };
             }
@@ -147,11 +148,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Employee.ErrorRetrievingEmployeesByBranch, branchId);
+                _logger.LogException(ExceptionCodes.Employee.GetEmployeesByBranch, nameof(GetEmployeesByBranchAsync), ex);
                 return new PersonalDetailListResponse
                 {
                     Success = false,
-                    Message = string.Format(EmployeeMessages.ErrorRetrievingEmployee, ex.Message),
+                    Message = EmployeeMessages.ErrorRetrievingEmployee,
                     Data = null,
                     TotalRecords = 0
                 };
@@ -176,11 +177,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Employee.ErrorRetrievingEmployeesByBranch, branchId);
+                _logger.LogException(ExceptionCodes.Employee.GetEmployeesByBranchExceptUser, nameof(GetEmployeesByBranchExceptUserAsync), ex);
                 return new PersonalDetailListResponse
                 {
                     Success = false,
-                    Message = string.Format(EmployeeMessages.ErrorRetrievingEmployee, ex.Message),
+                    Message = EmployeeMessages.ErrorRetrievingEmployee,
                     Data = null,
                     TotalRecords = 0
                 };
@@ -317,11 +318,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Employee.ErrorAddingEmployee);
+                _logger.LogException(ExceptionCodes.Employee.AddEmployee, nameof(AddEmployeeAsync), ex);
                 return new PersonalDetailServiceResponse
                 {
                     Success = false,
-                    Message = string.Format(EmployeeMessages.ErrorAddingEmployee, ex.Message),
+                    Message = EmployeeMessages.ErrorAddingEmployee,
                     Data = null
                 };
             }
@@ -447,11 +448,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Employee.ErrorUpdatingEmployee, request.EmployeeId);
+                _logger.LogException(ExceptionCodes.Employee.UpdateEmployee, nameof(UpdateEmployeeAsync), ex);
                 return new PersonalDetailServiceResponse
                 {
                     Success = false,
-                    Message = string.Format(EmployeeMessages.ErrorUpdatingEmployee, ex.Message),
+                    Message = EmployeeMessages.ErrorUpdatingEmployee,
                     Data = null
                 };
             }
@@ -468,7 +469,7 @@ namespace MobileWebApi.Services
                     return new PersonalDetailServiceResponse
                     {
                         Success = false,
-                        Message = "Employee not found for the given user",
+                        Message = EmployeeMessages.EmployeeNotFoundForGivenUser,
                         Data = null
                     };
                 }
@@ -480,7 +481,7 @@ namespace MobileWebApi.Services
                     return new PersonalDetailServiceResponse
                     {
                         Success = false,
-                        Message = "UserId is required.",
+                        Message = UserMessages.UserIdRequired,
                         Data = null
                     };
                 }
@@ -503,7 +504,7 @@ namespace MobileWebApi.Services
                     return new PersonalDetailServiceResponse
                     {
                         Success = false,
-                        Message = "At least one field (Phone or Picture) must be provided for update.",
+                        Message = EmployeeMessages.PhoneOrPictureRequiredForUpdate,
                         Data = null
                     };
                 }
@@ -548,11 +549,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Employee.ErrorUpdatingEmployee, request.UserId);
+                _logger.LogException(ExceptionCodes.Employee.UpdateEmployeePhoneAndPicture, nameof(UpdateEmployeePhoneAndPictureAsync), ex);
                 return new PersonalDetailServiceResponse
                 {
                     Success = false,
-                    Message = string.Format(EmployeeMessages.ErrorUpdatingEmployee, ex.Message),
+                    Message = EmployeeMessages.ErrorUpdatingEmployee,
                     Data = null
                 };
             }
@@ -569,7 +570,7 @@ namespace MobileWebApi.Services
                     return new PersonalDetailServiceResponse
                     {
                         Success = false,
-                        Message = "Employee not found for the given user",
+                        Message = EmployeeMessages.EmployeeNotFoundForGivenUser,
                         Data = null
                     };
                 }
@@ -608,11 +609,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Employee.ErrorDeletingEmployee, userId);
+                _logger.LogException(ExceptionCodes.Employee.DeleteEmployee, nameof(DeleteEmployeeAsync), ex);
                 return new PersonalDetailServiceResponse
                 {
                     Success = false,
-                    Message = string.Format(EmployeeMessages.ErrorDeletingEmployee, ex.Message),
+                    Message = EmployeeMessages.ErrorDeletingEmployee,
                     Data = null
                 };
             }
@@ -671,11 +672,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Employee.ErrorDeactivatingEmployee, id);
+                _logger.LogException(ExceptionCodes.Employee.DeactivateEmployee, nameof(DeactivateEmployeeAsync), ex);
                 return new PersonalDetailServiceResponse
                 {
                     Success = false,
-                    Message = string.Format(EmployeeMessages.ErrorDeactivatingEmployee, ex.Message),
+                    Message = EmployeeMessages.ErrorDeactivatingEmployee,
                     Data = null
                 };
             }

@@ -1,4 +1,5 @@
 using MobileWebApi.Models;
+using MobileWebApi.Repositories;
 
 namespace MobileWebApi.Interfaces
 {
@@ -25,9 +26,12 @@ namespace MobileWebApi.Interfaces
         Task<(int? EmployeeId, int? TenantId)> GetEmployeeIdAndTenantByUserIdAsync(int userId);
 		Task<(decimal MyShare, decimal EmployerShare)>GetEmployeeProvidentFundSummaryAsync(int employeeId, int tenantId);
 		Task<MonthlyPaymentSummary?> GetMonthlyPaymentSummaryAsync(int employeeId,int tenantId,int month,int year);
+		Task<MonthlyPaymentSummary?> GetMonthlyPaymentSummaryPublishedAsync(int employeeId,int tenantId,int month,int year);
 
-
+		Task<(int Month, int Year)?>GetLatestPayrollPeriodAsync(int employeeId,int tenantId);
 		Task<IEnumerable<PaySlipLineItem>> GetPaySlipIncomesAsync(int paySlipId);
 		Task<IEnumerable<PaySlipLineItem>> GetPaySlipDeductionsAsync(int paySlipId);
+		Task<PaySlipWithWeekOff?> GetPaySlipWithWeekOffAsync(int employeeId, int tenantId, int month, int year);
+		Task<IEnumerable<PaySlipMonthItem>> GetPaySlipMonthsByYearAsync(int employeeId, int tenantId, int year);
 	}
 }

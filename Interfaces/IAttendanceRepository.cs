@@ -1,4 +1,4 @@
-﻿using MobileWebApi.Models;
+using MobileWebApi.Models;
 
 namespace MobileWebApi.Interfaces
 {
@@ -6,8 +6,25 @@ namespace MobileWebApi.Interfaces
     {
         Task<Punch?> GetPunchByEmployeeAndDate(int employeeId, DateTime punchDate);
         Task<Punch?> GetPunchByEmployeeAndDateWithTenant(int employeeId, DateTime punchDate, int tenantId);
-        Task<int> InsertPunchIn(int employeeId, DateTime punchIn, DateTime punchDate);
-        Task UpdatePunchOut(int employeeId, DateTime punchOut, DateTime punchDate, double? duration);
+        Task<Punch?> GetOpenPunchByEmployeeId(int employeeId);
+        Task<int> InsertPunchIn(
+            int employeeId,
+            DateTime punchIn,
+            DateTime punchDate,
+            string inSource,
+            string? coordinateIn,
+            string? linkIn,
+            string? imageUrl);
+        Task UpdatePunchOut(
+            int punchId,
+            DateTime punchOut,
+            double? duration,
+            string outSource,
+            string? coordinateOut,
+            string? linkOut,
+            string? imageUrl);
+        Task<List<DateTime>> GetHolidayDatesAsync(int tenantId, DateTime fromDate, DateTime toDate);
+        Task<List<(DateTime FromDate, DateTime ToDate)>> GetApprovedLeaveDateRangesAsync(int employeeId, DateTime fromDate, DateTime toDate);
         
         // Attendance Report Methods
         Task<IEnumerable<AttendanceReport>> GetAttendanceReportAsync(AttendanceReportRequest request);
@@ -31,5 +48,9 @@ namespace MobileWebApi.Interfaces
         // Delete Attendance
         Task<Punch?> GetPunchByIdAsync(int id, int tenantId);
         Task<bool> DeletePunchAsync(int id, int tenantId);
+
+        // Today punch logs (DeviceLog + Punch table)
+        Task<IEnumerable<TodayPunchLogItem>> GetTodayPunchLogsAsync(string biometricNumber, DateTime date);
+        Task<IEnumerable<TodayPunchLogItem>> GetTodayPunchLogsFromPunchAsync(int employeeId, int tenantId, DateTime date);
     }
 }

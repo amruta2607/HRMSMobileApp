@@ -26,6 +26,7 @@ namespace MobileWebApi.Interfaces
         Task<string?> GenerateLeaveRequestNumberAsync(int organisationId);
 		Task<List<int>> GetTenantDayOffsAsync(int organisationId);
 		Task<List<Holiday>> GetHolidaysAsync(int organisationId, DateTime fromDate, DateTime toDate);
+		Task<int> GetTotalLeaveAllocationForEmployeeAsync(int employeeId);
 	}
 }
 

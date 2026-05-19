@@ -26,10 +26,15 @@ namespace MobileWebApi.Constants
             public const string ErrorDeletingUser = "Error deleting user with ID {UserId}";
             public const string ErrorDeactivatingUser = "Error deactivating user with ID {UserId}";
             public const string ErrorFetchingUsersByOrganisationId = "Error fetching users by OrganisationId.";
-        }
 
-        // Employee related logs
-        public static class Employee
+			public const string ErrorFetchingTenantConfigurationByOrganisationId = "Error fetching TenantConfiguration by OrganisationId.";
+			public const string RetrievingCompanyLogoForOrganisation = "Retrieving company logo for organisation: {OrganisationId}";
+
+
+		}
+
+		// Employee related logs
+		public static class Employee
         {
             public const string RetrievingEmployeeById = "Retrieving employee with ID: {Id}";
             public const string RetrievingEmployeeByUserId = "Retrieving employee for user: {UserId}";
@@ -103,6 +108,8 @@ namespace MobileWebApi.Constants
             public const string ErrorGettingAttendanceStatus = "Error getting attendance status for employee {EmployeeId} on date {Date}";
             public const string GettingAttendanceOverview = "Getting attendance overview for employee {EmployeeId}, tenant {TenantId}, from {FromDate} to {ToDate}";
             public const string ErrorFetchingAttendanceOverview = "Error fetching attendance overview for employee {EmployeeId}";
+            public const string InvalidDateForOperation = "Invalid date for {OperationType}: Requested date {RequestDate} does not match today's date {TodayDate}";
+            public const string FetchingTodayPunchLogs = "Fetching today's punch logs for user {UserId}";
         }
 
         // Leave related logs
@@ -112,6 +119,7 @@ namespace MobileWebApi.Constants
             public const string FetchingLeaveRequests = "Fetching leave requests";
             public const string FetchingLeaveRequestById = "Fetching leave request with ID: {Id}";
             public const string FetchingLeaveRequestsByFilter = "Fetching leave requests for user {UserId}, organization {OrganizationId}, status {Status}";
+            public const string FetchingLeaveHistory = "Fetching leave history for user: {UserId}";
             public const string ApprovingLeaveRequest = "Approving leave request with ID: {Id}";
             public const string RejectingLeaveRequest = "Rejecting leave request with ID: {Id}";
             public const string CancellingLeaveRequest = "Cancelling leave request with ID: {Id}";
@@ -223,6 +231,12 @@ namespace MobileWebApi.Constants
             public const string ErrorFetchingPaySlips = "Error fetching pay slips";
             public const string ErrorFetchingPaySlipById = "Error fetching pay slip by ID";
             public const string ErrorDownloadingPaySlip = "Error downloading pay slip";
+            public const string ErrorFetchingProvidentFund = "Error fetching Provident Fund";
+            public const string ErrorFetchingMonthlyPaymentSummary = "Error fetching monthly payment summary";
+            public const string ErrorFetchingLastMonthPayroll = "Error fetching last month payroll";
+            public const string ErrorDownloadingPaySlipByMonthYear = "Error downloading payslip by month/year";
+            public const string ErrorFetchingPaySlipYears = "Error fetching payslip years";
+            public const string ErrorFetchingPaySlipMonthsForYear = "Error fetching payslip months for year {Year}";
         }
 
         // General logs
@@ -349,6 +363,7 @@ namespace MobileWebApi.Constants
             public const string ApprovalWorkflowInitiated = "Approval workflow initiated for leave request {LeaveRequestId}. EventId: {EventId}";
             public const string FailedToInitiateWorkflow = "Failed to initiate approval workflow for leave request {LeaveRequestId}: {Message}";
             public const string WorkflowNotConfigured = "Error initiating approval workflow for leave request {LeaveRequestId}. Workflow may not be configured.";
+            public const string ApprovalWorkflowNotConfigured = "Approval workflow not configured";
             public const string ErrorExtractingEventDetails = "Error extracting event details for event {EventId}";
             public const string ErrorUpdatingPayrollApprovalStatus = "Error updating payroll approval status for PayrollId {PayrollId} and TenantId {TenantId}";
         }
@@ -366,6 +381,15 @@ namespace MobileWebApi.Constants
             public const string ErrorUpdatingHoliday = "Error updating holiday";
             public const string ErrorDeletingHoliday = "Error deleting holiday";
             public const string ErrorCreatingBulkHolidays = "Error creating bulk holidays";
+        }
+
+        // Mobile dashboard (events/announcements/holidays) logs
+        public static class MobileDashboard
+        {
+            public const string ErrorFetchingLatestEvents = "Error fetching latest events for mobile dashboard.";
+            public const string ErrorFetchingLatestAnnouncements = "Error fetching latest announcements for mobile dashboard.";
+            public const string ErrorFetchingLatestHolidays = "Error fetching latest holidays for mobile dashboard.";
+            public const string ErrorFetchingLatestTrainings = "Error fetching latest trainings for mobile dashboard.";
         }
 
         // Dispute related logs
@@ -436,6 +460,30 @@ namespace MobileWebApi.Constants
             public const string UsingSharedUploadRootPath = "Using shared upload root path from configuration: {Path}";
         }
 
+        // Azure Blob related logs (Punch image upload + cleanup)
+        public static class AzureBlob
+        {
+            // Configuration / initialization
+            public const string NotConfiguredUploadDisabled = "AzureBlob is not configured. Punch image upload will be disabled.";
+            public const string NotConfiguredCleanupDisabled = "AzureBlob is not configured. Blob cleanup job will be disabled.";
+            public const string InvalidConnectionStringCleanupDisabled = "Invalid AzureBlob:ConnectionString format. Blob cleanup job will be disabled.";
+            public const string InvalidConnectionStringUploadDisabled = "Invalid AzureBlob:ConnectionString format. Punch image upload will be disabled.";
+            public const string InitFailedCleanupDisabled = "Failed to initialize AzureBlob client. Blob cleanup job will be disabled.";
+            public const string InitFailedUploadDisabled = "Failed to initialize AzureBlob client. Punch image upload will be disabled.";
+
+            // Upload
+            public const string UploadingPunchImage = "Uploading punch image to blob '{BlobName}' for employee {EmpId}.";
+            public const string PunchImageUploadedSuccessfully = "Punch image uploaded successfully for employee {EmpId}. Url: {BlobUrl}";
+            public const string ErrorUploadingPunchImage = "Error uploading punch image for employee {EmpId}.";
+
+            // Cleanup job
+            public const string CleanupServiceDisabled = "BlobCleanupService is disabled due to missing/invalid AzureBlob configuration.";
+            public const string CleanupServiceStarted = "BlobCleanupService started. RetentionDays={RetentionDays}";
+            public const string CleanupRunFailed = "Blob cleanup run failed.";
+            public const string ContainerDoesNotExistSkippingCleanup = "Blob container does not exist. Skipping cleanup.";
+            public const string CleanupCompleted = "Blob cleanup completed. Checked={CheckedCount}, Deleted={DeletedCount}, CutoffUtc={CutoffUtc}";
+        }
+
         // Employee resolution logs (shared across services)
         public static class EmployeeResolution
         {
@@ -457,6 +505,7 @@ namespace MobileWebApi.Constants
             public const string Msg91ApiReturnedSuccessButFailure = "MSG91 API returned success status but response indicates failure. Response: {Response}";
             public const string Msg91ApiReturnedError = "MSG91 API returned error. Status: {Status}, Response: {Response}";
             public const string ExceptionWhileSendingSmsViaMsg91 = "Exception while sending SMS via MSG91 to {MobileNumber}";
+            public const string SmsResponseBody = "SMS Response: {Body}";
         }
 
         // Tenant Context related logs
@@ -494,6 +543,7 @@ namespace MobileWebApi.Constants
         {
             public const string UserNotFoundForUserId = "User not found for user_id: {UserId}";
             public const string OrganizationIdRequired = "Organization ID is required for getting holidays. Provide either organization_id or user_id parameter.";
+            public const string InvalidHolidayIdLog = "Invalid holiday ID";
         }
 
         // Middleware related logs

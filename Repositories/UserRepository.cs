@@ -1,4 +1,4 @@
-﻿using Dapper;
+using Dapper;
 using MobileWebApi.Data;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
@@ -30,18 +30,23 @@ namespace MobileWebApi.Repositories
             if (string.IsNullOrWhiteSpace(login))
                 return null;
 
-            string query = _queryProvider.Get("GetUserByUsernameOrMobile");
-            if (string.IsNullOrWhiteSpace(query))
+            try
             {
-                _logger.LogError("SQL query 'GetUserByUsernameOrMobile' not found in configuration");
-                throw new InvalidOperationException("SQL query 'GetUserByUsernameOrMobile' not found in configuration");
-            }
+                string query = _queryProvider.Get("GetUserByUsernameOrMobile");
 
-            using var connection = _context.CreateConnection();
-            return await connection.QueryFirstOrDefaultAsync<User>(
-                query,
-                new { Login = login }
-            );
+                using var connection = _context.CreateConnection();
+                return await connection.QueryFirstOrDefaultAsync<User>(
+                    query,
+                    new { Login = login }
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetUserByUsernameOrMobileAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.UserGetUserByUsernameOrMobileDatabaseError}: Failed to fetch user by username or mobile",
+                    ex);
+            }
         }
 
         public async Task<User?> GetUserByUsernameForWebLoginAsync(string username)
@@ -49,35 +54,50 @@ namespace MobileWebApi.Repositories
             if (string.IsNullOrWhiteSpace(username))
                 return null;
 
-            string query = _queryProvider.Get("GetUserByUsernameForWebLogin");
-            if (string.IsNullOrWhiteSpace(query))
+            try
             {
-                _logger.LogError("SQL query 'GetUserByUsernameForWebLogin' not found in configuration");
-                throw new InvalidOperationException("SQL query 'GetUserByUsernameForWebLogin' not found in configuration");
+                string query = _queryProvider.Get("GetUserByUsernameForWebLogin");
+
+                using var connection = _context.CreateConnection();
+                return await connection.QueryFirstOrDefaultAsync<User>(
+                    query,
+                    new { Username = username }
+                );
             }
-
-            using var connection = _context.CreateConnection();
-            return await connection.QueryFirstOrDefaultAsync<User>(
-                query,
-                new { Username = username }
-            );
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetUserByUsernameForWebLoginAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.UserGetUserByUsernameForWebLoginDatabaseError}: Failed to fetch user by username for web login",
+                    ex);
+            }
         }
-		public async Task<User?> GetUserByEmailAsync(string email)
-		{
-			if (string.IsNullOrWhiteSpace(email))
-				return null;
+        public async Task<User?> GetUserByEmailAsync(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return null;
 
-			string query = _queryProvider.Get("GetUserByEmail");
+            try
+            {
+                string query = _queryProvider.Get("GetUserByEmail");
 
-			if (string.IsNullOrWhiteSpace(query))
-				throw new InvalidOperationException("SQL query 'GetUserByEmail' not found.");
+                if (string.IsNullOrWhiteSpace(query))
+                    throw new InvalidOperationException("SQL query 'GetUserByEmail' not found.");
 
-			using var connection = _context.CreateConnection();
-			return await connection.QueryFirstOrDefaultAsync<User>(
-				query,
-				new { Email = email.Trim() }
-			);
-		}
+                using var connection = _context.CreateConnection();
+                return await connection.QueryFirstOrDefaultAsync<User>(
+                    query,
+                    new { Email = email.Trim() }
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetUserByEmailAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.UserGetUserByEmailDatabaseError}: Failed to fetch user by email",
+                    ex);
+            }
+        }
 
 		//public async Task<User?> GetUserByEmailAsync(string email)
 		//      {
@@ -93,23 +113,28 @@ namespace MobileWebApi.Repositories
 		//          );
 		//      }
 
-		public async Task<User?> GetUserByMobileAsync(string mobileNumber)
+        public async Task<User?> GetUserByMobileAsync(string mobileNumber)
         {
             if (string.IsNullOrWhiteSpace(mobileNumber))
                 return null;
 
-            string query = _queryProvider.Get("GetUserByMobile");
-            if (string.IsNullOrWhiteSpace(query))
+            try
             {
-                _logger.LogError("SQL query 'GetUserByMobile' not found in configuration");
-                throw new InvalidOperationException("SQL query 'GetUserByMobile' not found in configuration");
-            }
+                string query = _queryProvider.Get("GetUserByMobile");
 
-            using var connection = _context.CreateConnection();
-            return await connection.QueryFirstOrDefaultAsync<User>(
-                query,
-                new { MobileNumber = mobileNumber }
-            );
+                using var connection = _context.CreateConnection();
+                return await connection.QueryFirstOrDefaultAsync<User>(
+                    query,
+                    new { MobileNumber = mobileNumber }
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetUserByMobileAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.UserGetUserByMobileDatabaseError}: Failed to fetch user by mobile",
+                    ex);
+            }
         }
 
         public async Task<IEnumerable<User>> GetAllAsync(int organisationId)
@@ -127,126 +152,183 @@ namespace MobileWebApi.Repositories
             catch (Exception ex)
             {
                 _logger.LogError(ex, LogMessages.User.ErrorFetchingUsersByOrganisationId);
-                throw;
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.UserGetAllUsersByOrganisationDatabaseError}: Failed to fetch users by organisation id",
+                    ex);
             }
         }
 
         public async Task<User?> GetUserByIdAsync(int userId)
         {
-            using var connection = _context.CreateConnection();
-
-            string query = _queryProvider.Get("GetUserById");
-            if (string.IsNullOrWhiteSpace(query))
+            try
             {
-                _logger.LogError("SQL query 'GetUserById' not found in configuration");
-                throw new InvalidOperationException("SQL query 'GetUserById' not found in configuration");
-            }
+                using var connection = _context.CreateConnection();
 
-            return await connection.QueryFirstOrDefaultAsync<User>(query, new { UserId = userId });
+                string query = _queryProvider.Get("GetUserById");
+
+                return await connection.QueryFirstOrDefaultAsync<User>(query, new { UserId = userId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetUserByIdAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.UserGetUserByIdDatabaseError}: Failed to fetch user by id",
+                    ex);
+            }
         }
 
         public async Task<int> CreateUserAsync(UserCreateRequest request)
         {
-            using var connection = _context.CreateConnection();
-
-            // Convert WorkRoleName → WorkRoleId
-            int workRoleId = 0;
-            if (!string.IsNullOrEmpty(request.WorkRoleName))
+            try
             {
-                workRoleId = await connection.QueryFirstOrDefaultAsync<int>(
-                    _queryProvider.Get("GetWorkRoleIdByName"),
-                    new { WorkRoleName = request.WorkRoleName });
-            }
+                using var connection = _context.CreateConnection();
 
-            // Generate password hash and salt
-            string salt = PasswordHelper.GenerateSalt();
-            string passwordHash = PasswordHelper.HashPassword(request.Password, salt);
-
-            var userId = await connection.QuerySingleAsync<int>(
-                _queryProvider.Get("CreateUser"),
-                new
+                // Convert WorkRoleName → WorkRoleId
+                int workRoleId = 0;
+                if (!string.IsNullOrEmpty(request.WorkRoleName))
                 {
-                    request.Username,
-                    request.DisplayName,
-                    request.Email,
-                    request.MobileNumber,
-                    request.PinNumber,
-                    PasswordHash = passwordHash,
-                    PasswordSalt = salt,
-                    WorkRoleId = workRoleId,
-                    OrganisationId = request.organization,
-                    BranchId = request.branch,
-                    request.IsHrUser,
-                    request.IsTenantAdmin,
-                    request.IsActive
-                });
+                    workRoleId = await connection.QueryFirstOrDefaultAsync<int>(
+                        _queryProvider.Get("GetWorkRoleIdByName"),
+                        new { WorkRoleName = request.WorkRoleName });
+                }
 
-            return userId;
+                // Generate password hash and salt
+                string salt = PasswordHelper.GenerateSalt();
+                string passwordHash = PasswordHelper.HashPassword(request.Password, salt);
+
+                var userId = await connection.QuerySingleAsync<int>(
+                    _queryProvider.Get("CreateUser"),
+                    new
+                    {
+                        request.Username,
+                        request.DisplayName,
+                        request.Email,
+                        request.MobileNumber,
+                        request.PinNumber,
+                        PasswordHash = passwordHash,
+                        PasswordSalt = salt,
+                        WorkRoleId = workRoleId,
+                        OrganisationId = request.organization,
+                        BranchId = request.branch,
+                        request.IsHrUser,
+                        request.IsTenantAdmin,
+                        request.IsActive
+                    });
+
+                return userId;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(CreateUserAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.UserCreateUserDatabaseError}: Failed to create user",
+                    ex);
+            }
         }
 
         public async Task<bool> UpdateUserAsync(UserUpdateRequest request)
         {
-            using var connection = _context.CreateConnection();
-
-            // Convert WorkRoleName → WorkRoleId
-            int workRoleId = 0;
-            if (!string.IsNullOrEmpty(request.WorkRoleName))
+            try
             {
-                workRoleId = await connection.QueryFirstOrDefaultAsync<int>(
-                    _queryProvider.Get("GetWorkRoleIdByName"),
-                    new { request.WorkRoleName });
+                using var connection = _context.CreateConnection();
 
-                if (workRoleId <= 0)
-                    throw new Exception("Invalid WorkRoleName");
-            }
-
-            var rowsAffected = await connection.ExecuteAsync(
-                _queryProvider.Get("UpdateUser"),
-                new
+                // Convert WorkRoleName → WorkRoleId
+                int workRoleId = 0;
+                if (!string.IsNullOrEmpty(request.WorkRoleName))
                 {
-                    request.UserId,
-                    DisplayName = request.DisplayName,
-                    EmailId = request.email_id,
-                    MobileNumber = request.mobile_number,
-                    PinNumber = request.password,
-                    WorkRoleId = workRoleId,
-                    request.IsActive
-                });
+                    workRoleId = await connection.QueryFirstOrDefaultAsync<int>(
+                        _queryProvider.Get("GetWorkRoleIdByName"),
+                        new { request.WorkRoleName });
 
-            return rowsAffected > 0;
+                    if (workRoleId <= 0)
+                        throw new Exception("Invalid WorkRoleName");
+                }
+
+                var rowsAffected = await connection.ExecuteAsync(
+                    _queryProvider.Get("UpdateUser"),
+                    new
+                    {
+                        request.UserId,
+                        DisplayName = request.DisplayName,
+                        EmailId = request.email_id,
+                        MobileNumber = request.mobile_number,
+                        PinNumber = request.password,
+                        WorkRoleId = workRoleId,
+                        request.IsActive
+                    });
+
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(UpdateUserAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.UserUpdateUserDatabaseError}: Failed to update user",
+                    ex);
+            }
         }
 
         public async Task<bool> DeleteUserAsync(int userId)
         {
-            using var connection = _context.CreateConnection();
+            try
+            {
+                using var connection = _context.CreateConnection();
 
-            var rowsAffected = await connection.ExecuteAsync(
-                _queryProvider.Get("DeleteUser"),
-                new { UserId = userId });
+                var rowsAffected = await connection.ExecuteAsync(
+                    _queryProvider.Get("DeleteUser"),
+                    new { UserId = userId });
 
-            return rowsAffected > 0;
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(DeleteUserAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.UserDeleteUserDatabaseError}: Failed to delete user",
+                    ex);
+            }
         }
 
         public async Task<bool> DeactivateUserAsync(int userId)
         {
-            using var connection = _context.CreateConnection();
+            try
+            {
+                using var connection = _context.CreateConnection();
 
-            var rowsAffected = await connection.ExecuteAsync(
-                _queryProvider.Get("DeactivateUser"),
-                new { UserId = userId });
+                var rowsAffected = await connection.ExecuteAsync(
+                    _queryProvider.Get("DeactivateUser"),
+                    new { UserId = userId });
 
-            return rowsAffected > 0;
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(DeactivateUserAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.UserDeactivateUserDatabaseError}: Failed to deactivate user",
+                    ex);
+            }
         }
 
         public async Task<bool> UpdatePasswordAsync(int userId, string passwordHash, string passwordSalt)
         {
-            using var connection = _context.CreateConnection();
+            try
+            {
+                using var connection = _context.CreateConnection();
 
-            var rowsAffected = await connection.ExecuteAsync(
-                _queryProvider.Get("UpdatePassword"),
-                new { UserId = userId, PasswordHash = passwordHash, PasswordSalt = passwordSalt });
+                var rowsAffected = await connection.ExecuteAsync(
+                    _queryProvider.Get("UpdatePassword"),
+                    new { UserId = userId, PasswordHash = passwordHash, PasswordSalt = passwordSalt });
 
-            return rowsAffected > 0;
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(UpdatePasswordAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.UserUpdatePasswordDatabaseError}: Failed to update password",
+                    ex);
+            }
         }
     }
 }

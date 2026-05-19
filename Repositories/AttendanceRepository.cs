@@ -1,4 +1,4 @@
-﻿using Dapper;
+using Dapper;
 using MobileWebApi.Data;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
@@ -41,7 +41,22 @@ namespace MobileWebApi.Repositories
                 new { EmployeeId = employeeId, PunchDate = punchDate.Date, TenantId = tenantId });
         }
 
-        public async Task<int> InsertPunchIn(int employeeId, DateTime punchIn, DateTime punchDate)
+        public async Task<Punch?> GetOpenPunchByEmployeeId(int employeeId)
+        {
+            using var conn = _context.CreateConnection();
+            string query = _queryProvider.Get("GetOpenPunchByEmployeeId");
+
+            return await conn.QueryFirstOrDefaultAsync<Punch>(query, new { EmployeeId = employeeId });
+        }
+
+        public async Task<int> InsertPunchIn(
+            int employeeId,
+            DateTime punchIn,
+            DateTime punchDate,
+            string inSource,
+            string? coordinateIn,
+            string? linkIn,
+            string? imageUrl)
         {
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("InsertPunchIn");
@@ -51,13 +66,22 @@ namespace MobileWebApi.Repositories
                 { 
                     EmployeeId = employeeId, 
                     PunchDate = punchDate.Date, 
-                    PunchIn = punchIn
-                  
-                   
+                    PunchIn = punchIn,
+                    InSource = inSource,
+                    CoordinateIn = coordinateIn,
+                    LinkIn = linkIn,
+                    ImageUrl = imageUrl
                 });
         }
 
-        public async Task UpdatePunchOut(int employeeId, DateTime punchOut, DateTime punchDate, double? duration)
+        public async Task UpdatePunchOut(
+            int punchId,
+            DateTime punchOut,
+            double? duration,
+            string outSource,
+            string? coordinateOut,
+            string? linkOut,
+            string? imageUrl)
         {
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("UpdatePunchOut");
@@ -65,12 +89,38 @@ namespace MobileWebApi.Repositories
             await conn.ExecuteAsync(query,
                 new 
                 { 
-                    EmployeeId = employeeId, 
-                    PunchDate = punchDate.Date, 
+                    Id = punchId,
                     PunchOut = punchOut, 
-                    Duration = duration
-                  
+                    Duration = duration,
+                    OutSource = outSource,
+                    CoordinateOut = coordinateOut,
+                    LinkOut = linkOut,
+                    ImageUrl = imageUrl
                 });
+        }
+
+        public async Task<List<DateTime>> GetHolidayDatesAsync(int tenantId, DateTime fromDate, DateTime toDate)
+        {
+            using var conn = _context.CreateConnection();
+            string query = _queryProvider.Get("GetHolidaysByTenantIdAndDateRange");
+
+            var rows = await conn.QueryAsync<Holiday>(query, new { TenantId = tenantId, FromDate = fromDate.Date, ToDate = toDate.Date });
+            return rows.Select(h => h.Date.Date).Distinct().ToList();
+        }
+
+        private sealed class LeaveDateRangeRow
+        {
+            public DateTime FromDate { get; set; }
+            public DateTime ToDate { get; set; }
+        }
+
+        public async Task<List<(DateTime FromDate, DateTime ToDate)>> GetApprovedLeaveDateRangesAsync(int employeeId, DateTime fromDate, DateTime toDate)
+        {
+            using var conn = _context.CreateConnection();
+            string query = _queryProvider.Get("GetApprovedLeaveDateRangesByEmployeeAndDateRange");
+
+            var rows = await conn.QueryAsync<LeaveDateRangeRow>(query, new { EmployeeId = employeeId, FromDate = fromDate.Date, ToDate = toDate.Date });
+            return rows.Select(r => (r.FromDate.Date, r.ToDate.Date)).ToList();
         }
 
         /// <summary>
@@ -271,6 +321,37 @@ namespace MobileWebApi.Repositories
                 new { Id = id, TenantId = tenantId });
 
             return rowsAffected > 0;
+        }
+
+        /// <summary>
+        /// Get today's punch in/out logs from DeviceLog for a biometric number.
+        /// </summary>
+        public async Task<IEnumerable<TodayPunchLogItem>> GetTodayPunchLogsAsync(string biometricNumber, DateTime date)
+        {
+            using var conn = _context.CreateConnection();
+            string query = _queryProvider.Get("GetTodayPunchLogs");
+
+            return await conn.QueryAsync<TodayPunchLogItem>(query, new
+            {
+                BiometricNumber = biometricNumber,
+                LogDate = date.Date
+            });
+        }
+
+        /// <summary>
+        /// Get today's punch in/out logs from Punch table for an employee.
+        /// </summary>
+        public async Task<IEnumerable<TodayPunchLogItem>> GetTodayPunchLogsFromPunchAsync(int employeeId, int tenantId, DateTime date)
+        {
+            using var conn = _context.CreateConnection();
+            string query = _queryProvider.Get("GetTodayPunchLogsFromPunch");
+
+            return await conn.QueryAsync<TodayPunchLogItem>(query, new
+            {
+                EmployeeId = employeeId,
+                TenantId = tenantId,
+                LogDate = date.Date
+            });
         }
     }
 }
