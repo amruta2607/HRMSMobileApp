@@ -23,24 +23,31 @@ namespace MobileWebApi.Repositories
 			_queryProvider = queryProvider;
 		}
 
-		public async Task<TenantConfiguration> GetByTenantIdAsync(int organisationId)
+		public async Task<TenantConfiguration> GetByTenantIdAsync(
+	int organisationId,
+	int? branchId)
 		{
 			try
 			{
 				string query = _queryProvider.Get("GetByTenantId");
 
 				using var connection = _context.CreateConnection();
+
 				return await connection.QueryFirstOrDefaultAsync<TenantConfiguration>(
 					query,
-					new { TenantId = organisationId }
-				);
+					new
+					{
+						TenantId = organisationId,
+						BranchId = branchId
+					});
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, LogMessages.User.ErrorFetchingTenantConfigurationByOrganisationId);
+				_logger.LogError(ex,
+					LogMessages.User.ErrorFetchingTenantConfigurationByOrganisationId);
+
 				throw;
 			}
-
 		}
 
 		public async Task<TenantConfigurationRow?> GetTenantConfigurationRowByTenantIdAsync(int tenantId)

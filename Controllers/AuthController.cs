@@ -84,9 +84,11 @@ namespace MobileWebApi.Controllers
                     return Unauthorized(new { Success = false, Message = AuthMessages.InvalidCredentials });
                 }
 
-                var tenantConfig = await _tenantConfigurationRepository
-                    .GetByTenantIdAsync(user.OrganisationId);
-                var moduleAccess = await _mobileModuleAccessService.GetModuleAccess(user.OrganisationId);
+				var tenantConfig = await _tenantConfigurationRepository
+	  .GetByTenantIdAsync(
+		  user.OrganisationId,
+		  user.BranchId);
+				var moduleAccess = await _mobileModuleAccessService.GetModuleAccess(user.OrganisationId);
                 var token = _tokenService.GenerateToken(user);
 
                 _logger.LogInformation(LogMessages.Auth.LoginSuccessful, request.email);
@@ -102,7 +104,11 @@ namespace MobileWebApi.Controllers
                     OrganisationId = user.OrganisationId,
                     IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
                     IsGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false,
-                    IsActive=tenantConfig?.IsActive ?? false,
+					Latitude = tenantConfig?.Latitude,
+					Longitude = tenantConfig?.Longitude,
+					Radius = tenantConfig?.Radius,
+					LocationAddress = tenantConfig?.LocationAddress,
+					IsActive =tenantConfig?.IsActive ?? false,
                     ModuleAccess = moduleAccess
 
                 };
@@ -441,6 +447,7 @@ namespace MobileWebApi.Controllers
                 // Use Employee data if available, otherwise use User data
                 int employeeId = employee?.Id ?? 0;
                 int tenantId = employee?.OrganisationId ?? user.OrganisationId;
+                int branchId = employee.BranchId;
 
                 string name = employee?.Name ??
                               (!string.IsNullOrEmpty(employee?.FirstName)
@@ -462,7 +469,7 @@ namespace MobileWebApi.Controllers
 
                 // Get Tenant Configuration
                 var tenantConfig = await _tenantConfigurationRepository
-                    .GetByTenantIdAsync(tenantId);
+                    .GetByTenantIdAsync(tenantId,branchId);
                 var moduleAccess = await _mobileModuleAccessService.GetModuleAccess(tenantId);
 
                 // Generate JWT token

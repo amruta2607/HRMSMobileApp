@@ -26,6 +26,13 @@ namespace MobileWebApi.Models
 		public bool IsActive { get; set; }
 
 		public MobileAccessDto? ModuleAccess { get; set; }
+		public decimal? Latitude { get; set; }
+
+		public decimal? Longitude { get; set; }
+
+		public int? Radius { get; set; }
+
+		public string? LocationAddress { get; set; }
 	}
 }
 

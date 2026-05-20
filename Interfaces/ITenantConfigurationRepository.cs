@@ -4,7 +4,7 @@ namespace MobileWebApi.Interfaces
 {
 	public interface ITenantConfigurationRepository
 	{
-		Task<TenantConfiguration> GetByTenantIdAsync(int tenantId);
+		Task<TenantConfiguration> GetByTenantIdAsync(int tenantId,int? branchId);
 
 		/// <summary>
 		/// Loads TenantConfiguration row for the tenant, including company logo.
