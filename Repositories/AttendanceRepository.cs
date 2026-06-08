@@ -61,7 +61,14 @@ namespace MobileWebApi.Repositories
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("InsertPunchIn");
 
-            return await conn.ExecuteScalarAsync<int>(query,
+            _logger.LogInformation(
+                "InsertPunchIn before database save - EmployeeId: {EmployeeId}, PunchIn: {PunchIn} (Kind: {PunchInKind}), PunchDate: {PunchDate}",
+                employeeId,
+                punchIn,
+                punchIn.Kind,
+                punchDate.Date);
+
+            var punchId = await conn.ExecuteScalarAsync<int>(query,
                 new 
                 { 
                     EmployeeId = employeeId, 
@@ -72,6 +79,12 @@ namespace MobileWebApi.Repositories
                     LinkIn = linkIn,
                     ImageUrl = imageUrl
                 });
+
+            _logger.LogInformation(
+                "InsertPunchIn after database save - PunchId: {PunchId}",
+                punchId);
+
+            return punchId;
         }
 
         public async Task UpdatePunchOut(
@@ -86,6 +99,13 @@ namespace MobileWebApi.Repositories
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("UpdatePunchOut");
 
+            _logger.LogInformation(
+                "UpdatePunchOut before database save - PunchId: {PunchId}, PunchOut: {PunchOut} (Kind: {PunchOutKind}), Duration: {Duration}",
+                punchId,
+                punchOut,
+                punchOut.Kind,
+                duration);
+
             await conn.ExecuteAsync(query,
                 new 
                 { 
@@ -97,6 +117,10 @@ namespace MobileWebApi.Repositories
                     LinkOut = linkOut,
                     ImageUrl = imageUrl
                 });
+
+            _logger.LogInformation(
+                "UpdatePunchOut after database save - PunchId: {PunchId}",
+                punchId);
         }
 
         public async Task<List<DateTime>> GetHolidayDatesAsync(int tenantId, DateTime fromDate, DateTime toDate)

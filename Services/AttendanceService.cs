@@ -63,6 +63,13 @@ namespace MobileWebApi.Services
 		{
 			try
 			{
+				_logger.LogInformation(
+					"PunchInAsync entry - punch_in_time: {PunchInTime} (Kind: {PunchInKind}), attendance_date: {AttendanceDate} (Kind: {AttendanceDateKind})",
+					req.punch_in_time,
+					req.punch_in_time.Kind,
+					req.attendance_date,
+					req.attendance_date.Kind);
+
 				var employeeId = await ResolveEmployeeIdFromUserIdAsync(req.userId);
 
 				if (!employeeId.HasValue)
@@ -78,15 +85,20 @@ namespace MobileWebApi.Services
 					LogMessages.Attendance.ProcessingPunchIn,
 					employeeId.Value);
 
-				var punchInLocal = ConvertToServerLocalTime(req.punch_in_time);
+				var punchIn = PreserveReceivedDateTime(req.punch_in_time);
+				var attendanceDate = PreserveReceivedDateTime(req.attendance_date).Date;
 
-				var attendanceDateLocal = ConvertToServerLocalTime(req.attendance_date)
-					.Date;
+				_logger.LogInformation(
+					"PunchInAsync before save - EmployeeId: {EmployeeId}, PunchIn: {PunchIn} (Kind: {PunchInKind}), PunchDate: {PunchDate}",
+					employeeId.Value,
+					punchIn,
+					punchIn.Kind,
+					attendanceDate);
 
 				// Prevent duplicate punch in
 				var existingPunch = await _repo.GetPunchByEmployeeAndDate(
 					employeeId.Value,
-					attendanceDateLocal);
+					attendanceDate);
 
 				if (existingPunch != null && existingPunch.PunchIn != null)
 				{
@@ -119,8 +131,8 @@ namespace MobileWebApi.Services
 				// Insert attendance
 				var punchId = await _repo.InsertPunchIn(
 					employeeId.Value,
-					punchInLocal,
-					attendanceDateLocal,
+					punchIn,
+					attendanceDate,
 					MobileSource,
 					coordinateIn,
 					linkIn,
@@ -129,6 +141,13 @@ namespace MobileWebApi.Services
 
 				if (punchId > 0)
 				{
+					var savedPunch = await _repo.GetPunchByIdAsync(punchId, await GetEmployeeTenantIdAsync(employeeId.Value));
+					_logger.LogInformation(
+						"PunchInAsync after save - PunchId: {PunchId}, Stored PunchIn: {StoredPunchIn}, Stored PunchDate: {StoredPunchDate}",
+						punchId,
+						savedPunch?.PunchIn,
+						savedPunch?.PunchDate);
+
 					_logger.LogInformation(
 						LogMessages.Attendance.PunchInSuccessful,
 						employeeId.Value);
@@ -157,6 +176,11 @@ namespace MobileWebApi.Services
 		{
 			try
 			{
+				_logger.LogInformation(
+					"PunchOutAsync entry - punch_out_time: {PunchOutTime} (Kind: {PunchOutKind})",
+					req.punch_out_time,
+					req.punch_out_time.Kind);
+
 				var employeeId = await ResolveEmployeeIdFromUserIdAsync(req.userId);
 
 				if (!employeeId.HasValue)
@@ -172,8 +196,13 @@ namespace MobileWebApi.Services
 					LogMessages.Attendance.ProcessingPunchOut,
 					employeeId.Value);
 
-				var punchOutLocal = ConvertToServerLocalTime(
-					req.punch_out_time);
+				var punchOut = PreserveReceivedDateTime(req.punch_out_time);
+
+				_logger.LogInformation(
+					"PunchOutAsync before save - EmployeeId: {EmployeeId}, PunchOut: {PunchOut} (Kind: {PunchOutKind})",
+					employeeId.Value,
+					punchOut,
+					punchOut.Kind);
 
 				// Get open attendance
 				var punch = await _repo.GetOpenPunchByEmployeeId(
@@ -200,7 +229,7 @@ namespace MobileWebApi.Services
 				// Duration
 				double? duration = CalculateDurationInMinutes(
 					punch.PunchIn,
-					punchOutLocal);
+					punchOut);
 
 				// Upload image to Azure Blob, then persist blob URL in Punch.ImageUrl
 				string? imageUrl = null;
@@ -226,13 +255,20 @@ namespace MobileWebApi.Services
 				// Update punch out
 				await _repo.UpdatePunchOut(
 					punch.Id,
-					punchOutLocal,
+					punchOut,
 					duration,
 					MobileSource,
 					coordinateOut,
 					linkOut,
 					imageUrl
 				);
+
+				var savedPunch = await _repo.GetPunchByIdAsync(punch.Id, await GetEmployeeTenantIdAsync(employeeId.Value));
+				_logger.LogInformation(
+					"PunchOutAsync after save - PunchId: {PunchId}, Stored PunchOut: {StoredPunchOut}, Stored Duration: {StoredDuration}",
+					punch.Id,
+					savedPunch?.PunchOut,
+					savedPunch?.Duration);
 
 				_logger.LogInformation(
 					LogMessages.Attendance.PunchOutSuccessful,
@@ -257,10 +293,10 @@ namespace MobileWebApi.Services
 
             _logger.LogInformation(LogMessages.Attendance.ProcessingPunchIn, employeeId);
 
-            var punchInLocal = ConvertToServerLocalTime(req.punchTime);
-            var attendanceDateLocal = punchInLocal.Date;
+            var punchIn = PreserveReceivedDateTime(req.punchTime);
+            var attendanceDate = punchIn.Date;
 
-            var existingPunch = await _repo.GetPunchByEmployeeAndDate(employeeId, attendanceDateLocal);
+            var existingPunch = await _repo.GetPunchByEmployeeAndDate(employeeId, attendanceDate);
             if (existingPunch != null && existingPunch.PunchIn != null)
             {
                 _logger.LogWarning(AttendanceMessages.PunchInAlreadyDone);
@@ -274,8 +310,8 @@ namespace MobileWebApi.Services
 
             var punchId = await _repo.InsertPunchIn(
                 employeeId,
-                punchInLocal,
-                attendanceDateLocal,
+                punchIn,
+                attendanceDate,
                 MobileSource,
                 coordinateIn: null,
                 linkIn: null,
@@ -300,11 +336,11 @@ namespace MobileWebApi.Services
 
             _logger.LogInformation(LogMessages.Attendance.ProcessingPunchOut, employeeId);
 
-            var punchOutLocal = ConvertToServerLocalTime(req.punchTime);
-            var attendanceDateLocal = punchOutLocal.Date;
+            var punchOut = PreserveReceivedDateTime(req.punchTime);
+            var attendanceDate = punchOut.Date;
 
             var punch = await _repo.GetOpenPunchByEmployeeId(employeeId);
-            if (punch == null || punch.PunchIn == null || punch.PunchDate.Date != attendanceDateLocal)
+            if (punch == null || punch.PunchIn == null || punch.PunchDate.Date != attendanceDate)
             {
                 _logger.LogWarning(AttendanceMessages.CannotPunchOutWithoutPunchIn);
                 return AttendanceMessages.CannotPunchOutWithoutPunchIn;
@@ -317,7 +353,7 @@ namespace MobileWebApi.Services
             }
 
             // Calculate duration in minutes (do not convert to hours)
-            double? duration = CalculateDurationInMinutes(punch.PunchIn, punchOutLocal);
+            double? duration = CalculateDurationInMinutes(punch.PunchIn, punchOut);
 
             // Upload punch photo if provided.
             string? imageUrl = null;
@@ -326,7 +362,7 @@ namespace MobileWebApi.Services
 
             await _repo.UpdatePunchOut(
                 punch.Id,
-                punchOutLocal,
+                punchOut,
                 duration,
                 MobileSource,
                 coordinateOut: null,
@@ -338,20 +374,16 @@ namespace MobileWebApi.Services
             return AttendanceMessages.PunchOutSuccessful;
         }
 
-        private static DateTime ConvertToServerLocalTime(DateTime dateTime)
+        /// <summary>
+        /// Mobile sends wall-clock datetimes (typically Kind=Unspecified).
+        /// Store and use the exact value without server timezone conversion.
+        /// </summary>
+        private static DateTime PreserveReceivedDateTime(DateTime dateTime) => dateTime;
+
+        private async Task<int> GetEmployeeTenantIdAsync(int employeeId)
         {
-            // Align with controller behavior:
-            // - treat Utc => ToLocalTime
-            // - treat Unspecified => assume UTC from mobile and convert to local
-            if (dateTime.Kind == DateTimeKind.Utc)
-                return dateTime.ToLocalTime();
-
-            if (dateTime.Kind == DateTimeKind.Unspecified)
-            {
-                return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc).ToLocalTime();
-            }
-
-            return dateTime;
+            var employee = await _repo.GetEmployeeByIdAsync(employeeId);
+            return employee?.OrganisationId ?? 0;
         }
 
         private double? CalculateDurationInMinutes(DateTime? punchIn, DateTime punchOut)

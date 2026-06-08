@@ -29,50 +29,71 @@ namespace MobileWebApi.Controllers
             _attendanceOverviewService = attendanceOverviewService;
         }
 
-        /// <summary>
-        /// Validates that the provided date matches today's date (server local time).
-        /// Returns BadRequest if the date is not today, otherwise returns null.
-        /// </summary>
-        private IActionResult? ValidateDateIsToday(DateTime dateToValidate, string operationType)
-        {
-            // Handle UTC dates - convert to local time if needed
-            DateTime localDate;
-            if (dateToValidate.Kind == DateTimeKind.Utc)
-            {
-                localDate = dateToValidate.ToLocalTime();
-            }
-            else if (dateToValidate.Kind == DateTimeKind.Unspecified)
-            {
-                // If unspecified, assume it's UTC (common from mobile clients) and convert to local
-                localDate = DateTime.SpecifyKind(dateToValidate, DateTimeKind.Utc).ToLocalTime();
-            }
-            else
-            {
-                localDate = dateToValidate;
-            }
+		/// <summary>
+		/// Validates that the provided date matches today's date (server local time).
+		/// Returns BadRequest if the date is not today, otherwise returns null.
+		/// </summary>
+		private IActionResult? ValidateDateIsToday(DateTime dateToValidate, string operationType)
+		{
+			// Log received value for debugging
+			Logger.LogInformation(
+				"Validating {OperationType}. Received Date: {Date}, Kind: {Kind}",
+				operationType,
+				dateToValidate,
+				dateToValidate.Kind);
 
-            // Compare only the Date part with today's date
-            var todayDate = DateTime.Now.Date;
-            var requestDate = localDate.Date;
+			DateTime requestDate;
 
-            if (requestDate != todayDate)
-            {
-                Logger.LogWarning(
-                    LogMessages.Attendance.InvalidDateForOperation,
-                    operationType,
-                    requestDate,
-                    todayDate);
-                return BadRequest(new { Success = false, Message = "Punch in/out is allowed only for today's date." });
-            }
+			switch (dateToValidate.Kind)
+			{
+				case DateTimeKind.Utc:
+					requestDate = dateToValidate.ToLocalTime().Date;
+					break;
 
-            return null; // Validation passed
-        }
+				case DateTimeKind.Local:
+					requestDate = dateToValidate.Date;
+					break;
 
-        /// <summary>
-        /// Validates that the current user can access the specified employee's data.
-        /// HR/TenantAdmin can access all employees. Regular users can only access their own data.
-        /// </summary>
-        private async Task<IActionResult?> ValidateEmployeeAccessAsync(int employeeId)
+				case DateTimeKind.Unspecified:
+					// Treat as local date to avoid incorrect timezone conversion
+					requestDate = dateToValidate.Date;
+					break;
+
+				default:
+					requestDate = dateToValidate.Date;
+					break;
+			}
+
+			DateTime todayDate = DateTime.Now.Date;
+
+			Logger.LogInformation(
+				"Operation: {OperationType}, Request Date: {RequestDate}, Today: {TodayDate}",
+				operationType,
+				requestDate,
+				todayDate);
+
+			if (requestDate != todayDate)
+			{
+				Logger.LogWarning(
+					"Invalid date for {OperationType}: Requested date {RequestDate} does not match today's date {TodayDate}",
+					operationType,
+					requestDate,
+					todayDate);
+
+				return BadRequest(new
+				{
+					Success = false,
+					Message = "Punch in/out is allowed only for today's date."
+				});
+			}
+
+			return null;
+		}
+		/// <summary>
+		/// Validates that the current user can access the specified employee's data.
+		/// HR/TenantAdmin can access all employees. Regular users can only access their own data.
+		/// </summary>
+		private async Task<IActionResult?> ValidateEmployeeAccessAsync(int employeeId)
         {
             // HR or TenantAdmin can access all employees
             if (HasElevatedAccess)
