@@ -26,7 +26,7 @@ namespace MobileWebApi.Models
         public DateTime? PunchIn { get; set; }
         public DateTime? PunchOut { get; set; }
         public double? WorkingHours { get; set; }
-        public string? Status { get; set; } // "Present", "Absent", "Leave", "Holiday", "Weekend", "Future"
+        public string? Status { get; set; } // "Present", "Absent", "Leave", "Holiday", "Week Off", "Future"
         public string? Remarks { get; set; }
         public string? InSource { get; set; }
         public string? OutSource { get; set; }

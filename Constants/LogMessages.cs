@@ -110,6 +110,8 @@ namespace MobileWebApi.Constants
             public const string ErrorFetchingAttendanceOverview = "Error fetching attendance overview for employee {EmployeeId}";
             public const string InvalidDateForOperation = "Invalid date for {OperationType}: Requested date {RequestDate} does not match today's date {TodayDate}";
             public const string FetchingTodayPunchLogs = "Fetching today's punch logs for user {UserId}";
+            public const string FetchingTenantWeekOffDays = "Fetching tenant week-off days for tenant {TenantId}";
+            public const string ErrorFetchingTenantWeekOffDays = "Error fetching tenant week-off days for tenant {TenantId}";
         }
 
         // Leave related logs

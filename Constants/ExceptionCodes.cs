@@ -121,6 +121,8 @@ namespace MobileWebApi.Constants
             public const string UserDeleteUserDatabaseError = "REP100";
             public const string UserDeactivateUserDatabaseError = "REP101";
             public const string UserUpdatePasswordDatabaseError = "REP102";
+            public const string TenantWeekOffGetConfigurationDatabaseError = "REP103";
+            public const string TenantWeekOffGetWeekOffDaysDatabaseError = "REP104";
         }
 
         // Service layer (generic)

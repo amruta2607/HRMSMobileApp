@@ -15,6 +15,7 @@ namespace MobileWebApi.Services
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
         private readonly BlobService _blobService;
+        private readonly ITenantWeekOffRepository _tenantWeekOffRepository;
         private readonly ILogger<AttendanceService> _logger;
 
         public AttendanceService(
@@ -24,6 +25,7 @@ namespace MobileWebApi.Services
             IHttpClientFactory httpClientFactory,
             IConfiguration configuration,
             BlobService blobService,
+            ITenantWeekOffRepository tenantWeekOffRepository,
             ILogger<AttendanceService> logger)
         {
             _repo = repo;
@@ -32,6 +34,7 @@ namespace MobileWebApi.Services
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
             _blobService = blobService;
+            _tenantWeekOffRepository = tenantWeekOffRepository;
             _logger = logger;
         }
 
@@ -384,6 +387,11 @@ namespace MobileWebApi.Services
         {
             var employee = await _repo.GetEmployeeByIdAsync(employeeId);
             return employee?.OrganisationId ?? 0;
+        }
+
+        private async Task<List<DayOfWeek>> GetTenantWeeklyOffDaysAsync(int tenantId)
+        {
+            return await _tenantWeekOffRepository.GetTenantWeeklyOffDaysAsync(tenantId);
         }
 
         private double? CalculateDurationInMinutes(DateTime? punchIn, DateTime punchOut)
@@ -743,6 +751,8 @@ namespace MobileWebApi.Services
                 var attendanceData = await _repo.GetAttendanceByCalendarAsync(employeeId.Value, month, year);
                 var attendanceDict = attendanceData.ToDictionary(a => a.CalendarDate.Date, a => a);
 
+                var weeklyOffDays = await GetTenantWeeklyOffDaysAsync(employee.OrganisationId);
+
                 // Build calendar data
                 var dateFrom = new DateTime(year, month, 1);
                 var dateTo = dateFrom.AddMonths(1).AddDays(-1);
@@ -782,13 +792,13 @@ namespace MobileWebApi.Services
                         Date = currentDate,
                         Day = day,
                         DayName = currentDate.DayOfWeek.ToString(),
-                        IsWeekend = currentDate.DayOfWeek == DayOfWeek.Saturday || currentDate.DayOfWeek == DayOfWeek.Sunday
+                        IsWeekend = weeklyOffDays.Contains(currentDate.DayOfWeek)
                     };
 
-                    // Priority: Weekend -> Holiday -> Leave -> Future -> Present -> Absent
-                    if (dayAttendance.IsWeekend)
+                    // Priority: Week Off -> Holiday -> Leave -> Future -> Present -> Absent
+                    if (weeklyOffDays.Contains(currentDate.DayOfWeek))
                     {
-                        dayAttendance.Status = "Weekend";
+                        dayAttendance.Status = "Week Off";
                         dayAttendance.IsAbsent = false;
                         weekendDays++;
                     }
@@ -945,6 +955,8 @@ namespace MobileWebApi.Services
                 var attendanceData = await _repo.GetEmployeeAttendanceReportAsync(employeeId.Value, fromDate, toDate);
                 var attendanceDict = attendanceData.ToDictionary(a => a.CalendarDate.Date, a => a);
 
+                var weeklyOffDays = await GetTenantWeeklyOffDaysAsync(employee.OrganisationId);
+
                 // Build summary data
                 var totalDays = (toDate - fromDate).Days + 1;
                 var today = DateTime.Today;
@@ -963,11 +975,9 @@ namespace MobileWebApi.Services
                         DayName = date.DayOfWeek.ToString()
                     };
 
-                    bool isWeekend = date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday;
-
-                    if (isWeekend)
+                    if (weeklyOffDays.Contains(date.DayOfWeek))
                     {
-                        detail.Status = "Weekend";
+                        detail.Status = "Week Off";
                         weekendDays++;
                     }
                     else if (date > today)

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Microsoft.Extensions.FileProviders;
@@ -48,6 +49,8 @@ builder.Services.AddScoped<ITenantContext, TenantContext>();
 // Register services
 // ----------------------
 builder.Services.AddScoped<DapperContext>();
+builder.Services.AddDbContext<HrmsDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("ConnectionString")));
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
@@ -83,6 +86,8 @@ builder.Services.AddScoped<IMobileModuleAccessService, MobileModuleAccessService
 
 builder.Services.AddSingleton<ISqlConnections, MobileWebApi.Data.DefaultSqlConnections>();
 builder.Services.AddScoped<IAttendanceOverviewService, AttendanceOverviewService>();
+builder.Services.AddScoped<ITenantWeekOffRepository, TenantWeekOffRepository>();
+builder.Services.AddScoped<ITenantWeekOffService, TenantWeekOffService>();
 
 builder.Services.AddScoped<IMobileDashboardService, MobileDashboardService>();
 
