@@ -1,8 +1,10 @@
-using Microsoft.EntityFrameworkCore;
+using Dapper;
 using MobileWebApi.Constants;
 using MobileWebApi.Data;
+using MobileWebApi.Helper;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
+using MobileWebApi.Resources;
 
 namespace MobileWebApi.Repositories
 {
@@ -14,12 +16,17 @@ namespace MobileWebApi.Repositories
             DayOfWeek.Sunday
         };
 
-        private readonly HrmsDbContext _context;
+        private readonly DapperContext _dapperContext;
+        private readonly QueryProvider _queryProvider;
         private readonly ILogger<TenantWeekOffRepository> _logger;
 
-        public TenantWeekOffRepository(HrmsDbContext context, ILogger<TenantWeekOffRepository> logger)
+        public TenantWeekOffRepository(
+            DapperContext dapperContext,
+            QueryProvider queryProvider,
+            ILogger<TenantWeekOffRepository> logger)
         {
-            _context = context;
+            _dapperContext = dapperContext;
+            _queryProvider = queryProvider;
             _logger = logger;
         }
 
@@ -27,11 +34,10 @@ namespace MobileWebApi.Repositories
         {
             try
             {
-                return await _context.TenantConfigurations
-                    .AsNoTracking()
-                    .Where(tc => tc.TenantId == tenantId)
-                    .Select(tc => (int?)tc.TenantConfigurationId)
-                    .FirstOrDefaultAsync();
+                using var connection = _dapperContext.CreateConnection();
+                var query = _queryProvider.Get("GetTenantConfigurationIdByTenantId");
+
+                return await connection.QueryFirstOrDefaultAsync<int?>(query, new { TenantId = tenantId });
             }
             catch (Exception ex)
             {
@@ -46,20 +52,11 @@ namespace MobileWebApi.Repositories
         {
             try
             {
-                return await (
-                    from tcd in _context.TenantConfiguredDayOffDays
-                    join tc in _context.TenantConfigurations
-                        on tcd.TenantConfigurationId equals tc.TenantConfigurationId
-                    join d in _context.Days
-                        on tcd.DayOffId equals d.Id
-                    where tc.TenantId == tenantId
-                    orderby d.Id
-                    select new TenantWeekOffDayDto
-                    {
-                        Id = d.Id,
-                        Day = d.DayName
-                    }
-                ).AsNoTracking().ToListAsync();
+                using var connection = _dapperContext.CreateConnection();
+                var query = _queryProvider.Get("GetTenantWeekOffDaysWithNamesByTenantId");
+
+                var result = await connection.QueryAsync<TenantWeekOffDayDto>(query, new { TenantId = tenantId });
+                return result.ToList();
             }
             catch (Exception ex)
             {
@@ -74,47 +71,64 @@ namespace MobileWebApi.Repositories
         {
             try
             {
-                var tenantConfig = await _context.TenantConfigurations
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(x => x.TenantId == tenantId);
+                using var connection = _dapperContext.CreateConnection();
 
-                if (tenantConfig == null)
+                var tenantConfigurationId = await connection.QueryFirstOrDefaultAsync<int?>(
+                    _queryProvider.Get("GetTenantConfigurationIdByTenantId"),
+                    new { TenantId = tenantId });
+
+                if (!tenantConfigurationId.HasValue)
                 {
                     return new List<DayOfWeek>(DefaultWeeklyOffDays);
                 }
 
-                var configuredDays = await (
-                    from tcd in _context.TenantConfiguredDayOffDays
-                    join d in _context.Days
-                        on tcd.DayOffId equals d.Id
-                    where tcd.TenantConfigurationId == tenantConfig.TenantConfigurationId
-                    select d.DayName
-                ).AsNoTracking().ToListAsync();
-
-                if (!configuredDays.Any())
-                {
-                    return new List<DayOfWeek>(DefaultWeeklyOffDays);
-                }
-
-                var weeklyOffDays = configuredDays
-                    .Where(x => Enum.TryParse<DayOfWeek>(x, true, out _))
-                    .Select(x => Enum.Parse<DayOfWeek>(x, true))
+                var dayOffIds = (await connection.QueryAsync<int>(
+                    _queryProvider.Get("GetTenantDayOffsByTenantId"),
+                    new { TenantId = tenantId }))
                     .Distinct()
                     .ToList();
 
-                if (!weeklyOffDays.Any())
+                if (!dayOffIds.Any())
                 {
                     return new List<DayOfWeek>(DefaultWeeklyOffDays);
                 }
 
-                return weeklyOffDays;
+                // Prefer day names from Days table when available (Sunday, Monday, etc.)
+                var configuredDayNames = (await connection.QueryAsync<string>(
+                    _queryProvider.Get("GetTenantWeekOffDayNamesByTenantId"),
+                    new { TenantId = tenantId }))
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (configuredDayNames.Any())
+                {
+                    var weeklyOffDaysFromNames = configuredDayNames
+                        .Where(x => Enum.TryParse<DayOfWeek>(x, true, out _))
+                        .Select(x => Enum.Parse<DayOfWeek>(x, true))
+                        .Distinct()
+                        .ToList();
+
+                    if (weeklyOffDaysFromNames.Any())
+                    {
+                        return weeklyOffDaysFromNames;
+                    }
+                }
+
+                // DayOffId matches Days.Id and DayOfWeek enum (0=Sunday .. 6=Saturday)
+                var weeklyOffDaysFromIds = dayOffIds
+                    .Select(id => (DayOfWeek)PayrollHelper.NormalizeDayOfWeek(id))
+                    .Distinct()
+                    .ToList();
+
+                return weeklyOffDaysFromIds.Any()
+                    ? weeklyOffDaysFromIds
+                    : new List<DayOfWeek>(DefaultWeeklyOffDays);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Attendance.ErrorFetchingTenantWeekOffDays, tenantId);
-                throw new Exception(
-                    $"{ExceptionCodes.Repository.TenantWeekOffGetWeekOffDaysDatabaseError}: Failed to fetch tenant weekly off days",
-                    ex);
+                _logger.LogWarning(ex, LogMessages.Attendance.ErrorFetchingTenantWeekOffDays, tenantId);
+                return new List<DayOfWeek>(DefaultWeeklyOffDays);
             }
         }
     }

@@ -268,6 +268,9 @@
     "InsertDispute": "INSERT INTO EmployeeDispute (EmployeeId, DisputeCategoryId, DisputeDate, Description, Status, CreatedOn) VALUES (@EmployeeId, @DisputeCategoryId, @DisputeDate, @Description, @Status, @CreatedOn); SELECT CAST(SCOPE_IDENTITY() AS INT)",
 
     "GetTenantDayOffsByTenantId": "SELECT DayOffId FROM TenantConfiguredDayOffDays tdd INNER JOIN TenantConfiguration tc ON tc.TenantConfigurationId = tdd.TenantConfigurationId WHERE tc.TenantId = @TenantId",
+    "GetTenantConfigurationIdByTenantId": "SELECT TOP 1 TenantConfigurationId FROM TenantConfiguration WHERE TenantId = @TenantId",
+    "GetTenantWeekOffDaysWithNamesByTenantId": "SELECT DISTINCT d.Id, d.[Day] AS Day FROM TenantConfiguredDayOffDays tcd INNER JOIN TenantConfiguration tc ON tc.TenantConfigurationId = tcd.TenantConfigurationId INNER JOIN Days d ON tcd.DayOffId = d.Id WHERE tc.TenantId = @TenantId ORDER BY d.Id",
+    "GetTenantWeekOffDayNamesByTenantId": "SELECT DISTINCT d.[Day] FROM TenantConfiguredDayOffDays tcd INNER JOIN TenantConfiguration tc ON tc.TenantConfigurationId = tcd.TenantConfigurationId INNER JOIN Days d ON tcd.DayOffId = d.Id WHERE tc.TenantId = @TenantId",
     "GetHolidaysByTenantIdAndDateRange": "SELECT Id, Name, Date, Description, TenantId FROM Holiday WHERE TenantId = @TenantId AND Date BETWEEN @FromDate AND @ToDate",
     "GetByTenantId": "SELECT TOP 1 t.IsGeoLocationEnabled, t.IsGeoFencingEnabled, g.IsActive, g.Latitude, g.Longitude, g.Radius, g.LocationAddress FROM TenantConfiguration t INNER JOIN TenantBranchGeoFencing g ON t.TenantConfigurationId = g.TenantConfigurationId WHERE t.TenantId = @TenantId AND g.BranchId = @BranchId AND g.IsActive = 1",
     "GetTenantConfigurationRowByTenantId": "SELECT TOP 1 TenantConfigurationId, TenantId, Logo FROM TenantConfiguration WHERE TenantId = @TenantId",
