@@ -93,6 +93,8 @@ namespace MobileWebApi.Controllers
 
                 _logger.LogInformation(LogMessages.Auth.LoginSuccessful, request.email);
 
+                var isGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false;
+
                 var response = new TokenWithRefreshResponse
                 {
                     Success = true,
@@ -103,14 +105,13 @@ namespace MobileWebApi.Controllers
                     Username = user.Username,
                     OrganisationId = user.OrganisationId,
                     IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
-                    IsGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false,
-					Latitude = tenantConfig?.Latitude,
-					Longitude = tenantConfig?.Longitude,
-					Radius = tenantConfig?.Radius,
-					LocationAddress = tenantConfig?.LocationAddress,
-					IsActive =tenantConfig?.IsActive ?? false,
+                    IsGeoFencingEnabled = isGeoFencingEnabled,
+                    Latitude = isGeoFencingEnabled ? tenantConfig?.Latitude : null,
+                    Longitude = isGeoFencingEnabled ? tenantConfig?.Longitude : null,
+                    Radius = isGeoFencingEnabled ? tenantConfig?.Radius : null,
+                    LocationAddress = isGeoFencingEnabled ? tenantConfig?.LocationAddress : null,
+                    IsActive = tenantConfig?.IsActive ?? false,
                     ModuleAccess = moduleAccess
-
                 };
 
                 return Ok(response);
@@ -481,6 +482,8 @@ namespace MobileWebApi.Controllers
                 _logger.LogInformation(LogMessages.Otp.OtpVerifiedSuccessfully,
                     MaskMobileNumber(normalizedMobile), user.UserId, employeeId);
 
+                var isGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false;
+
                 return Ok(new TokenWithRefreshResponse
                 {
                     Success = true,
@@ -491,7 +494,11 @@ namespace MobileWebApi.Controllers
                     Username = user.Username,
                     OrganisationId = tenantId,
                     IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
-                    IsGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false,
+                    IsGeoFencingEnabled = isGeoFencingEnabled,
+                    Latitude = isGeoFencingEnabled ? tenantConfig?.Latitude : null,
+                    Longitude = isGeoFencingEnabled ? tenantConfig?.Longitude : null,
+                    Radius = isGeoFencingEnabled ? tenantConfig?.Radius : null,
+                    LocationAddress = isGeoFencingEnabled ? tenantConfig?.LocationAddress : null,
                     IsActive = tenantConfig?.IsActive ?? false,
                     ModuleAccess = moduleAccess
                 });
