@@ -89,30 +89,13 @@ namespace MobileWebApi.Controllers
 		  user.OrganisationId,
 		  user.BranchId);
 				var moduleAccess = await _mobileModuleAccessService.GetModuleAccess(user.OrganisationId);
-                var token = _tokenService.GenerateToken(user);
+                var authTokens = await _tokenService.GenerateTokensAsync(user);
 
                 _logger.LogInformation(LogMessages.Auth.LoginSuccessful, request.email);
 
                 var isGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false;
 
-                var response = new TokenWithRefreshResponse
-                {
-                    Success = true,
-                    Message = AuthMessages.TokenGenerated,
-                    Token = token,
-                    TokenExpiry = _tokenService.GetTokenExpiry(),
-                    UserId = user.UserId,
-                    Username = user.Username,
-                    OrganisationId = user.OrganisationId,
-                    IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
-                    IsGeoFencingEnabled = isGeoFencingEnabled,
-                    Latitude = isGeoFencingEnabled ? tenantConfig?.Latitude : null,
-                    Longitude = isGeoFencingEnabled ? tenantConfig?.Longitude : null,
-                    Radius = isGeoFencingEnabled ? tenantConfig?.Radius : null,
-                    LocationAddress = isGeoFencingEnabled ? tenantConfig?.LocationAddress : null,
-                    IsActive = tenantConfig?.IsActive ?? false,
-                    ModuleAccess = moduleAccess
-                };
+                var response = BuildLoginResponse(authTokens, user, tenantConfig, moduleAccess, isGeoFencingEnabled);
 
                 return Ok(response);
             }
@@ -473,8 +456,8 @@ namespace MobileWebApi.Controllers
                     .GetByTenantIdAsync(tenantId,branchId);
                 var moduleAccess = await _mobileModuleAccessService.GetModuleAccess(tenantId);
 
-                // Generate JWT token
-                var token = _tokenService.GenerateToken(user);
+                // Generate JWT + refresh token pair
+                var authTokens = await _tokenService.GenerateTokensAsync(user);
 
                 // Remove OTP from cache
                 _otpService.RemoveMobileOtp(normalizedMobile);
@@ -484,24 +467,14 @@ namespace MobileWebApi.Controllers
 
                 var isGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false;
 
-                return Ok(new TokenWithRefreshResponse
+                var loginUser = new User
                 {
-                    Success = true,
-                    Message = AuthMessages.TokenGenerated,
-                    Token = token,
-                    TokenExpiry = _tokenService.GetTokenExpiry(),
                     UserId = user.UserId,
                     Username = user.Username,
-                    OrganisationId = tenantId,
-                    IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
-                    IsGeoFencingEnabled = isGeoFencingEnabled,
-                    Latitude = isGeoFencingEnabled ? tenantConfig?.Latitude : null,
-                    Longitude = isGeoFencingEnabled ? tenantConfig?.Longitude : null,
-                    Radius = isGeoFencingEnabled ? tenantConfig?.Radius : null,
-                    LocationAddress = isGeoFencingEnabled ? tenantConfig?.LocationAddress : null,
-                    IsActive = tenantConfig?.IsActive ?? false,
-                    ModuleAccess = moduleAccess
-                });
+                    OrganisationId = tenantId
+                };
+
+                return Ok(BuildLoginResponse(authTokens, loginUser, tenantConfig, moduleAccess, isGeoFencingEnabled, tenantId));
             }
             catch (Exception ex)
             {
@@ -514,49 +487,90 @@ namespace MobileWebApi.Controllers
             }
 		}
 		/// <summary>
-		/// Logout - Terminates the user session and invalidates authentication credentials/tokens
+		/// Refresh access token using a valid refresh token (rotation).
+		/// POST: api/auth/refresh-token
+		/// </summary>
+		[HttpPost("refresh-token")]
+		public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
+		{
+			try
+			{
+				_logger.LogInformation(LogMessages.Auth.RefreshTokenAttempt);
+
+				if (request == null)
+				{
+					return BadRequest(new { Success = false, Message = AuthMessages.RefreshTokenRequired });
+				}
+
+				var authResponse = await _tokenService.RefreshTokenAsync(request);
+
+				_logger.LogInformation(LogMessages.Auth.RefreshTokenSuccessful, "User");
+
+				return Ok(authResponse);
+			}
+			catch (TokenRefreshException ex)
+			{
+				_logger.LogWarning(LogMessages.Auth.RefreshTokenInvalid);
+				return Unauthorized(new { Success = false, Message = ex.Message });
+			}
+			catch (Exception ex)
+			{
+				_logger.LogException(ExceptionCodes.Auth.RefreshToken, nameof(RefreshToken), ex);
+				return StatusCode(500, new
+				{
+					Success = false,
+					Message = GeneralMessages.SomethingWentWrongContactAdmin
+				});
+			}
+		}
+
+		/// <summary>
+		/// Logout - Revokes refresh token and optionally blacklists the access token from the Authorization header.
 		/// POST: api/auth/logout
 		/// </summary>
-		[Authorize]
         [HttpPost("logout")]
-        public async Task<IActionResult> Logout()
+        public async Task<IActionResult> Logout([FromBody] LogoutRequest? request)
         {
             try
             {
-                var username = User.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
-                var userIdClaim = User.FindFirst("UserId")?.Value;
-                
-                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                {
-                    _logger.LogWarning(LogMessages.Auth.LogoutUserIdClaimNotFound);
-                    return Unauthorized(new LogoutResponse
-                    {
-                        Success = false,
-                        Message = AuthMessages.InvalidAuthenticationToken
-                    });
-                }
+                var username = User.Identity?.IsAuthenticated == true
+                    ? User.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown"
+                    : "Unknown";
 
                 _logger.LogInformation(LogMessages.Auth.LogoutAttempt, username);
 
-                // Get the JWT token from Authorization header for blacklisting
+                if (request == null || string.IsNullOrWhiteSpace(request.RefreshToken))
+                {
+                    return BadRequest(new LogoutResponse
+                    {
+                        Success = false,
+                        Message = AuthMessages.RefreshTokenRequired
+                    });
+                }
+
+                var revoked = await _tokenService.RevokeRefreshTokenAsync(request.RefreshToken);
+                if (!revoked)
+                {
+                    return Unauthorized(new LogoutResponse
+                    {
+                        Success = false,
+                        Message = AuthMessages.InvalidRefreshToken
+                    });
+                }
+
+                // Blacklist access token from Authorization header when present
                 var authHeader = Request.Headers["Authorization"].FirstOrDefault();
                 if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
                 {
                     var accessToken = authHeader.Substring("Bearer ".Length).Trim();
-                    
-                    // Get token expiry from the token itself
-                    var tokenHandler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+                    var tokenHandler = new JwtSecurityTokenHandler();
                     if (tokenHandler.CanReadToken(accessToken))
                     {
                         var jwtToken = tokenHandler.ReadJwtToken(accessToken);
-                        var expiry = jwtToken.ValidTo;
-                        
-                        // Blacklist the access token
-                        _tokenService.BlacklistToken(accessToken, expiry);
-                        _logger.LogInformation(LogMessages.Auth.AccessTokenBlacklisted, username, userId);
+                        _tokenService.BlacklistToken(accessToken, jwtToken.ValidTo);
+                        _logger.LogInformation(LogMessages.Auth.AccessTokenBlacklisted, username, jwtToken.Subject);
                     }
                 }
-
 
                 _logger.LogInformation(LogMessages.Auth.LogoutSuccessful, username);
 
@@ -569,11 +583,11 @@ namespace MobileWebApi.Controllers
             catch (Exception ex)
             {
                 var username = User.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
-                    _logger.LogException(ExceptionCodes.Auth.Logout, nameof(Logout), ex);
+                _logger.LogException(ExceptionCodes.Auth.Logout, nameof(Logout), ex);
                 return StatusCode(500, new LogoutResponse
                 {
                     Success = false,
-                        Message = GeneralMessages.SomethingWentWrongContactAdmin
+                    Message = GeneralMessages.SomethingWentWrongContactAdmin
                 });
             }
         }
@@ -881,6 +895,39 @@ namespace MobileWebApi.Controllers
                     Message = GeneralMessages.SomethingWentWrongContactAdmin
                 });
             }
+        }
+
+        /// <summary>
+        /// Builds the login response with access + refresh tokens and tenant metadata.
+        /// </summary>
+        private static TokenWithRefreshResponse BuildLoginResponse(
+            AuthResponse authTokens,
+            User user,
+            TenantConfiguration? tenantConfig,
+            MobileAccessDto? moduleAccess,
+            bool isGeoFencingEnabled,
+            int? organisationIdOverride = null)
+        {
+            return new TokenWithRefreshResponse
+            {
+                Success = true,
+                Message = AuthMessages.TokenGenerated,
+                AccessToken = authTokens.AccessToken,
+                RefreshToken = authTokens.RefreshToken,
+                ExpiresIn = authTokens.ExpiresIn,
+                TokenExpiry = DateTime.UtcNow.AddSeconds(authTokens.ExpiresIn),
+                UserId = user.UserId,
+                Username = user.Username,
+                OrganisationId = organisationIdOverride ?? user.OrganisationId,
+                IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
+                IsGeoFencingEnabled = isGeoFencingEnabled,
+                Latitude = isGeoFencingEnabled ? tenantConfig?.Latitude : null,
+                Longitude = isGeoFencingEnabled ? tenantConfig?.Longitude : null,
+                Radius = isGeoFencingEnabled ? tenantConfig?.Radius : null,
+                LocationAddress = isGeoFencingEnabled ? tenantConfig?.LocationAddress : null,
+                IsActive = tenantConfig?.IsActive ?? false,
+                ModuleAccess = moduleAccess
+            };
         }
 
         /// <summary>

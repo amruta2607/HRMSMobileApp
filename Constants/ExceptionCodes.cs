@@ -165,6 +165,7 @@ namespace MobileWebApi.Constants
             public const string ForgotPassword = "AUTH-007";
             public const string ResetPassword = "AUTH-008";
             public const string ChangePassword = "AUTH-009";
+            public const string RefreshToken = "AUTH-010";
         }
 
         // Attendance / Shift module (AttendanceService)

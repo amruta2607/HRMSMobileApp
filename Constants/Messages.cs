@@ -36,6 +36,10 @@ namespace MobileWebApi.Constants
         public const string RefreshTokenExpired = "Refresh token has expired. Please login again.";
         public const string TokenRefreshed = "Token refreshed successfully.";
         public const string RefreshTokenRevoked = "Refresh token has been revoked successfully.";
+        public const string RefreshTokenRevokedLoginRequired = "Refresh token has been revoked. Please login again.";
+        public const string RefreshTokenAlreadyUsed = "Refresh token has already been used. Please login again.";
+        public const string InvalidAccessToken = "Invalid access token.";
+        public const string AccessTokenRequired = "Access token is required.";
     }
 
     /// <summary>
