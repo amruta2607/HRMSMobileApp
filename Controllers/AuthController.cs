@@ -487,8 +487,10 @@ namespace MobileWebApi.Controllers
             }
 		}
 		/// <summary>
-		/// Refresh access token using a valid refresh token (rotation).
+		/// Refresh access token using a valid refresh token.
 		/// POST: api/auth/refresh-token
+		/// Request: { "refreshToken": "..." }
+		/// Response: { "accessToken": "..." }
 		/// </summary>
 		[HttpPost("refresh-token")]
 		public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
@@ -497,16 +499,16 @@ namespace MobileWebApi.Controllers
 			{
 				_logger.LogInformation(LogMessages.Auth.RefreshTokenAttempt);
 
-				if (request == null)
+				if (request == null || string.IsNullOrWhiteSpace(request.RefreshToken))
 				{
 					return BadRequest(new { Success = false, Message = AuthMessages.RefreshTokenRequired });
 				}
 
-				var authResponse = await _tokenService.RefreshTokenAsync(request);
+				var response = await _tokenService.RefreshTokenAsync(request);
 
 				_logger.LogInformation(LogMessages.Auth.RefreshTokenSuccessful, "User");
 
-				return Ok(authResponse);
+				return Ok(response);
 			}
 			catch (TokenRefreshException ex)
 			{

@@ -15,8 +15,8 @@ namespace MobileWebApi.Interfaces
 		/// <summary>Creates a new access + refresh token pair and persists the refresh token.</summary>
 		Task<AuthResponse> GenerateTokensAsync(User user);
 
-		/// <summary>Rotates refresh token and issues a new access token pair.</summary>
-		Task<AuthResponse> RefreshTokenAsync(RefreshTokenRequest request);
+		/// <summary>Issues a new access token from a valid refresh token.</summary>
+		Task<AccessTokenResponse> RefreshTokenAsync(RefreshTokenRequest request);
 
 		/// <summary>Revokes a refresh token (logout).</summary>
 		Task<bool> RevokeRefreshTokenAsync(string refreshToken);

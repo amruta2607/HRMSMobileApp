@@ -87,6 +87,11 @@ namespace MobileWebApi.Services
             _refreshTokens[refreshTokenHash] = new RefreshTokenEntry
             {
                 UserId = user.UserId,
+                Username = user.Username,
+                WorkRoleName = user.WorkRoleName ?? "User",
+                OrganisationId = user.OrganisationId,
+                IsHrUser = user.IsHrUser,
+                IsTenantAdmin = user.IsTenantAdmin,
                 JwtId = jti,
                 ExpiryDate = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays),
                 CreatedDate = DateTime.UtcNow,
@@ -105,24 +110,10 @@ namespace MobileWebApi.Services
             });
         }
 
-        public Task<AuthResponse> RefreshTokenAsync(RefreshTokenRequest request)
+        public Task<AccessTokenResponse> RefreshTokenAsync(RefreshTokenRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.AccessToken))
-                throw new TokenRefreshException(AuthMessages.AccessTokenRequired);
-
             if (string.IsNullOrWhiteSpace(request.RefreshToken))
                 throw new TokenRefreshException(AuthMessages.RefreshTokenRequired);
-
-            var principal = GetPrincipalFromExpiredToken(request.AccessToken)
-                ?? throw new TokenRefreshException(AuthMessages.InvalidAccessToken);
-
-            var userIdClaim = principal.FindFirst("UserId")?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                throw new TokenRefreshException(AuthMessages.InvalidAccessToken);
-
-            var jti = principal.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
-            if (string.IsNullOrEmpty(jti))
-                throw new TokenRefreshException(AuthMessages.InvalidAccessToken);
 
             var refreshTokenHash = HashToken(request.RefreshToken);
 
@@ -143,48 +134,24 @@ namespace MobileWebApi.Services
                 if (storedToken.ExpiryDate <= DateTime.UtcNow)
                     throw new TokenRefreshException(AuthMessages.RefreshTokenExpired);
 
-                if (storedToken.UserId != userId)
-                    throw new TokenRefreshException(AuthMessages.InvalidRefreshToken);
-
-                if (!string.Equals(storedToken.JwtId, jti, StringComparison.Ordinal))
-                    throw new TokenRefreshException(AuthMessages.InvalidRefreshToken);
-
-                var newRefreshToken = GenerateSecureRefreshToken();
-                var newRefreshTokenHash = HashToken(newRefreshToken);
-
-                storedToken.IsUsed = true;
-                storedToken.ReplacedByToken = newRefreshTokenHash;
-
                 var user = new User
                 {
-                    UserId = userId,
-                    Username = principal.FindFirst(ClaimTypes.Name)?.Value ?? string.Empty,
-                    WorkRoleName = principal.FindFirst(ClaimTypes.Role)?.Value ?? "User",
-                    OrganisationId = int.TryParse(principal.FindFirst("OrganisationId")?.Value, out int orgId) ? orgId : 0,
-                    IsHrUser = bool.TryParse(principal.FindFirst("IsHrUser")?.Value, out bool isHr) && isHr,
-                    IsTenantAdmin = bool.TryParse(principal.FindFirst("IsTenantAdmin")?.Value, out bool isAdmin) && isAdmin
+                    UserId = storedToken.UserId,
+                    Username = storedToken.Username,
+                    WorkRoleName = storedToken.WorkRoleName,
+                    OrganisationId = storedToken.OrganisationId,
+                    IsHrUser = storedToken.IsHrUser,
+                    IsTenantAdmin = storedToken.IsTenantAdmin
                 };
 
-                var (newAccessToken, newJti, expiresAt) = CreateAccessToken(user);
-
-                _refreshTokens[newRefreshTokenHash] = new RefreshTokenEntry
-                {
-                    UserId = userId,
-                    JwtId = newJti,
-                    ExpiryDate = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays),
-                    CreatedDate = DateTime.UtcNow,
-                    IsUsed = false,
-                    IsRevoked = false,
-                    CreatedByIp = GetClientIpAddress()
-                };
+                var (newAccessToken, newJti, _) = CreateAccessToken(user);
+                storedToken.JwtId = newJti;
 
                 CleanupExpiredRefreshTokens();
 
-                return Task.FromResult(new AuthResponse
+                return Task.FromResult(new AccessTokenResponse
                 {
-                    AccessToken = newAccessToken,
-                    RefreshToken = newRefreshToken,
-                    ExpiresIn = (int)(expiresAt - DateTime.UtcNow).TotalSeconds
+                    AccessToken = newAccessToken
                 });
             }
         }
@@ -387,6 +354,11 @@ namespace MobileWebApi.Services
         private sealed class RefreshTokenEntry
         {
             public int UserId { get; set; }
+            public string Username { get; set; } = string.Empty;
+            public string WorkRoleName { get; set; } = "User";
+            public int OrganisationId { get; set; }
+            public bool IsHrUser { get; set; }
+            public bool IsTenantAdmin { get; set; }
             public string JwtId { get; set; } = string.Empty;
             public DateTime ExpiryDate { get; set; }
             public DateTime CreatedDate { get; set; }
