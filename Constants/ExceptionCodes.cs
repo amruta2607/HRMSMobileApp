@@ -300,6 +300,12 @@ namespace MobileWebApi.Constants
             public const string GetTenantGeofence = "GEOF-001";
         }
 
+        // Location tracking (LocationTrackingController)
+        public static class LocationTracking
+        {
+            public const string RecordLocation = "LOCT-001";
+        }
+
         // Personal details (PersonalDetailsController)
         public static class PersonalDetails
         {

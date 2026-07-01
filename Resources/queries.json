@@ -290,7 +290,9 @@
 
     "MobileDashboard_GetLatestEvents": "SELECT TOP 5 Id, Name, StartDate, EndDate, Description, Location FROM Event WHERE TenantId = @TenantId AND StartDate >= CAST(GETDATE() AS DATE) ORDER BY StartDate ASC",
     "MobileDashboard_GetLatestHolidays": "SELECT TOP 5 Id, Name, Description, Date FROM Holiday WHERE TenantId = @TenantId AND Date >= CAST(GETDATE() AS DATE) ORDER BY Date ASC",
-    "MarkScreenNotificationsReadByLeaveRequestId": "UPDATE sn SET sn.IsRead = 1, sn.Status = 'Read', sn.UpdateDate = GETDATE(), sn.UpdateUserId = @UpdateUserId FROM ScreenNotification sn INNER JOIN Events e ON sn.EventId = e.EventId WHERE sn.TenantId = @TenantId AND sn.IsActive = 1 AND sn.Status = 'Unread' AND e.TenantId = @TenantId AND (CAST(JSON_VALUE(e.EventData, '$.leave_request_id') AS INT) = @LeaveRequestId OR CAST(JSON_VALUE(e.EventData, '$.leaveRequestId') AS INT) = @LeaveRequestId)"
+    "MarkScreenNotificationsReadByLeaveRequestId": "UPDATE sn SET sn.IsRead = 1, sn.Status = 'Read', sn.UpdateDate = GETDATE(), sn.UpdateUserId = @UpdateUserId FROM ScreenNotification sn INNER JOIN Events e ON sn.EventId = e.EventId WHERE sn.TenantId = @TenantId AND sn.IsActive = 1 AND sn.Status = 'Unread' AND e.TenantId = @TenantId AND (CAST(JSON_VALUE(e.EventData, '$.leave_request_id') AS INT) = @LeaveRequestId OR CAST(JSON_VALUE(e.EventData, '$.leaveRequestId') AS INT) = @LeaveRequestId)",
+
+    "InsertLocationTracking": "INSERT INTO LocationTracking (EmployeeId, TenantId, Latitude, Longitude, Date, Time, InsertUserId, InsertDate, UpdateUserId, UpdateDate) VALUES (@EmployeeId, @TenantId, @Latitude, @Longitude, @Date, @Time, @InsertUserId, @InsertDate, @UpdateUserId, @UpdateDate); SELECT CAST(SCOPE_IDENTITY() AS INT)"
 
   }
 }

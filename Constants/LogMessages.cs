@@ -300,6 +300,13 @@ namespace MobileWebApi.Constants
             public const string ErrorFetchingLocationsForUserId = "Error fetching locations for UserId={UserId}";
         }
 
+        // Location tracking related logs
+        public static class LocationTracking
+        {
+            public const string RecordingLocation = "Recording location for employee {EmployeeId}, tenant {TenantId}";
+            public const string FailedToRecordLocation = "Failed to record location for employee {EmployeeId}";
+        }
+
         // Transaction related logs
         public static class Transaction
         {

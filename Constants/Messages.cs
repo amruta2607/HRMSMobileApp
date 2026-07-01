@@ -582,6 +582,26 @@ namespace MobileWebApi.Constants
     }
 
     /// <summary>
+    /// Location tracking related messages
+    /// </summary>
+    public static class LocationTrackingMessages
+    {
+        public const string LocationRecordedSuccessfully = "Location recorded successfully.";
+        public const string UserIdRequired = "User ID is required.";
+        public const string LatitudeRequired = "Latitude is required.";
+        public const string LongitudeRequired = "Longitude is required.";
+        public const string InvalidLatitude = "Latitude must be between -90 and 90.";
+        public const string InvalidLongitude = "Longitude must be between -180 and 180.";
+        public const string TrackingDateTimeRequired = "Tracking date and time is required.";
+        public const string EmployeeNotFound = "Employee not found.";
+        public const string TenantNotFound = "Tenant not found.";
+        public const string EmployeeDoesNotBelongToTenant = "Employee does not belong to the specified tenant.";
+        public const string EmployeeNotPunchedIn = "Employee is not currently punched in.";
+        public const string LocationTrackingDisabled = "Location tracking is disabled.";
+        public const string FailedToRecordLocation = "Failed to record location.";
+    }
+
+    /// <summary>
     /// Attendance status text used in responses
     /// </summary>
     public static class AttendanceStatusMessages
