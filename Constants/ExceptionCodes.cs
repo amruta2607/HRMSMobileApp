@@ -304,6 +304,7 @@ namespace MobileWebApi.Constants
         public static class LocationTracking
         {
             public const string RecordLocation = "LOCT-001";
+            public const string RecordLocationBatch = "LOCT-002";
         }
 
         // Personal details (PersonalDetailsController)

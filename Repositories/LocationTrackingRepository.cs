@@ -1,6 +1,7 @@
 using Dapper;
 using MobileWebApi.Data;
 using MobileWebApi.Interfaces;
+using MobileWebApi.Models;
 using MobileWebApi.Resources;
 
 namespace MobileWebApi.Repositories
@@ -41,6 +42,53 @@ namespace MobileWebApi.Repositories
                 UpdateUserId = insertUserId,
                 UpdateDate = now
             });
+        }
+
+        public async Task<int> InsertBatchAsync(
+            int employeeId,
+            int tenantId,
+            IReadOnlyList<LocationTrackingInsertRecord> records,
+            int insertUserId)
+        {
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var now = DateTime.Now;
+            var query = _queryProvider.Get("InsertLocationTrackingBatch");
+
+            var rows = records
+                .OrderBy(r => r.TrackingDateTime)
+                .Select(r => new
+                {
+                    EmployeeId = employeeId,
+                    TenantId = tenantId,
+                    Latitude = r.Latitude,
+                    Longitude = r.Longitude,
+                    Date = r.TrackingDateTime.Date,
+                    Time = r.TrackingDateTime,
+                    InsertUserId = insertUserId,
+                    InsertDate = now,
+                    UpdateUserId = insertUserId,
+                    UpdateDate = now
+                })
+                .ToList();
+
+            using var connection = _context.CreateConnection();
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                var inserted = await connection.ExecuteAsync(query, rows, transaction);
+                transaction.Commit();
+                return inserted;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
     }
 }

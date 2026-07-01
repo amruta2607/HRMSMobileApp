@@ -40,80 +40,35 @@ namespace MobileWebApi.Services
                 return Failure(LocationTrackingMessages.UserIdRequired);
             }
 
-            if (!request.latitude.HasValue)
+            var itemError = ValidateLocationItem(
+                request.latitude,
+                request.longitude,
+                request.trackingDateTime);
+
+            if (itemError != null)
             {
-                return Failure(LocationTrackingMessages.LatitudeRequired);
+                return Failure(itemError);
             }
 
-            if (!request.longitude.HasValue)
+            var contextResult = await ValidateTrackingContextAsync(request.userId, organisationId);
+            if (contextResult.Error != null)
             {
-                return Failure(LocationTrackingMessages.LongitudeRequired);
+                return Failure(contextResult.Error);
             }
 
-            if (request.latitude.Value < -90 || request.latitude.Value > 90)
-            {
-                return Failure(LocationTrackingMessages.InvalidLatitude);
-            }
-
-            if (request.longitude.Value < -180 || request.longitude.Value > 180)
-            {
-                return Failure(LocationTrackingMessages.InvalidLongitude);
-            }
-
-            if (request.trackingDateTime == default)
-            {
-                return Failure(LocationTrackingMessages.TrackingDateTimeRequired);
-            }
-
-            var tenantConfig = await _tenantConfigurationRepository.GetTenantConfigurationRowByTenantIdAsync(organisationId);
-            if (tenantConfig == null)
-            {
-                return Failure(LocationTrackingMessages.TenantNotFound);
-            }
-
-            var employee = await _employeeRepository.GetEmployeebyUserIdAsync(request.userId);
-            if (employee == null)
-            {
-                return Failure(LocationTrackingMessages.EmployeeNotFound);
-            }
-
-            if (employee.OrganisationId != organisationId)
-            {
-                return Failure(LocationTrackingMessages.EmployeeDoesNotBelongToTenant);
-            }
-
-            var openPunch = await _attendanceRepository.GetOpenPunchByEmployeeId(employee.Id);
-            if (openPunch == null || !openPunch.PunchIn.HasValue)
-            {
-                return Failure(LocationTrackingMessages.EmployeeNotPunchedIn);
-            }
-
-            var mobileTenantConfig = await _mobileTenantConfigurationRepository.GetByTenantIdAsync(organisationId);
-            var attendanceEnabled = mobileTenantConfig?.IsAttendanceEnabled ?? false;
-            var tenantLocationTrackingEnabled = mobileTenantConfig?.EnableLocationTracking ?? false;
-            var enableEmployeeLevelLocationTracking = mobileTenantConfig?.EnableEmployeeLevelLocationTracking ?? false;
-
-            if (!LocationTrackingSettingsHelper.ShouldTrackLocation(
-                attendanceEnabled,
-                tenantLocationTrackingEnabled,
-                enableEmployeeLevelLocationTracking,
-                employee.EnableLocationTracking))
-            {
-                return Failure(LocationTrackingMessages.LocationTrackingDisabled);
-            }
+            var employee = contextResult.Employee!;
 
             _logger.LogInformation(
                 LogMessages.LocationTracking.RecordingLocation,
                 employee.Id,
                 organisationId);
 
-            var trackingDateTime = request.trackingDateTime;
             var recordId = await _locationTrackingRepository.InsertAsync(
                 employee.Id,
                 organisationId,
-                RoundCoordinate(request.latitude.Value),
-                RoundCoordinate(request.longitude.Value),
-                trackingDateTime,
+                RoundCoordinate(request.latitude!.Value),
+                RoundCoordinate(request.longitude!.Value),
+                request.trackingDateTime,
                 currentUserId);
 
             if (recordId <= 0)
@@ -129,7 +84,199 @@ namespace MobileWebApi.Services
             };
         }
 
+        public async Task<LocationTrackingBatchResponse> RecordLocationBatchAsync(
+            LocationTrackingBatchRequest request,
+            int currentUserId,
+            int organisationId)
+        {
+            if (request.userId <= 0)
+            {
+                return BatchFailure(LocationTrackingMessages.UserIdRequired);
+            }
+
+            if (request.locations == null || request.locations.Count == 0)
+            {
+                return BatchFailure(LocationTrackingMessages.LocationsRequired);
+            }
+
+            var contextResult = await ValidateTrackingContextAsync(request.userId, organisationId);
+            if (contextResult.Error != null)
+            {
+                return BatchFailure(contextResult.Error);
+            }
+
+            var employee = contextResult.Employee!;
+            var failedRecords = new List<LocationTrackingBatchFailedRecord>();
+            var validRecords = new List<LocationTrackingInsertRecord>();
+
+            foreach (var location in request.locations)
+            {
+                var itemError = ValidateLocationItem(
+                    location.latitude,
+                    location.longitude,
+                    location.trackingDateTime);
+
+                if (itemError != null)
+                {
+                    failedRecords.Add(new LocationTrackingBatchFailedRecord
+                    {
+                        TrackingDateTime = location.trackingDateTime == default ? null : location.trackingDateTime,
+                        Latitude = location.latitude,
+                        Longitude = location.longitude,
+                        Reason = itemError
+                    });
+                    continue;
+                }
+
+                validRecords.Add(new LocationTrackingInsertRecord
+                {
+                    Latitude = RoundCoordinate(location.latitude!.Value),
+                    Longitude = RoundCoordinate(location.longitude!.Value),
+                    TrackingDateTime = location.trackingDateTime
+                });
+            }
+
+            var totalRecords = request.locations.Count;
+
+            if (validRecords.Count == 0)
+            {
+                return new LocationTrackingBatchResponse
+                {
+                    Success = false,
+                    Message = LocationTrackingMessages.BatchAllRecordsInvalid,
+                    TotalRecords = totalRecords,
+                    InsertedRecords = 0,
+                    FailedRecords = failedRecords.Count,
+                    FailedRecordDetails = failedRecords
+                };
+            }
+
+            _logger.LogInformation(
+                LogMessages.LocationTracking.ProcessingLocationBatch,
+                employee.Id,
+                organisationId,
+                validRecords.Count);
+
+            var insertedRecords = await _locationTrackingRepository.InsertBatchAsync(
+                employee.Id,
+                organisationId,
+                validRecords,
+                currentUserId);
+
+            if (insertedRecords <= 0)
+            {
+                _logger.LogWarning(LogMessages.LocationTracking.FailedToRecordLocationBatch, employee.Id);
+                return new LocationTrackingBatchResponse
+                {
+                    Success = false,
+                    Message = LocationTrackingMessages.FailedToRecordLocationBatch,
+                    TotalRecords = totalRecords,
+                    InsertedRecords = 0,
+                    FailedRecords = totalRecords,
+                    FailedRecordDetails = failedRecords.Count > 0
+                        ? failedRecords
+                        : request.locations.Select(l => new LocationTrackingBatchFailedRecord
+                        {
+                            TrackingDateTime = l.trackingDateTime == default ? null : l.trackingDateTime,
+                            Latitude = l.latitude,
+                            Longitude = l.longitude,
+                            Reason = LocationTrackingMessages.FailedToRecordLocation
+                        }).ToList()
+                };
+            }
+
+            var failedCount = failedRecords.Count;
+            return new LocationTrackingBatchResponse
+            {
+                Success = true,
+                Message = failedCount == 0
+                    ? LocationTrackingMessages.BatchProcessedSuccessfully
+                    : LocationTrackingMessages.BatchPartiallyProcessed,
+                TotalRecords = totalRecords,
+                InsertedRecords = insertedRecords,
+                FailedRecords = failedCount,
+                FailedRecordDetails = failedCount > 0 ? failedRecords : null
+            };
+        }
+
+        private async Task<(Employee? Employee, string? Error)> ValidateTrackingContextAsync(
+            int userId,
+            int organisationId)
+        {
+            var tenantConfig = await _tenantConfigurationRepository.GetTenantConfigurationRowByTenantIdAsync(organisationId);
+            if (tenantConfig == null)
+            {
+                return (null, LocationTrackingMessages.TenantNotFound);
+            }
+
+            var employee = await _employeeRepository.GetEmployeebyUserIdAsync(userId);
+            if (employee == null)
+            {
+                return (null, LocationTrackingMessages.EmployeeNotFound);
+            }
+
+            if (employee.OrganisationId != organisationId)
+            {
+                return (null, LocationTrackingMessages.EmployeeDoesNotBelongToTenant);
+            }
+
+            var openPunch = await _attendanceRepository.GetOpenPunchByEmployeeId(employee.Id);
+            if (openPunch == null || !openPunch.PunchIn.HasValue)
+            {
+                return (null, LocationTrackingMessages.EmployeeNotPunchedIn);
+            }
+
+            var mobileTenantConfig = await _mobileTenantConfigurationRepository.GetByTenantIdAsync(organisationId);
+            var attendanceEnabled = mobileTenantConfig?.IsAttendanceEnabled ?? false;
+            var tenantLocationTrackingEnabled = mobileTenantConfig?.EnableLocationTracking ?? false;
+            var enableEmployeeLevelLocationTracking = mobileTenantConfig?.EnableEmployeeLevelLocationTracking ?? false;
+
+            if (!LocationTrackingSettingsHelper.ShouldTrackLocation(
+                attendanceEnabled,
+                tenantLocationTrackingEnabled,
+                enableEmployeeLevelLocationTracking,
+                employee.EnableLocationTracking))
+            {
+                return (null, LocationTrackingMessages.LocationTrackingDisabled);
+            }
+
+            return (employee, null);
+        }
+
+        private static string? ValidateLocationItem(double? latitude, double? longitude, DateTime trackingDateTime)
+        {
+            if (!latitude.HasValue)
+            {
+                return LocationTrackingMessages.LatitudeRequired;
+            }
+
+            if (!longitude.HasValue)
+            {
+                return LocationTrackingMessages.LongitudeRequired;
+            }
+
+            if (latitude.Value < -90 || latitude.Value > 90)
+            {
+                return LocationTrackingMessages.InvalidLatitude;
+            }
+
+            if (longitude.Value < -180 || longitude.Value > 180)
+            {
+                return LocationTrackingMessages.InvalidLongitude;
+            }
+
+            if (trackingDateTime == default)
+            {
+                return LocationTrackingMessages.TrackingDateTimeRequired;
+            }
+
+            return null;
+        }
+
         private static LocationTrackingResponse Failure(string message) =>
+            new() { Success = false, Message = message };
+
+        private static LocationTrackingBatchResponse BatchFailure(string message) =>
             new() { Success = false, Message = message };
 
         private static decimal RoundCoordinate(double value) =>

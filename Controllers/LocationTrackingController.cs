@@ -109,5 +109,91 @@ namespace MobileWebApi.Controllers
                     });
             }
         }
+
+        /// <summary>
+        /// Receives multiple GPS coordinates from the mobile app for offline sync.
+        /// POST: api/locationtracking/batch
+        /// </summary>
+        [HttpPost("batch")]
+        public async Task<IActionResult> RecordLocationBatch([FromBody] LocationTrackingBatchRequest request)
+        {
+            try
+            {
+                if (request == null)
+                {
+                    return BadRequest(new LocationTrackingBatchResponse
+                    {
+                        Success = false,
+                        Message = GeneralMessages.RequestBodyCannotBeNull
+                    });
+                }
+
+                var currentUserId = CurrentUserId;
+                if (!currentUserId.HasValue || currentUserId.Value <= 0)
+                {
+                    return Unauthorized(new LocationTrackingBatchResponse
+                    {
+                        Success = false,
+                        Message = AuthMessages.InvalidAuthenticationToken
+                    });
+                }
+
+                if (request.userId <= 0)
+                {
+                    return BadRequest(new LocationTrackingBatchResponse
+                    {
+                        Success = false,
+                        Message = LocationTrackingMessages.UserIdRequired
+                    });
+                }
+
+                if (request.userId != currentUserId.Value)
+                {
+                    Logger.LogWarning(
+                        LogMessages.TenantAccess.UserAccessViolation,
+                        currentUserId.Value,
+                        request.userId);
+                    return UserAccessDenied();
+                }
+
+                var result = await _locationTrackingService.RecordLocationBatchAsync(
+                    request,
+                    currentUserId.Value,
+                    CurrentOrganisationId);
+
+                if (!result.Success)
+                {
+                    if (result.Message == LocationTrackingMessages.EmployeeNotFound
+                        || result.Message == LocationTrackingMessages.TenantNotFound)
+                    {
+                        return NotFound(result);
+                    }
+
+                    return BadRequest(result);
+                }
+
+                return Ok(result);
+            }
+            catch (TenantAccessException)
+            {
+                return TenantAccessDenied();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(
+                    ExceptionCodes.LocationTracking.RecordLocationBatch,
+                    nameof(RecordLocationBatch),
+                    ex,
+                    CurrentUserId);
+
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new LocationTrackingBatchResponse
+                    {
+                        Success = false,
+                        Message = GeneralMessages.SomethingWentWrongContactAdmin
+                    });
+            }
+        }
     }
 }

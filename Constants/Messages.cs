@@ -599,6 +599,11 @@ namespace MobileWebApi.Constants
         public const string EmployeeNotPunchedIn = "Employee is not currently punched in.";
         public const string LocationTrackingDisabled = "Location tracking is disabled.";
         public const string FailedToRecordLocation = "Failed to record location.";
+        public const string LocationsRequired = "At least one location record is required.";
+        public const string BatchProcessedSuccessfully = "Location batch processed successfully.";
+        public const string BatchPartiallyProcessed = "Location batch processed with some invalid records skipped.";
+        public const string BatchAllRecordsInvalid = "All location records in the batch are invalid.";
+        public const string FailedToRecordLocationBatch = "Failed to record location batch.";
     }
 
     /// <summary>

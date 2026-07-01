@@ -305,6 +305,8 @@ namespace MobileWebApi.Constants
         {
             public const string RecordingLocation = "Recording location for employee {EmployeeId}, tenant {TenantId}";
             public const string FailedToRecordLocation = "Failed to record location for employee {EmployeeId}";
+            public const string ProcessingLocationBatch = "Processing location batch for employee {EmployeeId}, tenant {TenantId}, record count {RecordCount}";
+            public const string FailedToRecordLocationBatch = "Failed to record location batch for employee {EmployeeId}";
         }
 
         // Transaction related logs
