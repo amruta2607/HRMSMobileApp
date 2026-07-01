@@ -124,6 +124,7 @@ namespace MobileWebApi.Constants
         // Success messages
         public const string PunchInSuccessful = "Punch In Successful";
         public const string PunchOutSuccessful = "Punch Out Successful";
+        public const string ManualPunchOutReason = "Manual punch out";
         public const string AttendanceReportFetchedSuccessfully = "Attendance report fetched successfully.";
         public const string RealTimeAttendanceFetchedSuccessfully = "Real-time attendance status fetched successfully.";
         public const string CurrentlyPunchedInFetchedSuccessfully = "Currently punched in employees fetched successfully.";

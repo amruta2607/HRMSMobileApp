@@ -94,17 +94,21 @@ namespace MobileWebApi.Repositories
             string outSource,
             string? coordinateOut,
             string? linkOut,
-            string? imageUrl)
+            string? imageUrl,
+            bool manual,
+            string? punchOutReason)
         {
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("UpdatePunchOut");
 
             _logger.LogInformation(
-                "UpdatePunchOut before database save - PunchId: {PunchId}, PunchOut: {PunchOut} (Kind: {PunchOutKind}), Duration: {Duration}",
+                "UpdatePunchOut before database save - PunchId: {PunchId}, PunchOut: {PunchOut} (Kind: {PunchOutKind}), Duration: {Duration}, Manual: {Manual}, PunchOutReason: {PunchOutReason}",
                 punchId,
                 punchOut,
                 punchOut.Kind,
-                duration);
+                duration,
+                manual,
+                punchOutReason);
 
             await conn.ExecuteAsync(query,
                 new 
@@ -115,7 +119,9 @@ namespace MobileWebApi.Repositories
                     OutSource = outSource,
                     CoordinateOut = coordinateOut,
                     LinkOut = linkOut,
-                    ImageUrl = imageUrl
+                    ImageUrl = imageUrl,
+                    Manual = manual,
+                    PunchOutReason = punchOutReason
                 });
 
             _logger.LogInformation(

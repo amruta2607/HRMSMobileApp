@@ -22,7 +22,9 @@ namespace MobileWebApi.Interfaces
             string outSource,
             string? coordinateOut,
             string? linkOut,
-            string? imageUrl);
+            string? imageUrl,
+            bool manual,
+            string? punchOutReason);
         Task<List<DateTime>> GetHolidayDatesAsync(int tenantId, DateTime fromDate, DateTime toDate);
         Task<List<(DateTime FromDate, DateTime ToDate)>> GetApprovedLeaveDateRangesAsync(int employeeId, DateTime fromDate, DateTime toDate);
         

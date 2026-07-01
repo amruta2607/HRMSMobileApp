@@ -79,5 +79,6 @@ namespace MobileWebApi.Models
         public string MiddleName { get; set; }
         public string LastName { get; set; }
         public int CompensationTemplateId { get; set; }
+        public bool EnableLocationTracking { get; set; }
     }
 }

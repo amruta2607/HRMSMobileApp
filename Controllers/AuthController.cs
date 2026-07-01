@@ -24,6 +24,7 @@ namespace MobileWebApi.Controllers
         private readonly ILogger<AuthController> _logger;
         private readonly IWebHostEnvironment _environment;
         private readonly ITenantConfigurationRepository _tenantConfigurationRepository;
+        private readonly IMobileTenantConfigurationRepository _mobileTenantConfigurationRepository;
         private readonly IMobileModuleAccessService _mobileModuleAccessService;
 
         public AuthController(
@@ -36,6 +37,7 @@ namespace MobileWebApi.Controllers
             ILogger<AuthController> logger,
             IWebHostEnvironment environment,
             ITenantConfigurationRepository tenantConfigurationRepository,
+            IMobileTenantConfigurationRepository mobileTenantConfigurationRepository,
             IMobileModuleAccessService mobileModuleAccessService)
         {
             _userRepository = userRepository;
@@ -47,6 +49,7 @@ namespace MobileWebApi.Controllers
             _logger = logger;
             _environment = environment;
             _tenantConfigurationRepository = tenantConfigurationRepository;
+            _mobileTenantConfigurationRepository = mobileTenantConfigurationRepository;
             _mobileModuleAccessService = mobileModuleAccessService;
         }
 
@@ -88,14 +91,16 @@ namespace MobileWebApi.Controllers
 	  .GetByTenantIdAsync(
 		  user.OrganisationId,
 		  user.BranchId);
+				var mobileTenantConfig = await _mobileTenantConfigurationRepository.GetByTenantIdAsync(user.OrganisationId);
 				var moduleAccess = await _mobileModuleAccessService.GetModuleAccess(user.OrganisationId);
+                var employee = await _employeeRepository.GetEmployeebyUserIdAsync(user.UserId);
                 var authTokens = await _tokenService.GenerateTokensAsync(user);
 
                 _logger.LogInformation(LogMessages.Auth.LoginSuccessful, request.email);
 
                 var isGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false;
 
-                var response = BuildLoginResponse(authTokens, user, tenantConfig, moduleAccess, isGeoFencingEnabled);
+                var response = BuildLoginResponse(authTokens, user, tenantConfig, mobileTenantConfig, moduleAccess, isGeoFencingEnabled, employee);
 
                 return Ok(response);
             }
@@ -454,6 +459,7 @@ namespace MobileWebApi.Controllers
                 // Get Tenant Configuration
                 var tenantConfig = await _tenantConfigurationRepository
                     .GetByTenantIdAsync(tenantId,branchId);
+                var mobileTenantConfig = await _mobileTenantConfigurationRepository.GetByTenantIdAsync(tenantId);
                 var moduleAccess = await _mobileModuleAccessService.GetModuleAccess(tenantId);
 
                 // Generate JWT + refresh token pair
@@ -474,7 +480,7 @@ namespace MobileWebApi.Controllers
                     OrganisationId = tenantId
                 };
 
-                return Ok(BuildLoginResponse(authTokens, loginUser, tenantConfig, moduleAccess, isGeoFencingEnabled, tenantId));
+                return Ok(BuildLoginResponse(authTokens, loginUser, tenantConfig, mobileTenantConfig, moduleAccess, isGeoFencingEnabled, employee, tenantId));
             }
             catch (Exception ex)
             {
@@ -906,10 +912,23 @@ namespace MobileWebApi.Controllers
             AuthResponse authTokens,
             User user,
             TenantConfiguration? tenantConfig,
+            MobileTenantConfiguration? mobileTenantConfig,
             MobileAccessDto? moduleAccess,
             bool isGeoFencingEnabled,
+            Employee? employee = null,
             int? organisationIdOverride = null)
         {
+            var attendanceEnabled = mobileTenantConfig?.IsAttendanceEnabled ?? false;
+            var tenantLocationTrackingEnabled = mobileTenantConfig?.EnableLocationTracking ?? false;
+            var enableEmployeeLevelLocationTracking = mobileTenantConfig?.EnableEmployeeLevelLocationTracking ?? false;
+            var employeeLocationTracking = employee?.EnableLocationTracking;
+
+            var locationTracking = LocationTrackingSettingsHelper.Resolve(
+                attendanceEnabled,
+                tenantLocationTrackingEnabled,
+                enableEmployeeLevelLocationTracking,
+                employeeLocationTracking);
+
             return new TokenWithRefreshResponse
             {
                 Success = true,
@@ -921,6 +940,10 @@ namespace MobileWebApi.Controllers
                 UserId = user.UserId,
                 Username = user.Username,
                 OrganisationId = organisationIdOverride ?? user.OrganisationId,
+                AttendanceEnabled = locationTracking.AttendanceEnabled,
+                EnableLocationTracking = locationTracking.EnableLocationTracking,
+                EnableEmployeeLevelLocationTracking = locationTracking.EnableEmployeeLevelLocationTracking,
+                EmployeeLocationTrackingEnabled = locationTracking.EmployeeLocationTrackingEnabled,
                 IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
                 IsGeoFencingEnabled = isGeoFencingEnabled,
                 Latitude = isGeoFencingEnabled ? tenantConfig?.Latitude : null,
