@@ -10,6 +10,7 @@ namespace MobileWebApi.Interfaces
             decimal latitude,
             decimal longitude,
             DateTime trackingDateTime,
+            string? locationFrom,
             int insertUserId);
 
         Task<int> InsertBatchAsync(

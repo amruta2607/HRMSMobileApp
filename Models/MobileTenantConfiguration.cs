@@ -10,6 +10,7 @@ namespace MobileWebApi.Models
         public bool IsPayrollEnabled { get; set; }
         public bool EnableLocationTracking { get; set; }
         public bool EnableEmployeeLevelLocationTracking { get; set; }
+        public int? LocationTrackingConfigurationId { get; set; }
         public DateTime InsertDate { get; set; }
         public int? InsertUserId { get; set; }
         public DateTime? UpdateDate { get; set; }

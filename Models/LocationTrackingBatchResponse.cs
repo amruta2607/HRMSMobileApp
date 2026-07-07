@@ -1,5 +1,8 @@
 namespace MobileWebApi.Models
 {
+    using System.Text.Json.Serialization;
+    using MobileWebApi.Helper;
+
     /// <summary>
     /// Response model for batch location upload.
     /// </summary>
@@ -18,9 +21,10 @@ namespace MobileWebApi.Models
     /// </summary>
     public class LocationTrackingBatchFailedRecord
     {
-        public DateTime? TrackingDateTime { get; set; }
-        public double? Latitude { get; set; }
-        public double? Longitude { get; set; }
+        [JsonConverter(typeof(NullableLocationTrackingTimestampJsonConverter))]
+        public DateTime? timestamp { get; set; }
+        public double? latitude { get; set; }
+        public double? longitude { get; set; }
         public string Reason { get; set; } = string.Empty;
     }
 }

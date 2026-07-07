@@ -607,6 +607,38 @@ namespace MobileWebApi.Constants
     }
 
     /// <summary>
+    /// Location tracking issue API messages
+    /// </summary>
+    public static class LocationTrackingIssueMessages
+    {
+        public const string IssueLoggedSuccessfully = "Location tracking issue logged successfully.";
+        public const string InvalidIssueType = "Invalid Issue Type.";
+        public const string IssueTypeRequired = "Issue type is required.";
+        public const string IssueDescriptionRequired = "Issue description is required.";
+        public const string TimestampRequired = "Timestamp is required.";
+        public const string EmployeeNotFound = "Employee not found.";
+        public const string TenantNotFound = "Tenant not found.";
+        public const string EmployeeDoesNotBelongToTenant = "Employee does not belong to the specified tenant.";
+        public const string FailedToLogIssue = "Failed to log location tracking issue.";
+        public const string ViolationNotificationTitle = "Location Tracking Violation";
+        public const string ViolationNotificationMessage = "Employee {0} triggered a {1} violation.";
+        public const string UnknownEmployeeName = "Unknown Employee";
+    }
+
+    /// <summary>
+    /// Location tracking configuration API messages
+    /// </summary>
+    public static class LocationTrackingConfigurationMessages
+    {
+        public const string ConfigurationFetchedSuccessfully = "Location tracking configuration fetched successfully.";
+        public const string EmployeeNotFound = "Employee not found.";
+        public const string TenantNotFound = "Tenant not found.";
+        public const string TenantConfigurationNotFound = "Tenant configuration not found.";
+        public const string LocationTrackingConfigurationNotFound = "Location tracking configuration not found.";
+        public const string EmployeeDoesNotBelongToTenant = "Employee does not belong to the specified tenant.";
+    }
+
+    /// <summary>
     /// Attendance status text used in responses
     /// </summary>
     public static class AttendanceStatusMessages

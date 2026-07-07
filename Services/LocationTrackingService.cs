@@ -35,7 +35,7 @@ namespace MobileWebApi.Services
             int currentUserId,
             int organisationId)
         {
-            if (request.userId <= 0)
+            if (request.user_id <= 0)
             {
                 return Failure(LocationTrackingMessages.UserIdRequired);
             }
@@ -43,14 +43,14 @@ namespace MobileWebApi.Services
             var itemError = ValidateLocationItem(
                 request.latitude,
                 request.longitude,
-                request.trackingDateTime);
+                request.timestamp);
 
             if (itemError != null)
             {
                 return Failure(itemError);
             }
 
-            var contextResult = await ValidateTrackingContextAsync(request.userId, organisationId);
+            var contextResult = await ValidateTrackingContextAsync(request.user_id, organisationId);
             if (contextResult.Error != null)
             {
                 return Failure(contextResult.Error);
@@ -63,12 +63,15 @@ namespace MobileWebApi.Services
                 employee.Id,
                 organisationId);
 
+            var trackingDateTimeIst = NormalizeToIndiaTime(request.timestamp);
+
             var recordId = await _locationTrackingRepository.InsertAsync(
                 employee.Id,
                 organisationId,
                 RoundCoordinate(request.latitude!.Value),
                 RoundCoordinate(request.longitude!.Value),
-                request.trackingDateTime,
+                trackingDateTimeIst,
+                NormalizeLocationFrom(request.location_from),
                 currentUserId);
 
             if (recordId <= 0)
@@ -89,7 +92,7 @@ namespace MobileWebApi.Services
             int currentUserId,
             int organisationId)
         {
-            if (request.userId <= 0)
+            if (request.user_id <= 0)
             {
                 return BatchFailure(LocationTrackingMessages.UserIdRequired);
             }
@@ -99,7 +102,7 @@ namespace MobileWebApi.Services
                 return BatchFailure(LocationTrackingMessages.LocationsRequired);
             }
 
-            var contextResult = await ValidateTrackingContextAsync(request.userId, organisationId);
+            var contextResult = await ValidateTrackingContextAsync(request.user_id, organisationId);
             if (contextResult.Error != null)
             {
                 return BatchFailure(contextResult.Error);
@@ -114,15 +117,15 @@ namespace MobileWebApi.Services
                 var itemError = ValidateLocationItem(
                     location.latitude,
                     location.longitude,
-                    location.trackingDateTime);
+                    location.timestamp);
 
                 if (itemError != null)
                 {
                     failedRecords.Add(new LocationTrackingBatchFailedRecord
                     {
-                        TrackingDateTime = location.trackingDateTime == default ? null : location.trackingDateTime,
-                        Latitude = location.latitude,
-                        Longitude = location.longitude,
+                        timestamp = location.timestamp == default ? null : location.timestamp,
+                        latitude = location.latitude,
+                        longitude = location.longitude,
                         Reason = itemError
                     });
                     continue;
@@ -132,7 +135,8 @@ namespace MobileWebApi.Services
                 {
                     Latitude = RoundCoordinate(location.latitude!.Value),
                     Longitude = RoundCoordinate(location.longitude!.Value),
-                    TrackingDateTime = location.trackingDateTime
+                    TrackingDateTime = NormalizeToIndiaTime(location.timestamp),
+                    LocationFrom = NormalizeLocationFrom(location.location_from)
                 });
             }
 
@@ -177,9 +181,9 @@ namespace MobileWebApi.Services
                         ? failedRecords
                         : request.locations.Select(l => new LocationTrackingBatchFailedRecord
                         {
-                            TrackingDateTime = l.trackingDateTime == default ? null : l.trackingDateTime,
-                            Latitude = l.latitude,
-                            Longitude = l.longitude,
+                            timestamp = l.timestamp == default ? null : l.timestamp,
+                            latitude = l.latitude,
+                            longitude = l.longitude,
                             Reason = LocationTrackingMessages.FailedToRecordLocation
                         }).ToList()
                 };
@@ -281,5 +285,30 @@ namespace MobileWebApi.Services
 
         private static decimal RoundCoordinate(double value) =>
             Math.Round(Convert.ToDecimal(value), 6, MidpointRounding.AwayFromZero);
+
+        private static string? NormalizeLocationFrom(string? locationFrom) =>
+            string.IsNullOrWhiteSpace(locationFrom) ? null : locationFrom.Trim();
+
+        private static DateTime NormalizeToIndiaTime(DateTime trackingDateTime)
+        {
+            // Mobile typically sends local (India) time like "2026-07-07T05:25:37" (Kind = Unspecified).
+            // If a UTC timestamp is sent (e.g., "...Z"), convert it to India Standard Time before storing.
+            try
+            {
+                var indiaTz = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
+
+                return trackingDateTime.Kind switch
+                {
+                    DateTimeKind.Utc => TimeZoneInfo.ConvertTimeFromUtc(trackingDateTime, indiaTz),
+                    DateTimeKind.Local => TimeZoneInfo.ConvertTime(trackingDateTime, TimeZoneInfo.Local, indiaTz),
+                    _ => trackingDateTime // Unspecified: assume already IST
+                };
+            }
+            catch
+            {
+                // If timezone lookup fails for any reason, store the timestamp as provided.
+                return trackingDateTime;
+            }
+        }
     }
 }

@@ -23,6 +23,7 @@ namespace MobileWebApi.Repositories
             decimal latitude,
             decimal longitude,
             DateTime trackingDateTime,
+            string? locationFrom,
             int insertUserId)
         {
             var now = DateTime.Now;
@@ -37,6 +38,7 @@ namespace MobileWebApi.Repositories
                 Longitude = longitude,
                 Date = trackingDateTime.Date,
                 Time = trackingDateTime,
+                LocationFrom = locationFrom,
                 InsertUserId = insertUserId,
                 InsertDate = now,
                 UpdateUserId = insertUserId,
@@ -68,6 +70,7 @@ namespace MobileWebApi.Repositories
                     Longitude = r.Longitude,
                     Date = r.TrackingDateTime.Date,
                     Time = r.TrackingDateTime,
+                    LocationFrom = r.LocationFrom,
                     InsertUserId = insertUserId,
                     InsertDate = now,
                     UpdateUserId = insertUserId,

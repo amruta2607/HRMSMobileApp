@@ -1,5 +1,8 @@
 namespace MobileWebApi.Models
 {
+    using System.Text.Json.Serialization;
+    using MobileWebApi.Helper;
+
     /// <summary>
     /// A single location entry within a batch upload request.
     /// </summary>
@@ -7,7 +10,9 @@ namespace MobileWebApi.Models
     {
         public double? latitude { get; set; }
         public double? longitude { get; set; }
-        public DateTime trackingDateTime { get; set; }
+        [JsonConverter(typeof(LocationTrackingTimestampJsonConverter))]
+        public DateTime timestamp { get; set; }
+        public string? location_from { get; set; }
     }
 
     /// <summary>
@@ -15,7 +20,7 @@ namespace MobileWebApi.Models
     /// </summary>
     public class LocationTrackingBatchRequest
     {
-        public int userId { get; set; }
+        public int user_id { get; set; }
         public List<LocationTrackingBatchItem> locations { get; set; } = new();
     }
 }
