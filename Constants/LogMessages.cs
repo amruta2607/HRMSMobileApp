@@ -424,6 +424,25 @@ namespace MobileWebApi.Constants
             public const string ErrorFetchingLatestTrainings = "Error fetching latest trainings for mobile dashboard.";
         }
 
+        // Asset dashboard logs
+        public static class AssetDashboard
+        {
+            public const string ErrorFetchingDashboard = "Error fetching asset dashboard for organisation {OrganisationId}.";
+        }
+
+        // Asset list logs
+        public static class Asset
+        {
+            public const string ErrorFetchingAssets = "Error fetching asset list for organisation {OrganisationId}.";
+            public const string ErrorCreatingAsset = "Error creating asset for organisation {OrganisationId}.";
+        }
+
+        // Asset hand over logs
+        public static class AssetHandOver
+        {
+            public const string ErrorFetchingList = "Error fetching asset hand over list for organisation {OrganisationId}.";
+        }
+
         // Dispute related logs
         public static class Dispute
         {
