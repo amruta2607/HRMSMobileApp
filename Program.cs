@@ -97,6 +97,7 @@ builder.Services.AddScoped<IMobileDashboardService, MobileDashboardService>();
 builder.Services.AddScoped<IAssetDashboardRepository, AssetDashboardRepository>();
 builder.Services.AddScoped<IAssetRepository, AssetRepository>();
 builder.Services.AddScoped<IAssetHandOverRepository, AssetHandOverRepository>();
+builder.Services.AddScoped<IScannerRepository, ScannerRepository>();
 builder.Services.AddScoped<IAssetQRCodeService, AssetQRCodeService>();
 
 builder.Services.AddMemoryCache();

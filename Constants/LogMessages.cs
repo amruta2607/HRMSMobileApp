@@ -443,6 +443,12 @@ namespace MobileWebApi.Constants
             public const string ErrorFetchingList = "Error fetching asset hand over list for organisation {OrganisationId}.";
         }
 
+        // Scanner logs
+        public static class Scanner
+        {
+            public const string ErrorFetchingAsset = "Error fetching asset by scanner code for organisation {OrganisationId}.";
+        }
+
         // Dispute related logs
         public static class Dispute
         {

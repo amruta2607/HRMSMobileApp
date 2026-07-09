@@ -371,6 +371,12 @@ namespace MobileWebApi.Constants
         {
             public const string GetList = "ASSET-004";
         }
+
+        // Scanner (ScannerRepository)
+        public static class Scanner
+        {
+            public const string GetAsset = "SCAN-001";
+        }
     }
 }
 
