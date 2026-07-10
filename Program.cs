@@ -7,6 +7,7 @@ using System.Linq;
 using MobileWebApi.Data;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Repositories;
+using MobileWebApi.Repositories.Interfaces;
 using MobileWebApi.Services;
 using MobileWebApi.Models;
 using MobileWebApi.Middleware;
@@ -93,6 +94,11 @@ builder.Services.AddScoped<ITenantWeekOffRepository, TenantWeekOffRepository>();
 builder.Services.AddScoped<ITenantWeekOffService, TenantWeekOffService>();
 
 builder.Services.AddScoped<IMobileDashboardService, MobileDashboardService>();
+builder.Services.AddScoped<IAssetDashboardRepository, AssetDashboardRepository>();
+builder.Services.AddScoped<IAssetRepository, AssetRepository>();
+builder.Services.AddScoped<IAssetHandOverRepository, AssetHandOverRepository>();
+builder.Services.AddScoped<IScannerRepository, ScannerRepository>();
+builder.Services.AddScoped<IAssetQRCodeService, AssetQRCodeService>();
 
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<IOtpService, OtpService>();

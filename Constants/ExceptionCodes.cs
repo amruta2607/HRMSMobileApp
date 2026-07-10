@@ -352,6 +352,31 @@ namespace MobileWebApi.Constants
             public const string InitiateLeaveWorkflow = "WF-001";
             public const string InsertInitialStage = "WF-002";
         }
+
+        // Asset dashboard (AssetDashboardRepository)
+        public static class AssetDashboard
+        {
+            public const string GetDashboard = "ASSET-001";
+        }
+
+        // Asset list (AssetRepository)
+        public static class Asset
+        {
+            public const string GetList = "ASSET-002";
+            public const string Create = "ASSET-003";
+        }
+
+        // Asset hand over list (AssetHandOverRepository)
+        public static class AssetHandOver
+        {
+            public const string GetList = "ASSET-004";
+        }
+
+        // Scanner (ScannerRepository)
+        public static class Scanner
+        {
+            public const string GetAsset = "SCAN-001";
+        }
     }
 }
 
