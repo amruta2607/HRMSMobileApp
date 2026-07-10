@@ -24,7 +24,69 @@ namespace MobileWebApi.Interfaces
             string? linkOut,
             string? imageUrl,
             bool manual,
+            string? punchOutReason,
+            int userId = 0);
+
+        /// <summary>
+        /// Gets today's punch record for an employee with tenant filter.
+        /// </summary>
+        Task<Punch?> GetTodayPunchAsync(int employeeId, int tenantId, DateTime punchDate);
+
+        /// <summary>
+        /// Gets the last punch tracking record for the current day.
+        /// </summary>
+        Task<PunchTracking?> GetLastPunchTrackingAsync(int employeeId, int tenantId, DateTime punchDate);
+
+        /// <summary>
+        /// Inserts a punch tracking record.
+        /// </summary>
+        Task InsertPunchTrackingAsync(PunchTracking tracking);
+
+        /// <summary>
+        /// Updates punch-out on the Punch table (latest out time).
+        /// </summary>
+        Task UpdatePunchOutAsync(
+            int punchId,
+            DateTime punchOut,
+            double? duration,
+            int userId,
+            string outSource,
+            string? coordinateOut,
+            string? linkOut,
+            string? imageUrl,
+            bool manual,
             string? punchOutReason);
+
+        /// <summary>
+        /// Inserts a punch-in and tracking record in a single transaction.
+        /// </summary>
+        Task<int> InsertPunchInWithTrackingAsync(
+            int employeeId,
+            int tenantId,
+            DateTime punchIn,
+            DateTime punchDate,
+            string inSource,
+            string? coordinateIn,
+            string? linkIn,
+            string? imageUrl,
+            int userId,
+            PunchTracking tracking);
+
+        /// <summary>
+        /// Inserts tracking and updates punch-out in a single transaction.
+        /// </summary>
+        Task UpdatePunchOutWithTrackingAsync(
+            int punchId,
+            DateTime punchOut,
+            double? duration,
+            int userId,
+            string outSource,
+            string? coordinateOut,
+            string? linkOut,
+            string? imageUrl,
+            bool manual,
+            string? punchOutReason,
+            PunchTracking tracking);
         Task<List<DateTime>> GetHolidayDatesAsync(int tenantId, DateTime fromDate, DateTime toDate);
         Task<List<(DateTime FromDate, DateTime ToDate)>> GetApprovedLeaveDateRangesAsync(int employeeId, DateTime fromDate, DateTime toDate);
         
