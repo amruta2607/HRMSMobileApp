@@ -13,6 +13,7 @@ import '../../Tenant/controller/tenant_controller.dart';
 
 import '../../../core/Utils/services/Attendance service/attendance_service.dart';
 import '../../../core/Utils/services/Time_Location/location_service.dart';
+import '../../../core/Background_location _tracking/services/battery_optimization_service.dart';
 import '../../Attendance/dialogs/clock_in_dialog.dart';
 import '../../Attendance/dialogs/clock_out_dialog.dart';
 import '../../Attendance/dialogs/already_punched_dialog.dart';
@@ -118,7 +119,7 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
     }
   }
 
-  void _handleClockTap(BuildContext context) {
+  void _handleClockTap(BuildContext context) async {
     if (_isLoading) return;
 
     if (AttendanceService.isPunchedOutForToday) {
@@ -132,6 +133,17 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
       return;
     }
 
+    if (!AttendanceService.isClockedIn) {
+      // MANDATORY: Check battery optimization BEFORE opening punch in selfie dialog
+      final batteryOptimizationCompleted =
+          await BatteryOptimizationService.showMandatoryBatteryOptimizationDialog(context);
+      if (!batteryOptimizationCompleted) {
+        _showError('Battery optimization settings are required for background location tracking.');
+        return;
+      }
+    }
+
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (_) => AttendanceService.isClockedIn
@@ -142,6 +154,16 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
 
   Future<void> _clockIn(DateTime punchTime, File image) async {
     setState(() => _isLoading = true);
+
+    // MANDATORY: Check battery optimization before allowing punch in
+    final batteryOptimizationCompleted =
+        await BatteryOptimizationService.showMandatoryBatteryOptimizationDialog(context);
+    if (!batteryOptimizationCompleted) {
+      setState(() => _isLoading = false);
+      _showError('Battery optimization settings are required for background location tracking.');
+      return;
+    }
+
     try {
       final geoConfig = await AttendanceService.getGeofencingDetails();
       if (geoConfig != null && geoConfig.isEnabled) {
@@ -185,12 +207,39 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
       } else {
         _showError(result.message ?? 'Clock-in failed / Range Issue');
       }
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        BatteryOptimizationService.showBatteryOptimizationDialog(context);
+      });
     }
     setState(() => _isLoading = false);
   }
 
   Future<void> _clockOut(DateTime punchTime, File image) async {
     setState(() => _isLoading = true);
+
+    try {
+      final geoConfig = await AttendanceService.getGeofencingDetails();
+      if (geoConfig != null && geoConfig.isEnabled) {
+        final position = await LocationService.getLatLng();
+        final isWithin = AttendanceService.isWithinRadius(
+          currentLat: position.latitude,
+          currentLng: position.longitude,
+          branchLat: geoConfig.latitude,
+          branchLng: geoConfig.longitude,
+          radius: geoConfig.radius,
+        );
+
+        if (!isWithin) {
+          setState(() => _isLoading = false);
+          _showError('You are not in the office range. Radius: ${geoConfig.radius}m');
+          return;
+        }
+      }
+    } catch (e) {
+      print('Geofencing check failed (home clockOut): $e');
+    }
+
     print("Home header punch out");
     print(punchTime);
     final result = await AttendanceService.submitAttendance(

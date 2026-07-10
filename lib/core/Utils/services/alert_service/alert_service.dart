@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../Urls/urls.dart';
 import '../token_storage.dart';
+import '../authenticated_http.dart';
 import 'package:altroz/feature/alerts/model/alert_model.dart';
 
 class AlertService {
@@ -12,7 +13,7 @@ class AlertService {
 
       final url = Uri.parse(BaseUrls.alerts);
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         url,
         headers: {
           'accept': '*/*',
@@ -21,7 +22,6 @@ class AlertService {
       );
 
       if (response.statusCode == 401) {
-        await TokenStorage.logoutAndNavigate();
         return null;
       }
 
@@ -68,7 +68,7 @@ class AlertService {
 
       print('DEBUG: Sending Approval/Rejection Payload => ${jsonEncode(body)}');
 
-      final response = await http.put(
+      final response = await AuthenticatedHttp.put(
         url,
         headers: {
           'accept': '*/*',
@@ -79,7 +79,6 @@ class AlertService {
       );
 
       if (response.statusCode == 401) {
-        await TokenStorage.logoutAndNavigate();
         return {'success': false, 'message': 'Session expired'};
       }
 
@@ -105,7 +104,7 @@ class AlertService {
         "updateUserId": 0
       };
 
-      final response = await http.put(
+      final response = await AuthenticatedHttp.put(
         url,
         headers: {
           'accept': '*/*',

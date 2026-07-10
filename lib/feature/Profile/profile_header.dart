@@ -7,9 +7,17 @@ import '../../../core/Theme/app_colors.dart';
 import '../../../core/Utils/services/token_storage.dart';
 import 'controller/profile_controller.dart';
 import '../Reuse_Widgets/authenticated_image.dart';
+import '../../../core/Background_location _tracking/presentation/track_location.dart';
 
-class ProfileHeader extends StatelessWidget {
+class ProfileHeader extends StatefulWidget {
   const ProfileHeader({super.key});
+
+  @override
+  State<ProfileHeader> createState() => _ProfileHeaderState();
+}
+
+class _ProfileHeaderState extends State<ProfileHeader> {
+  int _tapCount = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -44,31 +52,54 @@ class ProfileHeader extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    /// Profile Image - Only show if exists
-                    CircleAvatar(
-                      radius: 44 * scale,
-                      backgroundColor: Colors.white,
-                      child: imageUrl.isNotEmpty
-                          ? AuthenticatedImage(
-                        imageUrl: imageUrl,
-                        width: 88 * scale,
-                        height: 88 * scale,
-                        scale: scale,
-                        fallbackLetter: profile?.name != null &&
-                            profile!.name.isNotEmpty
-                            ? profile!.name[0].toUpperCase()
-                            : 'U',
-                      )
-                          : Center(
-                        child: Text(
-                          profile?.name != null &&
+                    /// Profile Image - Only show if exists (10-tap developer secret menu)
+                    GestureDetector(
+                      onTap: () {
+                        _tapCount++;
+                        if (_tapCount == 10) {
+                          _tapCount = 0;
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const LocationTracker(),
+                            ),
+                          );
+                        } else if (_tapCount >= 5) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '${10 - _tapCount} more taps to open Developer Sync Tracker',
+                              ),
+                              duration: const Duration(milliseconds: 500),
+                            ),
+                          );
+                        }
+                      },
+                      child: CircleAvatar(
+                        radius: 44 * scale,
+                        backgroundColor: Colors.white,
+                        child: imageUrl.isNotEmpty
+                            ? AuthenticatedImage(
+                          imageUrl: imageUrl,
+                          width: 88 * scale,
+                          height: 88 * scale,
+                          scale: scale,
+                          fallbackLetter: profile?.name != null &&
                               profile!.name.isNotEmpty
                               ? profile!.name[0].toUpperCase()
                               : 'U',
-                          style: TextStyle(
-                            fontSize: 30 * scale,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryBlue,
+                        )
+                            : Center(
+                          child: Text(
+                            profile?.name != null &&
+                                profile!.name.isNotEmpty
+                                ? profile!.name[0].toUpperCase()
+                                : 'U',
+                            style: TextStyle(
+                              fontSize: 30 * scale,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryBlue,
+                            ),
                           ),
                         ),
                       ),

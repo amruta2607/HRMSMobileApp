@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../../../../feature/Dispute/dispute_category.dart';
 import '../../Urls/urls.dart';
 import '../token_storage.dart';
+import '../authenticated_http.dart';
 
 class DisputeService {
   static Future<List<DisputeCategory>> fetchCategories() async {
@@ -10,7 +11,7 @@ class DisputeService {
       final token = await TokenStorage.getToken();
       if (token == null) throw Exception("Token Missing");
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         Uri.parse(BaseUrls.disputeCategories),
         headers: {
           'accept': '*/*',
@@ -56,7 +57,7 @@ class DisputeService {
 
       print("DISPUTE BODY: ${jsonEncode(body)}");
 
-      final response = await http.post(
+      final response = await AuthenticatedHttp.post(
         Uri.parse(BaseUrls.createDispute),
         headers: {
           'accept': '*/*',

@@ -28,10 +28,11 @@ android {
 
     defaultConfig {
         applicationId = "com.altroz.hrm"
-        minSdk = flutter.minSdkVersion
+        minSdk = 24
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        multiDexEnabled = true
     }
 
     signingConfigs {
@@ -48,10 +49,17 @@ android {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             isShrinkResources = false
+
+
+            // =========================================================================
+            // Added: Link ProGuard rules for release builds
+            // =========================================================================
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
-
-
 }
 
 kotlin {

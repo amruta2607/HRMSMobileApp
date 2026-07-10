@@ -1,14 +1,17 @@
 class BaseUrls {
 
-  //static const String base = "http://103.123.74.160:81"; //development
+   static const String base = "http://103.123.74.160:81"; //development
 
 
-     static const String base = "http://103.123.74.159:5005"; //production
+    //  static const String base = "http://103.123.74.159:5005"; //production
 
   // AUTH
   static const String loginWithEmail = "$base/api/Auth/login-email";
   static const String loginWithMobile = "$base/api/Auth/login-mobile";
   static const String logout = "$base/api/Auth/logout";
+
+  static const String refreshToken = "$base/api/Auth/refresh-token";
+
 
   static const String forgotPassword = "$base/api/Auth/forgot-password";
      static const String moduleAccess = "$base/api/mobile/module-access";
@@ -28,6 +31,11 @@ class BaseUrls {
   static const String geofencingByTenant = "$base/api/geofencing/by-tenant";
 
   static const String todayLogs = "$base/api/attendance/today-logs";
+
+  // LOCATION TRACKING & ISSUES
+  static const String addLocationTracking = "$base/apipunch/location-tracking/add-location-tracking";
+  static const String addBatchLocation = "$base/apipunch/location-tracking/add-batch-location";
+  static const String addLocationTrackingIssue = "$base/apipunch/location-tracking/add-issue";
 
 
   // PROFILE

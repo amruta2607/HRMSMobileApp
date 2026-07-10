@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../feature/Profile/model/profile_model.dart';
 import '../../Urls/urls.dart';
 import '../token_storage.dart';
+import '../authenticated_http.dart';
 
 class ProfileService {
   static Future<ProfileModel?> fetchProfile() async {
@@ -27,7 +28,7 @@ class ProfileService {
       final url = '${BaseUrls.profileByUser}/$userId';
       print(' PROFILE API URL => $url');
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         Uri.parse(url),
         headers: {
           'accept': '*/*',
@@ -35,12 +36,8 @@ class ProfileService {
         },
       );
 
-      // print(' PROFILE STATUS => ${response.statusCode}');
-      // print(' PROFILE RESPONSE => ${response.body}');
-
       if (response.statusCode == 401) {
-        print(' PROFILE: Token expired, logging out');
-        await TokenStorage.logoutAndNavigate();
+        print(' PROFILE: 401 returned (logout handled centrally if auth rejected)');
         return null;
       }
 
@@ -56,22 +53,14 @@ class ProfileService {
         return null;
       }
 
-      final profile = ProfileModel.fromJson(decoded['data']);
-
-      // print(' PROFILE FETCHED SUCCESSFULLY');
-      // print('    Name        : ${profile.name}');
-      // print('   Emp ID      : ${profile.empId}');
-      // print('   Email       : ${profile.email}');
-      // print('   Phone       : ${profile.phone}');
-      // print('   Designation : ${profile.designation}');
-      // print('   Picture     : ${profile.picture}');
-      // print('    address        : ${profile.address}');
-      // print('    reporting manager     : ${profile.reportingManager}');
-
-      return profile;
+      return ProfileModel.fromJson(decoded['data']);
     } catch (e, s) {
-      print(' PROFILE FETCH ERROR => $e');
-      print('STACKTRACE => $s');
+      if (e.toString().contains('SocketException') || e.toString().contains('Network is unreachable')) {
+        print('🌐 [PROFILE SERVICE] Offline: Cannot fetch profile.');
+      } else {
+        print(' PROFILE FETCH ERROR => $e');
+        print('STACKTRACE => $s');
+      }
       return null;
     }
   }
@@ -94,7 +83,7 @@ class ProfileService {
         return false;
       }
 
-      // Use the correct PUT endpoint (not the GET endpoint)
+      // Use the correct PUT endpoint
       final url = Uri.parse('${BaseUrls.base}/api/personal-details');
       print(' UPDATE PROFILE API URL => $url');
 
@@ -139,8 +128,7 @@ class ProfileService {
       print(' UPDATE PROFILE RESPONSE => ${response.body}');
 
       if (response.statusCode == 401) {
-        print(' UPDATE PROFILE: Token expired, logging out');
-        await TokenStorage.logoutAndNavigate();
+        print(' UPDATE PROFILE: 401 returned (logout handled centrally if auth rejected)');
         return false;
       }
 

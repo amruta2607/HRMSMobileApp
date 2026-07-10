@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../Urls/urls.dart';
 import '../token_storage.dart';
+import '../authenticated_http.dart';
 
 class TenantService {
   static Future<String?> getCompanyLogo() async {
@@ -9,7 +10,7 @@ class TenantService {
       final token = await TokenStorage.getToken();
       if (token == null) return null;
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         Uri.parse(BaseUrls.companyLogo),
         headers: {
           'accept': '*/*',
@@ -34,7 +35,11 @@ class TenantService {
         }
       }
     } catch (e) {
-      print('🔴 TENANT SERVICE ERROR => $e');
+      if (e.toString().contains('SocketException') || e.toString().contains('Network is unreachable')) {
+        print('🌐 [TENANT SERVICE] Offline: Cannot fetch company logo.');
+      } else {
+        print('🔴 TENANT SERVICE ERROR => $e');
+      }
     }
     return null;
   }

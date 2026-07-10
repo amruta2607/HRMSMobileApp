@@ -17,11 +17,11 @@ class LeaveHistoryItem {
 
   factory LeaveHistoryItem.fromJson(Map<String, dynamic> json) {
     return LeaveHistoryItem(
-      leaveRequestId: json['leaveRequestId'] ?? 0,
+      leaveRequestId: (json['leaveRequestId'] as num?)?.toInt() ?? 0,
       leaveDates: json['leaveDates'] ?? '',
       leaveType: json['leaveType'] ?? '',
       reason: json['reason'] ?? '',
-      usedDays: json['usedDays'] ?? 0,
+      usedDays: (json['usedDays'] as num?)?.toInt() ?? 0,
       status: json['status'] ?? '',
     );
   }
@@ -53,10 +53,10 @@ class LeaveHistoryModel {
     return LeaveHistoryModel(
       success: json['success'] ?? false,
       message: json['message'] ?? '',
-      employeeId: json['employeeId'] ?? 0,
-      availableLeaves: json['availableLeaves'] ?? 0,
-      usedLeaves: json['usedLeaves'] ?? 0,
-      year: json['year'] ?? DateTime.now().year,
+      employeeId: (json['employeeId'] as num?)?.toInt() ?? 0,
+      availableLeaves: (json['availableLeaves'] as num?)?.toInt() ?? 0,
+      usedLeaves: (json['usedLeaves'] as num?)?.toInt() ?? 0,
+      year: (json['year'] as num?)?.toInt() ?? DateTime.now().year,
       leaveHistory: historyList,
     );
   }

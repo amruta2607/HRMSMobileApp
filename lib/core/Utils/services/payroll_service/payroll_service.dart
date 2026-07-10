@@ -5,6 +5,7 @@ import '../../../../feature/payroll/model/provident_fund_model.dart';
 import '../../../../feature/payroll/model/monthly_summary_model.dart';
 import '../../Urls/urls.dart';
 import '../token_storage.dart';
+import '../authenticated_http.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
@@ -39,7 +40,7 @@ class PayrollService {
 
       print(' PROVIDENT FUND API URL => $uri');
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         uri,
         headers: {
           'accept': '*/*',
@@ -51,8 +52,6 @@ class PayrollService {
       print(' PROVIDENT FUND RESPONSE => ${response.body}');
 
       if (response.statusCode == 401) {
-        print(' PAYROLL SERVICE: Token expired, logging out');
-        await TokenStorage.logoutAndNavigate();
         return null;
       }
 
@@ -99,7 +98,7 @@ class PayrollService {
 
       print(' MONTHLY SUMMARY API URL => $uri');
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         uri,
         headers: {
           'accept': '*/*',
@@ -111,8 +110,6 @@ class PayrollService {
       print(' MONTHLY SUMMARY RESPONSE => ${response.body}');
 
       if (response.statusCode == 401) {
-        print(' PAYROLL SERVICE: Token expired, logging out');
-        await TokenStorage.logoutAndNavigate();
         return null;
       }
 
@@ -154,7 +151,7 @@ class PayrollService {
 
       print(' LAST MONTH PAYROLL API URL => $uri');
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         uri,
         headers: {
           'accept': '*/*',
@@ -166,8 +163,6 @@ class PayrollService {
       print(' LAST MONTH PAYROLL RESPONSE => ${response.body}');
 
       if (response.statusCode == 401) {
-        print(' PAYROLL SERVICE: Token expired, logging out');
-        await TokenStorage.logoutAndNavigate();
         return null;
       }
 
@@ -237,7 +232,7 @@ class PayrollService {
 
       print(' PAY SLIP LIST API URL => $uri');
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         uri,
         headers: {
           'accept': '*/*',
@@ -248,7 +243,6 @@ class PayrollService {
       print(' PAY SLIP LIST STATUS => ${response.statusCode}');
 
       if (response.statusCode == 401) {
-        await TokenStorage.logoutAndNavigate();
         return null;
       }
 
@@ -285,7 +279,7 @@ class PayrollService {
 
       print(' DOWNLOAD PAY SLIP API URL => $uri');
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         uri,
         headers: {
           'accept': '*/*',
@@ -321,7 +315,7 @@ class PayrollService {
       final token = await TokenStorage.getToken();
       if (token == null) return null;
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         Uri.parse(BaseUrls.paySlipYears),
         headers: {
           'accept': '*/*',
@@ -347,7 +341,7 @@ class PayrollService {
       final token = await TokenStorage.getToken();
       if (token == null) return null;
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         Uri.parse('${BaseUrls.paySlipMonths}?year=$year'),
         headers: {
           'accept': '*/*',

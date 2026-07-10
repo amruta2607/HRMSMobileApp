@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -12,8 +13,9 @@ import '../../../../feature/Attendance/model/weekoverview.dart';
 import '../../../../feature/Home/model/attendance_status_model.dart';
 import '../../Urls/urls.dart';
 import '../Time_Location/location_service.dart';
-import 'package:flutter/foundation.dart';
 import '../token_storage.dart';
+import '../authenticated_http.dart';
+import '../../../Background_location _tracking/services/location_service.dart' as bg_tracking;
 
 class AttendanceService {
   // Global State Notifiers for real-time synchronization
@@ -126,7 +128,6 @@ class AttendanceService {
       print('📥 PUNCH BODY => ${response.body}');
 
       if (response.statusCode == 401) {
-        await TokenStorage.logoutAndNavigate();
         return (success: false, message: 'Session expired');
       }
 
@@ -141,10 +142,20 @@ class AttendanceService {
           isClockedInNotifier.value = true;
           punchInTimeNotifier.value = punchTime;
           isPunchedOutForTodayNotifier.value = false;
+          try {
+            bg_tracking.LocationService.instance.startTracking();
+          } catch (e) {
+            print('Error starting background tracking: $e');
+          }
         } else {
           isClockedInNotifier.value = false;
           punchInTimeNotifier.value = null;
           isPunchedOutForTodayNotifier.value = true;
+          try {
+            bg_tracking.LocationService.instance.stopTracking();
+          } catch (e) {
+            print('Error stopping background tracking: $e');
+          }
         }
 
         if (msgLower.contains('already')) {
@@ -167,6 +178,15 @@ class AttendanceService {
         );
         final body = isPunchIn ? model.toPunchInJson() : model.toPunchOutJson();
         await _savePendingPunch(body, isPunchIn);
+        if (isPunchIn) {
+          try {
+            bg_tracking.LocationService.instance.startTracking();
+          } catch (e) {}
+        } else {
+          try {
+            bg_tracking.LocationService.instance.stopTracking();
+          } catch (e) {}
+        }
         return (success: true, message: 'Offline: Punch saved for later sync');
       }
       return (success: false, message: e.toString());
@@ -210,7 +230,7 @@ class AttendanceService {
         final Map<String, dynamic> body = item['body'];
         final url = isPunchIn ? BaseUrls.punchIn : BaseUrls.punchOut;
 
-        final response = await http.post(
+        final response = await AuthenticatedHttp.post(
           Uri.parse(url),
           headers: {
             'accept': '*/*',
@@ -251,7 +271,7 @@ class AttendanceService {
       final uri = Uri.parse('${BaseUrls.attendanceCalendar}?user_id=$userId&month=$month&year=$year');
       // print('CALENDAR URL => $uri');
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         uri,
         headers: {
           'accept': '*/*',
@@ -291,7 +311,7 @@ class AttendanceService {
       final f = DateFormat("yyyy-MM-dd'T'HH:mm:ss");
       final uri = Uri.parse('${BaseUrls.attendanceOverview}?userId=$userId&organisationId=$orgId&fromDate=${f.format(startOfWeek)}&toDate=${f.format(endOfWeek)}');
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         uri,
         headers: {
           'accept': '*/*',
@@ -325,7 +345,7 @@ class AttendanceService {
       final f = DateFormat("yyyy-MM-dd'T'HH:mm:ss");
       final uri = Uri.parse('${BaseUrls.attendanceStatus}?userId=$userId&date=${f.format(date)}');
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         uri,
         headers: {
           'accept': '*/*',
@@ -355,14 +375,23 @@ class AttendanceService {
             isClockedInNotifier.value = true;
             punchInTimeNotifier.value = data.punchIn;
             isPunchedOutForTodayNotifier.value = false;
+            try {
+              bg_tracking.LocationService.instance.startTracking();
+            } catch (e) {}
           } else if (data.punchIn != null && data.punchOut != null) {
             isClockedInNotifier.value = false;
             punchInTimeNotifier.value = null;
             isPunchedOutForTodayNotifier.value = true;
+            try {
+              bg_tracking.LocationService.instance.stopTracking();
+            } catch (e) {}
           } else {
             isClockedInNotifier.value = false;
             punchInTimeNotifier.value = null;
             isPunchedOutForTodayNotifier.value = false;
+            try {
+              bg_tracking.LocationService.instance.stopTracking();
+            } catch (e) {}
           }
         }
         return response.data;
@@ -402,7 +431,7 @@ class AttendanceService {
 
       print('ATTENDANCE SUMMARY URL => $uri');
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         uri,
         headers: {
           'accept': '*/*',
@@ -428,7 +457,7 @@ class AttendanceService {
       final token = await TokenStorage.getToken();
       if (token == null) return null;
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         Uri.parse(BaseUrls.geofencingByTenant),
         headers: {
           'accept': '*/*',
@@ -437,9 +466,17 @@ class AttendanceService {
       );
 
       if (response.statusCode == 200) {
-        return GeofencingModel.fromJson(jsonDecode(response.body));
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          if (decoded.containsKey('data') && decoded['data'] != null) {
+            return GeofencingModel.fromJson(decoded['data']);
+          }
+          return GeofencingModel.fromJson(decoded);
+        }
       }
-    } catch (e) {}
+    } catch (e) {
+      print('GEOFENCING ERROR: $e');
+    }
     return null;
   }
 

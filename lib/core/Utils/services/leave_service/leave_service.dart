@@ -7,6 +7,7 @@ import '../../../../feature/leave/model/leave_reuest_model.dart';
 import '../../../../feature/leave/model/leave_history_model.dart';
 import '../../Urls/urls.dart';
 import '../token_storage.dart';
+import '../authenticated_http.dart';
 
 class LeaveService {
   static Future<int?> _getUserId() async {
@@ -41,7 +42,7 @@ class LeaveService {
 
       print(' LEAVE BALANCE API URL => $uri');
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         uri,
         headers: {
           'accept': '*/*',
@@ -53,8 +54,7 @@ class LeaveService {
       print(' LEAVE BALANCE RESPONSE => ${response.body}');
 
       if (response.statusCode == 401) {
-        print(' LEAVE SERVICE: Token expired, logging out');
-        await TokenStorage.logoutAndNavigate();
+        print(' LEAVE SERVICE: 401 returned (logout handled centrally if auth rejected)');
         return null;
       }
 
@@ -135,7 +135,7 @@ class LeaveService {
       print(' APPLY LEAVE API URL => $url');
       print(' APPLY LEAVE BODY => ${jsonEncode(body)}');
 
-      final response = await http.post(
+      final response = await AuthenticatedHttp.post(
         url,
         headers: {
           'accept': '*/*',
@@ -149,10 +149,9 @@ class LeaveService {
       print(' APPLY LEAVE RESPONSE => ${response.body}');
 
       if (response.statusCode == 401) {
-        await TokenStorage.logoutAndNavigate();
         return {
           'success': false,
-          'message': 'Session expired. Please login again.'
+          'message': 'Session expired.'
         };
       }
 
@@ -240,7 +239,7 @@ class LeaveService {
 
       print(' LEAVE REQUESTS API URL => $uri');
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         uri,
         headers: {
           'accept': '*/*',
@@ -252,7 +251,6 @@ class LeaveService {
       print(' LEAVE REQUESTS RESPONSE => ${response.body}');
 
       if (response.statusCode == 401) {
-        await TokenStorage.logoutAndNavigate();
         return null;
       }
 
@@ -300,7 +298,7 @@ class LeaveService {
       print(' WITHDRAW LEAVE API URL => $url');
       print(' WITHDRAW LEAVE BODY => ${jsonEncode(body)}');
 
-      final response = await http.put(
+      final response = await AuthenticatedHttp.put(
         url,
         headers: {
           'accept': '*/*',
@@ -314,7 +312,6 @@ class LeaveService {
       print(' WITHDRAW LEAVE RESPONSE => ${response.body}');
 
       if (response.statusCode == 401) {
-        await TokenStorage.logoutAndNavigate();
         return null;
       }
 
@@ -343,7 +340,7 @@ class LeaveService {
 
       print(' LEAVE HISTORY API URL => $url');
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         url,
         headers: {
           'accept': '*/*',
@@ -355,7 +352,6 @@ class LeaveService {
       // print(' LEAVE HISTORY RESPONSE => ${response.body}');
 
       if (response.statusCode == 401) {
-        await TokenStorage.logoutAndNavigate();
         return null;
       }
 

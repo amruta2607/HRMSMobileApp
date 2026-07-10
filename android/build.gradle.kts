@@ -1,9 +1,18 @@
+rootProject.extra.set("playServicesLocationVersion", "21.3.0")
+
 allprojects {
     repositories {
         google()
         mavenCentral()
+        maven {
+            url = uri("${project(":flutter_background_geolocation").projectDir}/libs")
+        }
+        maven {
+            url = uri("https://developer.huawei.com/repo/")
+        }
     }
 }
+
 
 val newBuildDir: Directory =
     rootProject.layout.buildDirectory

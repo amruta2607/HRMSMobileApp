@@ -44,7 +44,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   Future<void> _navigate() async {
-    await Future.delayed(const Duration(seconds: 2, milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 800));
 
     final bool isLoggedIn = await TokenStorage.getLoginStatus();
     if (!mounted) return;
@@ -54,8 +54,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       return;
     }
 
-    final isExpired = await TokenStorage.isTokenExpired();
-    if (isExpired) {
+    // Try to get a valid token (auto-refreshes if expired)
+    final validToken = await TokenStorage.getValidToken();
+    if (validToken == null) {
+      // Both access token and refresh token are invalid → must re-login
+      print('SPLASH → Token refresh failed, redirecting to login');
       await TokenStorage.logout();
       _goToLogin();
       return;

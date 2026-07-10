@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../Urls/urls.dart';
 import '../token_storage.dart';
+import '../authenticated_http.dart';
 
 class AlertCountService {
   static final ValueNotifier<int> alertCountNotifier = ValueNotifier<int>(0);
@@ -17,7 +18,7 @@ class AlertCountService {
 
       if (token == null) return 0;
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         Uri.parse(BaseUrls.alertCount),
         headers: {
           'accept': '*/*',
