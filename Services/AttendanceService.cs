@@ -16,6 +16,8 @@ namespace MobileWebApi.Services
         private readonly IConfiguration _configuration;
         private readonly BlobService _blobService;
         private readonly ITenantWeekOffRepository _tenantWeekOffRepository;
+        private readonly ITenantConfigurationRepository _tenantConfigurationRepository;
+        private readonly IPunchTrackingRepository _punchTrackingRepository;
         private readonly ILogger<AttendanceService> _logger;
 
         public AttendanceService(
@@ -26,6 +28,8 @@ namespace MobileWebApi.Services
             IConfiguration configuration,
             BlobService blobService,
             ITenantWeekOffRepository tenantWeekOffRepository,
+            ITenantConfigurationRepository tenantConfigurationRepository,
+            IPunchTrackingRepository punchTrackingRepository,
             ILogger<AttendanceService> logger)
         {
             _repo = repo;
@@ -35,10 +39,14 @@ namespace MobileWebApi.Services
             _configuration = configuration;
             _blobService = blobService;
             _tenantWeekOffRepository = tenantWeekOffRepository;
+            _tenantConfigurationRepository = tenantConfigurationRepository;
+            _punchTrackingRepository = punchTrackingRepository;
             _logger = logger;
         }
 
         private const string MobileSource = "Mobile";
+        private const string DirectionIn = "IN";
+        private const string DirectionOut = "OUT";
 
         /// <summary>
         /// Resolves EmployeeId from UserId by joining Users and Employee tables
@@ -97,6 +105,20 @@ namespace MobileWebApi.Services
 					punchIn,
 					punchIn.Kind,
 					attendanceDate);
+
+				var tenantId = await GetEmployeeTenantIdAsync(employeeId.Value);
+				var locationTrackingEnabled = await IsLocationTrackingEnabledAsync(tenantId);
+
+				if (locationTrackingEnabled)
+				{
+					return await PunchInMultipleAsync(
+						employeeId.Value,
+						tenantId,
+						req.userId,
+						punchIn,
+						attendanceDate,
+						req);
+				}
 
 				// Prevent duplicate punch in
 				var existingPunch = await _repo.GetPunchByEmployeeAndDate(
@@ -207,6 +229,20 @@ namespace MobileWebApi.Services
 					punchOut,
 					punchOut.Kind);
 
+				var tenantId = await GetEmployeeTenantIdAsync(employeeId.Value);
+				var locationTrackingEnabled = await IsLocationTrackingEnabledAsync(tenantId);
+
+				if (locationTrackingEnabled)
+				{
+					return await PunchOutMultipleAsync(
+						employeeId.Value,
+						tenantId,
+						req.userId,
+						punchOut,
+						PreserveReceivedDateTime(req.attendance_date).Date,
+						req);
+				}
+
 				// Get open attendance
 				var punch = await _repo.GetOpenPunchByEmployeeId(
 					employeeId.Value);
@@ -268,7 +304,8 @@ namespace MobileWebApi.Services
 					linkOut,
 					imageUrl,
 					isManual,
-					punchOutReason
+					punchOutReason,
+					req.userId
 				);
 
 				var savedPunch = await _repo.GetPunchByIdAsync(punch.Id, await GetEmployeeTenantIdAsync(employeeId.Value));
@@ -303,18 +340,87 @@ namespace MobileWebApi.Services
 
             var punchIn = PreserveReceivedDateTime(req.punchTime);
             var attendanceDate = punchIn.Date;
+            var tenantId = await GetEmployeeTenantIdAsync(employeeId);
 
-            var existingPunch = await _repo.GetPunchByEmployeeAndDate(employeeId, attendanceDate);
-            if (existingPunch != null && existingPunch.PunchIn != null)
+            if (await IsLocationTrackingEnabledAsync(tenantId))
             {
-                _logger.LogWarning(AttendanceMessages.PunchInAlreadyDone);
-                return AttendanceMessages.PunchInAlreadyDone;
+                var lastTracking = await _repo.GetLastPunchTrackingAsync(employeeId, tenantId, attendanceDate);
+                if (lastTracking != null && string.Equals(lastTracking.Direction, DirectionIn, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning(AttendanceMessages.AlreadyPunchedIn);
+                    return AttendanceMessages.AlreadyPunchedIn;
+                }
+            }
+            else
+            {
+                var existingPunch = await _repo.GetPunchByEmployeeAndDate(employeeId, attendanceDate);
+                if (existingPunch != null && existingPunch.PunchIn != null)
+                {
+                    _logger.LogWarning(AttendanceMessages.PunchInAlreadyDone);
+                    return AttendanceMessages.PunchInAlreadyDone;
+                }
             }
 
             // Upload punch photo if provided.
             string? imageUrl = null;
             if (req.image != null)
                 imageUrl = await _blobService.UploadAsync(req.image, employeeId);
+
+            if (await IsLocationTrackingEnabledAsync(tenantId))
+            {
+                var existingPunch = await _repo.GetTodayPunchAsync(employeeId, tenantId, attendanceDate);
+                if (existingPunch == null)
+                {
+                    var tracking = BuildInTracking(
+                        tenantId,
+                        employeeId,
+                        0,
+                        attendanceDate,
+                        punchIn,
+                        employeeId,
+                        coordinateIn: null,
+                        linkIn: null,
+                        imageUrl);
+
+                    var newPunchId = await _repo.InsertPunchInWithTrackingAsync(
+                        employeeId,
+                        tenantId,
+                        punchIn,
+                        attendanceDate,
+                        MobileSource,
+                        coordinateIn: null,
+                        linkIn: null,
+                        imageUrl,
+                        employeeId,
+                        tracking);
+
+                    if (newPunchId > 0)
+                    {
+                        _logger.LogInformation(LogMessages.Attendance.PunchInSuccessful, employeeId);
+                        return AttendanceMessages.PunchInSuccessful;
+                    }
+                }
+                else
+                {
+                    var tracking = BuildInTracking(
+                        tenantId,
+                        employeeId,
+                        existingPunch.Id,
+                        attendanceDate,
+                        punchIn,
+                        employeeId,
+                        coordinateIn: null,
+                        linkIn: null,
+                        imageUrl);
+
+                    await _repo.InsertPunchTrackingAsync(tracking);
+                    _logger.LogInformation(LogMessages.Attendance.PunchInSuccessful, employeeId);
+                    return AttendanceMessages.PunchInSuccessful;
+                }
+
+                _logger.LogWarning(AttendanceMessages.PunchInFailed);
+                return AttendanceMessages.PunchInFailed;
+            }
 
             var punchId = await _repo.InsertPunchIn(
                 employeeId,
@@ -346,39 +452,99 @@ namespace MobileWebApi.Services
 
             var punchOut = PreserveReceivedDateTime(req.punchTime);
             var attendanceDate = punchOut.Date;
+            var tenantId = await GetEmployeeTenantIdAsync(employeeId);
+            var locationTrackingEnabled = await IsLocationTrackingEnabledAsync(tenantId);
+            Punch? openPunch;
 
-            var punch = await _repo.GetOpenPunchByEmployeeId(employeeId);
-            if (punch == null || punch.PunchIn == null || punch.PunchDate.Date != attendanceDate)
+            if (locationTrackingEnabled)
             {
-                _logger.LogWarning(AttendanceMessages.CannotPunchOutWithoutPunchIn);
-                return AttendanceMessages.CannotPunchOutWithoutPunchIn;
+                openPunch = await _repo.GetTodayPunchAsync(employeeId, tenantId, attendanceDate);
+                if (openPunch == null || openPunch.PunchIn == null)
+                {
+                    _logger.LogWarning(AttendanceMessages.PleasePunchInFirst);
+                    return AttendanceMessages.PleasePunchInFirst;
+                }
+
+                var lastTracking = await _repo.GetLastPunchTrackingAsync(employeeId, tenantId, attendanceDate);
+                if (lastTracking == null || !string.Equals(lastTracking.Direction, DirectionIn, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (lastTracking != null && string.Equals(lastTracking.Direction, DirectionOut, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.LogWarning(AttendanceMessages.AlreadyPunchedOut);
+                        return AttendanceMessages.AlreadyPunchedOut;
+                    }
+
+                    _logger.LogWarning(AttendanceMessages.PleasePunchInFirst);
+                    return AttendanceMessages.PleasePunchInFirst;
+                }
             }
-
-            if (punch.PunchOut != null)
+            else
             {
-                _logger.LogWarning(AttendanceMessages.PunchOutAlreadyDone);
-                return AttendanceMessages.PunchOutAlreadyDone;
+                openPunch = await _repo.GetOpenPunchByEmployeeId(employeeId);
+                if (openPunch == null || openPunch.PunchIn == null || openPunch.PunchDate.Date != attendanceDate)
+                {
+                    _logger.LogWarning(AttendanceMessages.CannotPunchOutWithoutPunchIn);
+                    return AttendanceMessages.CannotPunchOutWithoutPunchIn;
+                }
+
+                if (openPunch.PunchOut != null)
+                {
+                    _logger.LogWarning(AttendanceMessages.PunchOutAlreadyDone);
+                    return AttendanceMessages.PunchOutAlreadyDone;
+                }
             }
 
             // Calculate duration in minutes (do not convert to hours)
-            double? duration = CalculateDurationInMinutes(punch.PunchIn, punchOut);
+            double? duration = CalculateDurationInMinutes(openPunch.PunchIn, punchOut);
 
             // Upload punch photo if provided.
             string? imageUrl = null;
             if (req.image != null)
                 imageUrl = await _blobService.UploadAsync(req.image, employeeId);
 
-            await _repo.UpdatePunchOut(
-                punch.Id,
-                punchOut,
-                duration,
-                MobileSource,
-                coordinateOut: null,
-                linkOut: null,
-                imageUrl: imageUrl,
-                manual: true,
-                punchOutReason: AttendanceMessages.ManualPunchOutReason
-            );
+            if (locationTrackingEnabled)
+            {
+                var tracking = BuildOutTracking(
+                    tenantId,
+                    employeeId,
+                    openPunch.Id,
+                    attendanceDate,
+                    punchOut,
+                    duration,
+                    employeeId,
+                    coordinateOut: null,
+                    linkOut: null,
+                    imageUrl,
+                    manual: true,
+                    AttendanceMessages.ManualPunchOutReason);
+
+                await _repo.UpdatePunchOutWithTrackingAsync(
+                    openPunch.Id,
+                    punchOut,
+                    duration,
+                    employeeId,
+                    MobileSource,
+                    coordinateOut: null,
+                    linkOut: null,
+                    imageUrl,
+                    manual: true,
+                    AttendanceMessages.ManualPunchOutReason,
+                    tracking);
+            }
+            else
+            {
+                await _repo.UpdatePunchOut(
+                    openPunch.Id,
+                    punchOut,
+                    duration,
+                    MobileSource,
+                    coordinateOut: null,
+                    linkOut: null,
+                    imageUrl: imageUrl,
+                    manual: true,
+                    punchOutReason: AttendanceMessages.ManualPunchOutReason
+                );
+            }
 
             _logger.LogInformation(LogMessages.Attendance.PunchOutSuccessful, employeeId);
             return AttendanceMessages.PunchOutSuccessful;
@@ -402,6 +568,239 @@ namespace MobileWebApi.Services
         {
             var employee = await _repo.GetEmployeeByIdAsync(employeeId);
             return employee?.OrganisationId ?? 0;
+        }
+
+        private async Task<bool> IsLocationTrackingEnabledAsync(int tenantId)
+        {
+            if (tenantId <= 0)
+            {
+                return false;
+            }
+
+            var config = await _tenantConfigurationRepository.GetTenantPunchConfigurationAsync(tenantId);
+            var enabled = config != null && config.IsLocationTrackingEnabled;
+
+            _logger.LogDebug(
+                "Location tracking check for TenantId {TenantId}: enabled={Enabled}",
+                tenantId,
+                enabled);
+
+            return enabled;
+        }
+
+        private PunchTracking BuildInTracking(
+            int tenantId,
+            int employeeId,
+            int punchId,
+            DateTime attendanceDate,
+            DateTime punchIn,
+            int userId,
+            string? coordinateIn,
+            string? linkIn,
+            string? imageUrl)
+        {
+            return new PunchTracking
+            {
+                TenantId = tenantId,
+                EmployeeId = employeeId,
+                PunchId = punchId,
+                PunchDate = attendanceDate,
+                Direction = DirectionIn,
+                PunchIn = punchIn,
+                PunchOut = null,
+                InsertUserId = userId,
+                InSource = MobileSource,
+                CoordinateIn = coordinateIn,
+                LinkIn = linkIn,
+                ImageUrl = imageUrl
+            };
+        }
+
+        private PunchTracking BuildOutTracking(
+            int tenantId,
+            int employeeId,
+            int punchId,
+            DateTime attendanceDate,
+            DateTime punchOut,
+            double? duration,
+            int userId,
+            string? coordinateOut,
+            string? linkOut,
+            string? imageUrl,
+            bool manual,
+            string? punchOutReason)
+        {
+            return new PunchTracking
+            {
+                TenantId = tenantId,
+                EmployeeId = employeeId,
+                PunchId = punchId,
+                PunchDate = attendanceDate,
+                Direction = DirectionOut,
+                PunchIn = null,
+                PunchOut = punchOut,
+                Duration = duration,
+                InsertUserId = userId,
+                OutSource = MobileSource,
+                CoordinateOut = coordinateOut,
+                LinkOut = linkOut,
+                ImageUrl = imageUrl,
+                Manual = manual,
+                PunchOutReason = punchOutReason
+            };
+        }
+
+        private async Task<string> PunchInMultipleAsync(
+            int employeeId,
+            int tenantId,
+            int userId,
+            DateTime punchIn,
+            DateTime attendanceDate,
+            PunchInRequest req)
+        {
+            var existingPunch = await _repo.GetTodayPunchAsync(employeeId, tenantId, attendanceDate);
+            var lastTracking = await _repo.GetLastPunchTrackingAsync(employeeId, tenantId, attendanceDate);
+
+            if (lastTracking != null && string.Equals(lastTracking.Direction, DirectionIn, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning(AttendanceMessages.AlreadyPunchedIn);
+                return AttendanceMessages.AlreadyPunchedIn;
+            }
+
+            string? imageUrl = null;
+            if (req.image != null && req.image.Length > 0)
+            {
+                imageUrl = await _blobService.UploadAsync(req.image, employeeId);
+                _logger.LogInformation("Punch-in image uploaded for employee {EmployeeId}", employeeId);
+            }
+
+            var coordinateIn = BuildCoordinate(req.latitude, req.longitude);
+            var linkIn = GenerateGoogleMapLink(req.latitude, req.longitude);
+
+            if (existingPunch == null)
+            {
+                var tracking = BuildInTracking(
+                    tenantId,
+                    employeeId,
+                    0,
+                    attendanceDate,
+                    punchIn,
+                    userId,
+                    coordinateIn,
+                    linkIn,
+                    imageUrl);
+
+                var punchId = await _repo.InsertPunchInWithTrackingAsync(
+                    employeeId,
+                    tenantId,
+                    punchIn,
+                    attendanceDate,
+                    MobileSource,
+                    coordinateIn,
+                    linkIn,
+                    imageUrl,
+                    userId,
+                    tracking);
+
+                if (punchId > 0)
+                {
+                    _logger.LogInformation(LogMessages.Attendance.PunchInSuccessful, employeeId);
+                    return AttendanceMessages.PunchInSuccessful;
+                }
+
+                _logger.LogWarning(AttendanceMessages.PunchInFailed);
+                return AttendanceMessages.PunchInFailed;
+            }
+
+            var trackingOnly = BuildInTracking(
+                tenantId,
+                employeeId,
+                existingPunch.Id,
+                attendanceDate,
+                punchIn,
+                userId,
+                coordinateIn,
+                linkIn,
+                imageUrl);
+
+            await _repo.InsertPunchTrackingAsync(trackingOnly);
+
+            _logger.LogInformation(LogMessages.Attendance.PunchInSuccessful, employeeId);
+            return AttendanceMessages.PunchInSuccessful;
+        }
+
+        private async Task<string> PunchOutMultipleAsync(
+            int employeeId,
+            int tenantId,
+            int userId,
+            DateTime punchOut,
+            DateTime attendanceDate,
+            PunchOutRequest req)
+        {
+            var punch = await _repo.GetTodayPunchAsync(employeeId, tenantId, attendanceDate);
+            if (punch == null || punch.PunchIn == null)
+            {
+                _logger.LogWarning(AttendanceMessages.PleasePunchInFirst);
+                return AttendanceMessages.PleasePunchInFirst;
+            }
+
+            var lastTracking = await _repo.GetLastPunchTrackingAsync(employeeId, tenantId, attendanceDate);
+            if (lastTracking == null || !string.Equals(lastTracking.Direction, DirectionIn, StringComparison.OrdinalIgnoreCase))
+            {
+                if (lastTracking != null && string.Equals(lastTracking.Direction, DirectionOut, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning(AttendanceMessages.AlreadyPunchedOut);
+                    return AttendanceMessages.AlreadyPunchedOut;
+                }
+
+                _logger.LogWarning(AttendanceMessages.PleasePunchInFirst);
+                return AttendanceMessages.PleasePunchInFirst;
+            }
+
+            double? punchTableDuration = CalculateDurationInMinutes(punch.PunchIn, punchOut);
+            double? segmentDuration = CalculateDurationInMinutes(lastTracking.PunchIn, punchOut);
+
+            string? imageUrl = null;
+            if (req.image != null && req.image.Length > 0)
+            {
+                imageUrl = await _blobService.UploadAsync(req.image, employeeId);
+                _logger.LogInformation("Punch-out image uploaded for employee {EmployeeId}", employeeId);
+            }
+
+            var coordinateOut = BuildCoordinate(req.latitude, req.longitude);
+            var linkOut = GenerateGoogleMapLink(req.latitude, req.longitude);
+            var isManual = req.Manual ?? true;
+            var punchOutReason = ResolvePunchOutReason(req.PunchOutReason, isManual);
+
+            var tracking = BuildOutTracking(
+                tenantId,
+                employeeId,
+                punch.Id,
+                attendanceDate,
+                punchOut,
+                segmentDuration,
+                userId,
+                coordinateOut,
+                linkOut,
+                imageUrl,
+                isManual,
+                punchOutReason);
+
+            await _repo.UpdatePunchOutWithTrackingAsync(
+                punch.Id,
+                punchOut,
+                punchTableDuration,
+                userId,
+                MobileSource,
+                coordinateOut,
+                linkOut,
+                imageUrl,
+                isManual,
+                punchOutReason,
+                tracking);
+
+            _logger.LogInformation(LogMessages.Attendance.PunchOutSuccessful, employeeId);
+            return AttendanceMessages.PunchOutSuccessful;
         }
 
         private async Task<List<DayOfWeek>> GetTenantWeeklyOffDaysAsync(int tenantId)
@@ -1231,6 +1630,8 @@ namespace MobileWebApi.Services
                     };
                 }
 
+                var locationTrackingEnabled = await IsLocationTrackingEnabledAsync(tenantId);
+
                 // Get punch record with tenant filter
                 var punch = await _repo.GetPunchByEmployeeAndDateWithTenant(employeeId.Value, date, tenantId);
 
@@ -1241,33 +1642,35 @@ namespace MobileWebApi.Services
 
                 if (punch != null)
                 {
-                    // Attendance is marked
-                    statusData.isMarked = true;
-                    statusData.isAlreadyMarked = true; // Prevents duplicate punch-in
+                    statusData.isMarked = punch.PunchIn.HasValue;
                     statusData.inSource = punch.InSource;
                     statusData.outSource = punch.OutSource;
                     statusData.coordinateIn = punch.CoordinateIn;
                     statusData.coordinateOut = punch.CoordinateOut;
                     statusData.linkIn = punch.LinkIn;
                     statusData.linkOut = punch.LinkOut;
+                    statusData.punchIn = punch.PunchIn;
+                    statusData.punchOut = punch.PunchOut;
+                    statusData.duration = punch.Duration;
 
-                    // Determine status based on punch-in/punch-out
-                    if (punch.PunchIn.HasValue && punch.PunchOut.HasValue)
+                    if (locationTrackingEnabled)
                     {
-                        statusData.status = "Present";
-                        statusData.punchIn = punch.PunchIn;
-                        statusData.punchOut = punch.PunchOut;
-                        statusData.duration = punch.Duration;
-                    }
-                    else if (punch.PunchIn.HasValue && !punch.PunchOut.HasValue)
-                    {
-                        statusData.status = "Present"; // Present but not punched out yet
-                        statusData.punchIn = punch.PunchIn;
-                        statusData.punchOut = null;
+                        var lastTracking = await _repo.GetLastPunchTrackingAsync(
+                            employeeId.Value,
+                            tenantId,
+                            date.Date);
+
+                        statusData.isAlreadyMarked = lastTracking != null
+                            && string.Equals(lastTracking.Direction, DirectionIn, StringComparison.OrdinalIgnoreCase);
+
+                        statusData.status = punch.PunchIn.HasValue ? "Present" : "Absent";
                     }
                     else
                     {
-                        statusData.status = "Absent"; // Record exists but no punch-in
+                        statusData.isAlreadyMarked = punch.PunchIn.HasValue;
+                        statusData.status = punch.PunchIn.HasValue
+                            ? (punch.PunchOut.HasValue ? "Present" : "Present")
+                            : "Absent";
                     }
                 }
                 else

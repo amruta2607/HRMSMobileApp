@@ -24,7 +24,7 @@
 
 
     "InsertPunchIn": "INSERT INTO Punch (EmployeeId, PunchDate, PunchIn, TenantId, InsertDate, InSource, CoordinateIn, LinkIn, ImageUrl) SELECT @EmployeeId, @PunchDate, @PunchIn, e.TenantId, GETDATE(), @InSource, @CoordinateIn, @LinkIn, @ImageUrl FROM Employee e WHERE e.Id = @EmployeeId; SELECT CAST(SCOPE_IDENTITY() AS INT);",
-    "UpdatePunchOut": "UPDATE Punch SET PunchOut = @PunchOut, Duration = @Duration, UpdateDate = GETDATE(), OutSource = @OutSource, CoordinateOut = @CoordinateOut, LinkOut = @LinkOut, ImageUrl = ISNULL(@ImageUrl, ImageUrl), Manual = @Manual, PunchOutReason = @PunchOutReason WHERE Id = @Id",
+    "UpdatePunchOut": "UPDATE Punch SET PunchOut = @PunchOut, Duration = @Duration, UpdateDate = GETDATE(), UpdateUserId = @UserId, OutSource = @OutSource, CoordinateOut = @CoordinateOut, LinkOut = @LinkOut, ImageUrl = ISNULL(@ImageUrl, ImageUrl), Manual = @Manual, PunchOutReason = @PunchOutReason WHERE Id = @PunchId",
 
     "GetApprovedLeaveDateRangesByEmployeeAndDateRange": "SELECT FromDate, ToDate FROM LeaveRequest WHERE EmployeeId = @EmployeeId AND LeaveRequestStatus = 2 AND FromDate <= @ToDate AND ToDate >= @FromDate",
 
@@ -300,53 +300,15 @@
 
     "InsertLocationTrackingIssue": "INSERT INTO LocationTrackingIssue (UserId, IssueType, IssueDescription, [Timestamp], LastKnownLatitude, LastKnownLongitude, DeviceId, TenantId, InsertUserId, InsertDate, UpdateUserId, UpdateDate) VALUES (@UserId, @IssueType, @IssueDescription, @Timestamp, @LastKnownLatitude, @LastKnownLongitude, @DeviceId, @TenantId, @InsertUserId, @InsertDate, @UpdateUserId, @UpdateDate); SELECT CAST(SCOPE_IDENTITY() AS INT)",
 
-    "Asset_GetList": "SELECT a.Id, a.Number, a.AssetCode, a.QRCodePath, a.AssetName, ISNULL(s.[Name], '') AS AssetStatus, ISNULL(a.Owner, '') AS Owner, ISNULL(c.[Name], '') AS AssetCategory, ISNULL(d.[Name], '') AS Department, ISNULL(b.[Name], '') AS Branch, ISNULL(bu.[Name], '') AS BusinessUnit, a.PurchaseDate, a.PurchasePrice, a.ActualValue, a.Manufacturer, a.Model, a.ProductionYear, a.QRCodeGeneratedDate FROM [dbo].[Asset] a LEFT JOIN [dbo].[AssetStatus] s ON s.Id = a.AssetStatusId LEFT JOIN [dbo].[Asset Category] c ON c.Id = a.AssetCategoryId LEFT JOIN [dbo].[Department] d ON d.Id = a.DepartmentId LEFT JOIN [dbo].[Branch] b ON b.Id = a.BranchId LEFT JOIN [dbo].[BusinessUnit] bu ON bu.Id = a.BusinessUnitId WHERE a.TenantId = @TenantId ORDER BY a.Number DESC",
+    "GetTenantPunchConfiguration": "SELECT TOP 1 EnableLocationTracking AS IsLocationTrackingEnabled FROM MobileTenantConfiguration WHERE TenantId = @TenantId",
 
-    "Asset_Insert": "INSERT INTO [dbo].[Asset] (Number, Description, PurchaseDate, PurchasePrice, PurchaseOrderNumber, PurchaseOrderBill, SupportCenter, Manufacturer, Model, SerialNumber, ProductionYear, Images, AssetTagNumber, InsertDate, InsertUserId, UpdateDate, UpdateUserId, TenantId, AssetStatusId, CategoryId, DepartmentId, AssetName, AssetCategoryId, ActualValue, WarrantyExpiryDate, MaintenanceDueDate, DepreciationPercentage, BranchId, AssetCode, QRCodePath, QRCodeText, QRCodeGenerated, QRCodeGeneratedDate, BusinessUnitId, Location, Owner, AssetTypeId) VALUES (@Number, @Description, @PurchaseDate, @PurchasePrice, @PurchaseOrderNumber, @PurchaseOrderBill, @SupportCenter, @Manufacturer, @Model, @SerialNumber, @ProductionYear, @Images, @AssetTagNumber, GETDATE(), @InsertUserId, NULL, NULL, @TenantId, @AssetStatusId, @CategoryId, @DepartmentId, @AssetName, @AssetCategoryId, @ActualValue, @WarrantyExpiryDate, @MaintenanceDueDate, @DepreciationPercentage, @BranchId, @AssetCode, NULL, NULL, 0, NULL, @BusinessUnitId, @Location, @Owner, @AssetTypeId); SELECT CAST(SCOPE_IDENTITY() AS INT);",
+    "GetTodayPunch": "SELECT TOP 1 Id, EmployeeId, PunchDate, PunchIn, PunchOut, Duration, ImageUrl, InsertDate, InsertUserId, UpdateDate, UpdateUserId, TenantId AS OrganisationId, InSource, OutSource, CoordinateIn, CoordinateOut, LinkIn, LinkOut, Manual, PunchOutReason FROM Punch WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND PunchDate = @PunchDate",
 
-    "Asset_InsertMaintenance": "INSERT INTO [dbo].[AssetMaintenance] (AssetId, Cost, Attachment, Date, ResponsiblePerson, InsertDate, InsertUserId, UpdateDate, UpdateUserId, TenantId) VALUES (@AssetId, @Cost, @Attachment, @Date, @ResponsiblePerson, GETDATE(), @InsertUserId, NULL, NULL, @TenantId);",
+    "InsertPunchTracking": "INSERT INTO PunchTracking (TenantId, EmployeeId, PunchId, PunchDate, Direction, PunchIn, PunchOut, Duration, InsertDate, InsertUserId, InSource, OutSource, CoordinateIn, CoordinateOut, LinkIn, LinkOut, ImageUrl, Manual, PunchOutReason) VALUES (@TenantId, @EmployeeId, @PunchId, @PunchDate, @Direction, @PunchIn, @PunchOut, @Duration, GETDATE(), @InsertUserId, @InSource, @OutSource, @CoordinateIn, @CoordinateOut, @LinkIn, @LinkOut, @ImageUrl, @Manual, @PunchOutReason); SELECT CAST(SCOPE_IDENTITY() AS INT);",
 
-    "Asset_ExistsAssetCategory": "SELECT 1 FROM [dbo].[Asset Category] WHERE Id = @Id AND TenantId = @TenantId",
+    "GetLastPunchTracking": "SELECT TOP 1 Id, TenantId, EmployeeId, PunchId, PunchDate, Direction, CASE WHEN PunchIn IS NOT NULL THEN DATEADD(SECOND, DATEDIFF(SECOND, CAST('00:00:00' AS TIME), PunchIn), CAST(PunchDate AS DATETIME)) END AS PunchIn, CASE WHEN PunchOut IS NOT NULL THEN DATEADD(SECOND, DATEDIFF(SECOND, CAST('00:00:00' AS TIME), PunchOut), CAST(PunchDate AS DATETIME)) END AS PunchOut, CASE WHEN Duration IS NOT NULL THEN CAST(DATEDIFF(SECOND, CAST('00:00:00' AS TIME), Duration) AS FLOAT) / 60.0 END AS Duration, InsertDate, InsertUserId, UpdateDate, UpdateUserId, InSource, OutSource, CoordinateIn, CoordinateOut, LinkIn, LinkOut, ImageUrl, Manual, PunchOutReason FROM PunchTracking WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND PunchDate = @PunchDate ORDER BY Id DESC",
 
-    "Asset_ExistsBranch": "SELECT 1 FROM [dbo].[Branch] WHERE Id = @Id AND TenantId = @TenantId",
-
-    "Asset_ExistsDepartment": "SELECT 1 FROM [dbo].[Department] WHERE Id = @Id AND TenantId = @TenantId",
-
-    "Asset_ExistsBusinessUnit": "SELECT 1 FROM [dbo].[BusinessUnit] WHERE Id = @Id AND TenantId = @TenantId",
-
-    "Asset_ExistsAssetType": "SELECT 1 FROM [dbo].[AssetType] WHERE Id = @Id AND TenantId = @TenantId",
-
-    "Asset_ExistsAssetStatus": "SELECT 1 FROM [dbo].[AssetStatus] WHERE Id = @Id AND TenantId = @TenantId",
-
-    "Asset_ExistsAssetTagNumber": "SELECT COUNT(1) FROM [dbo].[Asset] WHERE TenantId = @TenantId AND AssetTagNumber = @AssetTagNumber",
-
-    "Asset_GetTenantNumberConfig": "SELECT AssetNumberPrefix, AssetNumberUseDate, AssetNumberLength FROM [dbo].[Tenant] WHERE TenantId = @TenantId",
-
-    "Asset_GetMaxNumber": "SELECT MAX(Number) FROM [dbo].[Asset] WHERE TenantId = @TenantId AND Number LIKE @PrefixPattern AND Number >= @MinValue AND Number <= @MaxValue",
-
-    "Asset_GetMaxAssetCode": "SELECT MAX(AssetCode) FROM [dbo].[Asset] WHERE TenantId = @TenantId AND AssetCode LIKE @Pattern",
-
-    "Asset_GetCategoryDepreciationPercentage": "SELECT DepreciationPercentage FROM [dbo].[Asset Category] WHERE Id = @CategoryId AND TenantId = @TenantId",
-
-    "Asset_GetForQrCode": "SELECT Id, AssetCode, QRCodePath, QRCodeText, QRCodeGenerated, QRCodeGeneratedDate FROM [dbo].[Asset] WHERE Id = @AssetId AND TenantId = @TenantId",
-
-    "Asset_UpdateQrCode": "UPDATE [dbo].[Asset] SET AssetCode = @AssetCode, QRCodePath = @QRCodePath, QRCodeText = @QRCodeText, QRCodeGenerated = 1, QRCodeGeneratedDate = @QRCodeGeneratedDate WHERE Id = @AssetId AND TenantId = @TenantId",
-
-    "AssetDashboard_GetKpiMetrics": "SELECT COUNT(*) AS TotalCount, SUM(CASE WHEN a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS TotalPrevCount, SUM(CASE WHEN {IN_USE} THEN 1 ELSE 0 END) AS InUseCount, SUM(CASE WHEN {IN_USE} AND a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS InUsePrevCount, SUM(CASE WHEN {MAINTENANCE} THEN 1 ELSE 0 END) AS MaintenanceCount, SUM(CASE WHEN {MAINTENANCE} AND a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS MaintenancePrevCount, SUM(CASE WHEN {OUT_OF_SERVICE} THEN 1 ELSE 0 END) AS OutOfServiceCount, SUM(CASE WHEN {OUT_OF_SERVICE} AND a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS OutOfServicePrevCount FROM [dbo].[Asset] a LEFT JOIN [dbo].[AssetStatus] s ON s.Id = a.AssetStatusId WHERE a.TenantId = @TenantId",
-
-    "AssetDashboard_StatusInUse": "(LOWER(ISNULL(s.[Name], '')) LIKE '%in use%' OR LOWER(ISNULL(s.[Name], '')) LIKE '%assigned%' OR LOWER(ISNULL(s.[Name], '')) LIKE '%active%' OR LOWER(ISNULL(s.[Name], '')) LIKE '%available%' OR LOWER(ISNULL(s.[Name], '')) LIKE '%in-use%')",
-
-    "AssetDashboard_StatusOutOfService": "(LOWER(ISNULL(s.[Name], '')) LIKE '%out of service%' OR LOWER(ISNULL(s.[Name], '')) LIKE '%retired%' OR LOWER(ISNULL(s.[Name], '')) LIKE '%disposed%' OR LOWER(ISNULL(s.[Name], '')) LIKE '%inactive%' OR LOWER(ISNULL(s.[Name], '')) LIKE '%broken%')",
-
-    "AssetDashboard_StatusMaintenance": "(LOWER(ISNULL(s.[Name], '')) LIKE '%maintenance%' OR LOWER(ISNULL(s.[Name], '')) LIKE '%repair%' OR LOWER(ISNULL(s.[Name], '')) LIKE '%under maintenance%') AND NOT ({OUT_OF_SERVICE})",
-
-    "AssetDashboard_GetCategoryBreakdown": "SELECT TOP 6 ISNULL(c.Id, 0) AS CategoryId, ISNULL(c.[Name], 'Others') AS CategoryName, COUNT(*) AS [Count] FROM [dbo].[Asset] a LEFT JOIN [dbo].[Asset Category] c ON c.Id = a.AssetCategoryId WHERE a.TenantId = @TenantId GROUP BY ISNULL(c.Id, 0), ISNULL(c.[Name], 'Others') ORDER BY COUNT(*) DESC",
-
-    "AssetDashboard_GetBranchBreakdown": "SELECT TOP 6 ISNULL(a.BranchId, 0) AS BranchId, ISNULL(NULLIF(b.[Name], ''), 'Unassigned') AS BranchName, COUNT(*) AS [Count] FROM [dbo].[Asset] a LEFT JOIN [dbo].[Branch] b ON b.Id = a.BranchId WHERE a.TenantId = @TenantId GROUP BY ISNULL(a.BranchId, 0), ISNULL(NULLIF(b.[Name], ''), 'Unassigned') ORDER BY COUNT(*) DESC",
-
-    "AssetHandOverList": "SELECT h.Id, h.Number, h.AssetId, a.Number AS AssetNumber, a.AssetName, h.HandOverDate, h.HandOverById, ISNULL(empBy.[Name], '') AS HandOverBy, h.HandOverToId, ISNULL(empTo.[Name], '') AS HandOverTo, ISNULL(d.[Name], '') AS Department, ISNULL(b.[Name], '') AS Branch, ISNULL(h.Description, '') AS Remarks FROM [dbo].[AssetHandOver] h INNER JOIN [dbo].[Asset] a ON a.Id = h.AssetId LEFT JOIN [dbo].[Employee] empBy ON empBy.Id = h.HandOverById LEFT JOIN [dbo].[Employee] empTo ON empTo.Id = h.HandOverToId LEFT JOIN [dbo].[Department] d ON d.Id = a.DepartmentId LEFT JOIN [dbo].[Branch] b ON b.Id = a.BranchId WHERE h.TenantId = @TenantId ORDER BY h.HandOverDate DESC, h.Id DESC",
-
-    "GetAssetByScanner": "SELECT TOP 1 a.Id, a.Number, a.AssetCode, a.AssetName, a.AssetTagNumber, a.AssetStatusId, ISNULL(s.[Name], '') AS AssetStatus, a.AssetCategoryId, ISNULL(c.[Name], '') AS AssetCategory, a.AssetTypeId, ISNULL(t.TypeName, '') AS AssetType, ISNULL(a.Owner, '') AS Owner, ISNULL(d.[Name], '') AS Department, ISNULL(b.[Name], '') AS Branch, ISNULL(bu.[Name], '') AS BusinessUnit, ISNULL(a.Location, '') AS Location, a.PurchaseDate, a.PurchasePrice, a.ActualValue, a.Manufacturer, a.Model, a.SerialNumber, a.ProductionYear, a.MaintenanceDueDate, a.WarrantyExpiryDate, a.Description, a.Images, a.QRCodePath FROM [dbo].[Asset] a LEFT JOIN [dbo].[AssetStatus] s ON s.Id = a.AssetStatusId LEFT JOIN [dbo].[Asset Category] c ON c.Id = a.AssetCategoryId LEFT JOIN [dbo].[AssetType] t ON t.Id = a.AssetTypeId LEFT JOIN [dbo].[Department] d ON d.Id = a.DepartmentId LEFT JOIN [dbo].[Branch] b ON b.Id = a.BranchId LEFT JOIN [dbo].[BusinessUnit] bu ON bu.Id = a.BusinessUnitId WHERE a.TenantId = @TenantId AND (a.AssetCode = @Code OR a.QRCodeText = @Code OR a.Number = @Code) ORDER BY a.Id DESC"
+    "GetPunchTrackingTimeline": "SELECT pt.Id, pt.PunchId, pt.EmployeeId, e.Name AS EmployeeName, pt.PunchDate, pt.Direction, CASE WHEN pt.PunchIn IS NOT NULL THEN DATEADD(SECOND, DATEDIFF(SECOND, CAST('00:00:00' AS TIME), pt.PunchIn), CAST(pt.PunchDate AS DATETIME)) END AS PunchIn, CASE WHEN pt.PunchOut IS NOT NULL THEN DATEADD(SECOND, DATEDIFF(SECOND, CAST('00:00:00' AS TIME), pt.PunchOut), CAST(pt.PunchDate AS DATETIME)) END AS PunchOut, CASE WHEN pt.Direction = 'IN' THEN DATEADD(SECOND, DATEDIFF(SECOND, CAST('00:00:00' AS TIME), pt.PunchIn), CAST(pt.PunchDate AS DATETIME)) ELSE DATEADD(SECOND, DATEDIFF(SECOND, CAST('00:00:00' AS TIME), pt.PunchOut), CAST(pt.PunchDate AS DATETIME)) END AS PunchTime, CASE WHEN pt.Direction = 'IN' THEN pt.InSource ELSE pt.OutSource END AS Source, CASE WHEN pt.Direction = 'IN' THEN pt.CoordinateIn ELSE pt.CoordinateOut END AS Coordinate, CASE WHEN pt.Direction = 'IN' THEN pt.LinkIn ELSE pt.LinkOut END AS Address, pt.ImageUrl, pt.Manual, pt.PunchOutReason AS Remarks FROM PunchTracking pt INNER JOIN Employee e ON e.Id = pt.EmployeeId WHERE pt.PunchId = @PunchId AND pt.EmployeeId = @EmployeeId AND pt.TenantId = @TenantId ORDER BY CASE WHEN pt.Direction = 'IN' THEN pt.PunchIn ELSE pt.PunchOut END ASC"
 
   }
 }

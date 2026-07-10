@@ -116,7 +116,37 @@ namespace MobileWebApi.Controllers
                 return UserAccessDenied();
             }
 
-            return null; // Access granted
+			return null; // Access granted
+        }
+
+        /// <summary>
+        /// Maps punch service result messages to appropriate HTTP responses.
+        /// </summary>
+        private IActionResult MapPunchResult(string result)
+        {
+            if (IsPunchValidationError(result))
+            {
+                return BadRequest(new { Success = false, Message = result });
+            }
+
+            if (result.StartsWith("Error while processing", StringComparison.OrdinalIgnoreCase)
+                || result.StartsWith("No employee found", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { Success = false, Message = result });
+            }
+
+            return Ok(new { message = result });
+        }
+
+        private static bool IsPunchValidationError(string result)
+        {
+            return result == AttendanceMessages.PunchInAlreadyDone
+                || result == AttendanceMessages.AlreadyPunchedIn
+                || result == AttendanceMessages.AlreadyPunchedOut
+                || result == AttendanceMessages.PleasePunchInFirst
+                || result == AttendanceMessages.CannotPunchOutWithoutPunchIn
+                || result == AttendanceMessages.PunchOutAlreadyDone
+                || result == AttendanceMessages.PunchInFailed;
         }
 
 		/// <summary>
@@ -164,7 +194,7 @@ namespace MobileWebApi.Controllers
 
                 Logger.LogInformation(LogMessages.Attendance.ProcessingPunchIn, request.userId);
                 var result = await _service.PunchInAsync(request);
-                return Ok(new { message = result });
+                return MapPunchResult(result);
             }
             catch (Exception ex)
             {
@@ -260,7 +290,7 @@ namespace MobileWebApi.Controllers
 
                 Logger.LogInformation(LogMessages.Attendance.ProcessingPunchOut, request.userId);
                 var result = await _service.PunchOutAsync(request);
-                return Ok(new { message = result });
+                return MapPunchResult(result);
             }
             catch (Exception ex)
             {
