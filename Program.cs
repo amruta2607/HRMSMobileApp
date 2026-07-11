@@ -7,6 +7,7 @@ using System.Linq;
 using MobileWebApi.Data;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Repositories;
+using MobileWebApi.Repositories.Interfaces;
 using MobileWebApi.Services;
 using MobileWebApi.Models;
 using MobileWebApi.Middleware;
@@ -77,6 +78,11 @@ builder.Services.AddScoped<IPaySlipService, PaySlipService>();
 
 builder.Services.AddScoped<IDisputeRepository, DisputeRepository>();
 builder.Services.AddScoped<IDisputeService, DisputeService>();
+
+builder.Services.AddScoped<IAssetRepository, AssetRepository>();
+builder.Services.AddScoped<IAssetDashboardRepository, AssetDashboardRepository>();
+builder.Services.AddScoped<IAssetHandOverRepository, AssetHandOverRepository>();
+builder.Services.AddScoped<IAssetQRCodeService, AssetQRCodeService>();
 builder.Services.AddScoped<ITenantConfigurationRepository, TenantConfigurationRepository>();
 builder.Services.AddScoped<IGeoTenantLocationRepository, GeoTenantLocationRepository>();
 builder.Services.AddScoped<IMobileTenantConfigurationRepository, MobileTenantConfigurationRepository>();
