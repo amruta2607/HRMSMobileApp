@@ -28,7 +28,7 @@ namespace MobileWebApi.Controllers
         }
 
         /// <summary>
-        /// Returns complete asset details for a scanned asset code, QR text, or asset number.
+        /// Returns complete asset details for a scanned QR code, asset code, or asset number.
         /// </summary>
         [HttpGet("asset/{code}")]
         public async Task<IActionResult> GetAsset(string code)
@@ -38,18 +38,25 @@ namespace MobileWebApi.Controllers
                 _ = CurrentOrganisationId;
                 _ = CurrentUserId;
 
-                if (string.IsNullOrWhiteSpace(code))
-                {
-                    return BadRequest(new { message = ScannerMessages.CodeRequired });
-                }
-
                 var asset = await _scannerRepository.GetAssetAsync(code);
                 if (asset == null)
                 {
-                    return NotFound(new { message = ScannerMessages.AssetNotFound });
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = ScannerMessages.AssetNotFound
+                    });
                 }
 
                 return Ok(asset);
+            }
+            catch (ScannerValidationException ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
             catch (TenantAccessException)
             {

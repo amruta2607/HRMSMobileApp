@@ -141,8 +141,13 @@ namespace MobileWebApi.Models.Responses
         public string Images { get; set; } = string.Empty;
 
         /// <summary>
-        /// QR code image path.
+        /// QR code image path (absolute URL when available).
         /// </summary>
         public string QRCodePath { get; set; } = string.Empty;
+
+        /// <summary>
+        /// URL encoded inside the QR image.
+        /// </summary>
+        public string QRCodeText { get; set; } = string.Empty;
     }
 }

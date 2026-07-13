@@ -5,7 +5,7 @@ namespace MobileWebApi.Constants
     /// </summary>
     public static class ScannerMessages
     {
-        public const string CodeRequired = "Asset code is required.";
-        public const string AssetNotFound = "Asset not found for the scanned code.";
+        public const string InvalidQrCode = "Invalid QR Code.";
+        public const string AssetNotFound = "Asset not found.";
     }
 }
