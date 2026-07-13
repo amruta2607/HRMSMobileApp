@@ -26,7 +26,7 @@ namespace MobileWebApi.Models.Requests
         /// <summary>
         /// Asset category identifier.
         /// </summary>
-        [Range(1, int.MaxValue, ErrorMessage = "Asset category is required.")]
+        [Range(1, 999999, ErrorMessage = "Asset category is required.")]
         public int AssetCategoryId { get; set; }
 
         /// <summary>
@@ -37,7 +37,7 @@ namespace MobileWebApi.Models.Requests
         /// <summary>
         /// Branch identifier.
         /// </summary>
-        [Range(1, int.MaxValue, ErrorMessage = "Branch is required.")]
+        [Range(1, 999999, ErrorMessage = "Branch is required.")]
         public int BranchId { get; set; }
 
         /// <summary>

@@ -435,12 +435,16 @@ namespace MobileWebApi.Constants
         {
             public const string ErrorFetchingAssets = "Error fetching asset list for organisation {OrganisationId}.";
             public const string ErrorCreatingAsset = "Error creating asset for organisation {OrganisationId}.";
+            public const string ErrorUpdatingAsset = "Error updating asset {AssetId} for organisation {OrganisationId}.";
+            public const string AssetUpdated = "Asset {AssetId} updated by user {UserId} for organisation {OrganisationId} at {Timestamp}.";
         }
 
         // Asset hand over logs
         public static class AssetHandOver
         {
             public const string ErrorFetchingList = "Error fetching asset hand over list for organisation {OrganisationId}.";
+            public const string ErrorHandingOver = "Error handing over asset {AssetId} for organisation {OrganisationId}.";
+            public const string AssetHandedOver = "Asset {AssetId} handed over to employee {EmployeeId} by user {UserId} for organisation {OrganisationId} at {Timestamp}.";
         }
 
         // Scanner logs

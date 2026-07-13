@@ -28,17 +28,18 @@ namespace MobileWebApi.Controllers
         }
 
         /// <summary>
-        /// Returns complete asset details for a scanned QR code, asset code, or asset number.
+        /// Returns complete asset details for the given asset id.
+        /// The mobile app should extract the id from the scanned QR value before calling this endpoint.
         /// </summary>
-        [HttpGet("asset/{code}")]
-        public async Task<IActionResult> GetAsset(string code)
+        [HttpGet("asset/{id:int}")]
+        public async Task<IActionResult> GetAsset(int id)
         {
             try
             {
                 _ = CurrentOrganisationId;
                 _ = CurrentUserId;
 
-                var asset = await _scannerRepository.GetAssetAsync(code);
+                var asset = await _scannerRepository.GetAssetAsync(id);
                 if (asset == null)
                 {
                     return NotFound(new

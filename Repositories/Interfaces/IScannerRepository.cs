@@ -8,9 +8,9 @@ namespace MobileWebApi.Repositories.Interfaces
     public interface IScannerRepository
     {
         /// <summary>
-        /// Retrieves an asset by scanner code for the authenticated user's organisation.
+        /// Retrieves an asset by id for the authenticated user's organisation.
         /// </summary>
-        /// <param name="code">Asset code, QR code text, or asset number.</param>
-        Task<AssetScannerResponse?> GetAssetAsync(string code);
+        /// <param name="assetId">Asset identifier from the scanned QR code.</param>
+        Task<AssetScannerResponse?> GetAssetAsync(int assetId);
     }
 }

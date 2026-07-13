@@ -17,5 +17,10 @@ namespace MobileWebApi.Repositories.Interfaces
         /// Creates a new asset for the authenticated user's organisation.
         /// </summary>
         Task<CreateAssetResponse> CreateAssetAsync(CreateAssetRequest request);
+
+        /// <summary>
+        /// Updates editable fields on an existing asset for the authenticated user's organisation.
+        /// </summary>
+        Task<AssetOperationResponse> UpdateAssetAsync(int assetId, UpdateAssetRequest request);
     }
 }

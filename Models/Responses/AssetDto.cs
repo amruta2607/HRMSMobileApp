@@ -26,6 +26,11 @@ namespace MobileWebApi.Models.Responses
         public string QRCodePath { get; set; } = string.Empty;
 
         /// <summary>
+        /// URL encoded inside the QR image.
+        /// </summary>
+        public string QRCodeText { get; set; } = string.Empty;
+
+        /// <summary>
         /// Asset display name.
         /// </summary>
         public string AssetName { get; set; } = string.Empty;

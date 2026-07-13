@@ -186,6 +186,183 @@ namespace MobileWebApi.Repositories
             }
         }
 
+        /// <inheritdoc />
+        public async Task<AssetOperationResponse> UpdateAssetAsync(int assetId, UpdateAssetRequest request)
+        {
+            var tenantId = _tenantContext.GetRequiredOrganisationId();
+            var userId = _tenantContext.GetRequiredUserId();
+
+            using var connection = _context.CreateConnection();
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+
+            try
+            {
+                var asset = await connection.QueryFirstOrDefaultAsync<AssetSummaryRow>(
+                    _queries.Get("Asset_GetById"),
+                    new { AssetId = assetId, TenantId = tenantId },
+                    transaction);
+
+                if (asset == null)
+                    throw new AssetNotFoundException(AssetMessages.NotFound);
+
+                await ValidateUpdateLookupsAsync(connection, transaction, request, tenantId);
+                ValidateUpdateDates(request);
+
+                var actualValue = request.ActualValue.HasValue
+                    ? (double?)request.ActualValue.Value
+                    : (double?)request.PurchasePrice;
+
+                var rowsAffected = await connection.ExecuteAsync(
+                    _queries.Get("Asset_Update"),
+                    new
+                    {
+                        AssetId = assetId,
+                        TenantId = tenantId,
+                        request.AssetName,
+                        request.AssetCategoryId,
+                        request.AssetTypeId,
+                        request.AssetStatusId,
+                        request.DepartmentId,
+                        request.BranchId,
+                        request.BusinessUnitId,
+                        request.Location,
+                        request.Owner,
+                        request.Manufacturer,
+                        request.Model,
+                        request.SerialNumber,
+                        request.ProductionYear,
+                        request.PurchaseDate,
+                        PurchasePrice = (double)request.PurchasePrice,
+                        ActualValue = actualValue,
+                        request.WarrantyExpiryDate,
+                        request.MaintenanceDueDate,
+                        request.Description,
+                        request.Images,
+                        UpdateUserId = userId
+                    },
+                    transaction);
+
+                if (rowsAffected == 0)
+                    throw new AssetNotFoundException(AssetMessages.NotFound);
+
+                transaction.Commit();
+
+                _logger.LogInformation(
+                    LogMessages.Asset.AssetUpdated,
+                    assetId,
+                    userId,
+                    tenantId,
+                    DateTime.UtcNow);
+
+                return new AssetOperationResponse
+                {
+                    Success = true,
+                    Message = AssetMessages.UpdatedSuccessfully
+                };
+            }
+            catch (AssetValidationException)
+            {
+                transaction.Rollback();
+                throw;
+            }
+            catch (AssetNotFoundException)
+            {
+                transaction.Rollback();
+                throw;
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                _logger.LogException(
+                    ExceptionCodes.Asset.Update,
+                    nameof(UpdateAssetAsync),
+                    ex,
+                    userId);
+                throw;
+            }
+        }
+
+        private async Task ValidateUpdateLookupsAsync(
+            IDbConnection connection,
+            IDbTransaction transaction,
+            UpdateAssetRequest request,
+            int tenantId)
+        {
+            if (!await ExistsForTenantAsync(
+                    connection, transaction, _queries.Get("Asset_ExistsAssetCategory"),
+                    request.AssetCategoryId, tenantId))
+            {
+                throw new AssetValidationException(AssetMessages.InvalidAssetCategory);
+            }
+
+            if (!await ExistsForTenantAsync(
+                    connection, transaction, _queries.Get("Asset_ExistsBranch"),
+                    request.BranchId, tenantId))
+            {
+                throw new AssetValidationException(AssetMessages.InvalidBranch);
+            }
+
+            if (request.DepartmentId.HasValue &&
+                !await ExistsForTenantAsync(
+                    connection, transaction, _queries.Get("Asset_ExistsDepartment"),
+                    request.DepartmentId.Value, tenantId))
+            {
+                throw new AssetValidationException(AssetMessages.InvalidDepartment);
+            }
+
+            if (request.BusinessUnitId.HasValue &&
+                !await ExistsForTenantAsync(
+                    connection, transaction, _queries.Get("Asset_ExistsBusinessUnit"),
+                    request.BusinessUnitId.Value, tenantId))
+            {
+                throw new AssetValidationException(AssetMessages.InvalidBusinessUnit);
+            }
+
+            if (request.AssetTypeId.HasValue &&
+                !await ExistsForTenantAsync(
+                    connection, transaction, _queries.Get("Asset_ExistsAssetType"),
+                    request.AssetTypeId.Value, tenantId))
+            {
+                throw new AssetValidationException(AssetMessages.InvalidAssetType);
+            }
+
+            if (request.AssetStatusId.HasValue &&
+                !await ExistsForTenantAsync(
+                    connection, transaction, _queries.Get("Asset_ExistsAssetStatus"),
+                    request.AssetStatusId.Value, tenantId))
+            {
+                throw new AssetValidationException(AssetMessages.InvalidAssetStatus);
+            }
+        }
+
+        private static void ValidateUpdateDates(UpdateAssetRequest request)
+        {
+            if (request.WarrantyExpiryDate.HasValue &&
+                request.WarrantyExpiryDate.Value.Date < request.PurchaseDate.Date)
+            {
+                throw new AssetValidationException(AssetMessages.InvalidWarrantyDate);
+            }
+
+            if (request.MaintenanceDueDate.HasValue &&
+                request.MaintenanceDueDate.Value.Date < request.PurchaseDate.Date)
+            {
+                throw new AssetValidationException(AssetMessages.InvalidMaintenanceDate);
+            }
+        }
+
+        private sealed class AssetSummaryRow
+        {
+            public int Id { get; set; }
+            public int? AssetStatusId { get; set; }
+            public string AssetStatusName { get; set; } = string.Empty;
+            public string Owner { get; set; } = string.Empty;
+            public string Location { get; set; } = string.Empty;
+            public int? DepartmentId { get; set; }
+            public int? BusinessUnitId { get; set; }
+            public int? BranchId { get; set; }
+        }
+
         private async Task ValidateLookupsAsync(
             IDbConnection connection,
             IDbTransaction transaction,

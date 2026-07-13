@@ -69,7 +69,7 @@ namespace MobileWebApi.Controllers
         {
             if (request == null)
             {
-                return BadRequest(new { message = AssetMessages.RequestBodyCannotBeNull });
+                return BadRequest(new { success = false, message = AssetMessages.RequestBodyCannotBeNull });
             }
 
             if (!ModelState.IsValid)
@@ -87,7 +87,7 @@ namespace MobileWebApi.Controllers
             }
             catch (AssetValidationException ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(new { success = false, message = ex.Message });
             }
             catch (TenantAccessException)
             {
@@ -98,6 +98,57 @@ namespace MobileWebApi.Controllers
                 Logger.LogException(
                     ExceptionCodes.Asset.Create,
                     nameof(Create),
+                    ex,
+                    CurrentUserId);
+
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = GeneralMessages.UnexpectedError
+                });
+            }
+        }
+
+        /// <summary>
+        /// Updates editable asset information for the authenticated user's organisation.
+        /// </summary>
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Update(int id, [FromBody] UpdateAssetRequest request)
+        {
+            if (request == null)
+            {
+                return BadRequest(new { success = false, message = AssetMessages.RequestBodyCannotBeNull });
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                _ = CurrentOrganisationId;
+                _ = CurrentUserId;
+
+                var result = await _assetRepository.UpdateAssetAsync(id, request);
+                return Ok(result);
+            }
+            catch (AssetNotFoundException ex)
+            {
+                return NotFound(new { success = false, message = ex.Message });
+            }
+            catch (AssetValidationException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (TenantAccessException)
+            {
+                return TenantAccessDenied();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(
+                    ExceptionCodes.Asset.Update,
+                    nameof(Update),
                     ex,
                     CurrentUserId);
 

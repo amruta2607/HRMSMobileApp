@@ -364,12 +364,15 @@ namespace MobileWebApi.Constants
         {
             public const string GetList = "ASSET-002";
             public const string Create = "ASSET-003";
+            public const string Update = "ASSET-005";
         }
 
         // Asset hand over list (AssetHandOverRepository)
         public static class AssetHandOver
         {
             public const string GetList = "ASSET-004";
+            public const string Handover = "ASSET-006";
+            public const string Update = "ASSET-007";
         }
 
         // Scanner (ScannerRepository)
