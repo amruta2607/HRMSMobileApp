@@ -9,6 +9,7 @@ using MobileWebApi.Models.Responses;
 using MobileWebApi.Repositories.Interfaces;
 using MobileWebApi.Resources;
 using MobileWebApi.Services;
+using System.Net;
 
 namespace MobileWebApi.Repositories
 {
@@ -40,53 +41,66 @@ namespace MobileWebApi.Repositories
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        /// <inheritdoc />
-        public async Task<AssetScannerResponse?> GetAssetAsync(string code)
-        {
-            if (string.IsNullOrWhiteSpace(code))
-                throw new ScannerValidationException(ScannerMessages.InvalidQrCode);
+		/// <inheritdoc />
+		public async Task<AssetScannerResponse?> GetAssetAsync(string code)
+		{
+			if (string.IsNullOrWhiteSpace(code))
+				throw new ScannerValidationException(ScannerMessages.InvalidQrCode);
 
-            try
-            {
-                var tenantId = _tenantContext.GetRequiredOrganisationId();
-                var scannedValue = code.Trim();
-                AssetScannerResponse? asset;
+			try
+			{
+				var tenantId = _tenantContext.GetRequiredOrganisationId();
 
-                if (AssetQrScannerHelper.TryParseAssetId(scannedValue, out var assetId))
-                {
-                    if (assetId <= 0)
-                        throw new ScannerValidationException(ScannerMessages.InvalidQrCode);
+				// Decode URL-encoded QR value
+				var scannedValue = code.Trim();
+				if (string.IsNullOrWhiteSpace(scannedValue))
+					throw new ScannerValidationException(ScannerMessages.InvalidQrCode);
 
-                    asset = await GetAssetByIdAsync(tenantId, assetId);
-                }
-                else
-                {
-                    asset = await GetAssetByCodeAsync(tenantId, scannedValue);
-                }
+				AssetScannerResponse? asset;
 
-                if (asset == null)
-                    return null;
+				// QR Code contains URL like:
+				// https://localhost:44304/Asset/ViewByQR/8
+				if (AssetQrScannerHelper.TryParseAssetId(scannedValue, out var assetId))
+				{
+					if (assetId <= 0)
+						throw new ScannerValidationException(ScannerMessages.InvalidQrCode);
 
-                ApplyAbsoluteMediaUrls(asset);
-                return asset;
-            }
-            catch (ScannerValidationException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogException(
-                    ExceptionCodes.Scanner.GetAsset,
-                    nameof(GetAssetAsync),
-                    ex,
-                    _tenantContext.UserId);
+					asset = await GetAssetByIdAsync(tenantId, assetId);
+				}
+				// Looks like QR but cannot extract AssetId
+				else if (AssetQrScannerHelper.LooksLikeQrPayload(scannedValue))
+				{
+					throw new ScannerValidationException(ScannerMessages.InvalidQrCode);
+				}
+				// Manual search using Asset Code or Asset Number
+				else
+				{
+					asset = await GetAssetByCodeAsync(tenantId, scannedValue);
+				}
 
-                throw;
-            }
-        }
+				if (asset == null)
+					return null;
 
-        private async Task<AssetScannerResponse?> GetAssetByIdAsync(int tenantId, int assetId)
+				ApplyAbsoluteMediaUrls(asset);
+
+				return asset;
+			}
+			catch (ScannerValidationException)
+			{
+				throw;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogException(
+					ExceptionCodes.Scanner.GetAsset,
+					nameof(GetAssetAsync),
+					ex,
+					_tenantContext.UserId);
+
+				throw;
+			}
+		}
+		private async Task<AssetScannerResponse?> GetAssetByIdAsync(int tenantId, int assetId)
         {
             using var connection = _context.CreateConnection();
             return await connection.QueryFirstOrDefaultAsync<AssetScannerResponse>(
