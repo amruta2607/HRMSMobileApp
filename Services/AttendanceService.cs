@@ -455,6 +455,7 @@ namespace MobileWebApi.Services
             var tenantId = await GetEmployeeTenantIdAsync(employeeId);
             var locationTrackingEnabled = await IsLocationTrackingEnabledAsync(tenantId);
             Punch? openPunch;
+            PunchTracking? lastTracking = null;
 
             if (locationTrackingEnabled)
             {
@@ -465,7 +466,7 @@ namespace MobileWebApi.Services
                     return AttendanceMessages.PleasePunchInFirst;
                 }
 
-                var lastTracking = await _repo.GetLastPunchTrackingAsync(employeeId, tenantId, attendanceDate);
+                lastTracking = await _repo.GetLastPunchTrackingAsync(employeeId, tenantId, attendanceDate);
                 if (lastTracking == null || !string.Equals(lastTracking.Direction, DirectionIn, StringComparison.OrdinalIgnoreCase))
                 {
                     if (lastTracking != null && string.Equals(lastTracking.Direction, DirectionOut, StringComparison.OrdinalIgnoreCase))
@@ -494,9 +495,6 @@ namespace MobileWebApi.Services
                 }
             }
 
-            // Calculate duration in minutes (do not convert to hours)
-            double? duration = CalculateDurationInMinutes(openPunch.PunchIn, punchOut);
-
             // Upload punch photo if provided.
             string? imageUrl = null;
             if (req.image != null)
@@ -504,13 +502,22 @@ namespace MobileWebApi.Services
 
             if (locationTrackingEnabled)
             {
+                var sessionDuration = await CalculateCurrentSessionDurationAsync(openPunch!.Id, punchOut);
+                if (!sessionDuration.HasValue)
+                {
+                    _logger.LogWarning(AttendanceMessages.PleasePunchInFirst);
+                    return AttendanceMessages.PleasePunchInFirst;
+                }
+
+                var totalDuration = await CalculateLocationTrackingPunchDurationAsync(openPunch.Id, sessionDuration);
+
                 var tracking = BuildOutTracking(
                     tenantId,
                     employeeId,
                     openPunch.Id,
                     attendanceDate,
                     punchOut,
-                    duration,
+                    sessionDuration,
                     employeeId,
                     coordinateOut: null,
                     linkOut: null,
@@ -521,7 +528,7 @@ namespace MobileWebApi.Services
                 await _repo.UpdatePunchOutWithTrackingAsync(
                     openPunch.Id,
                     punchOut,
-                    duration,
+                    totalDuration,
                     employeeId,
                     MobileSource,
                     coordinateOut: null,
@@ -533,6 +540,8 @@ namespace MobileWebApi.Services
             }
             else
             {
+                var duration = CalculateDurationInMinutes(openPunch!.PunchIn, punchOut);
+
                 await _repo.UpdatePunchOut(
                     openPunch.Id,
                     punchOut,
@@ -757,8 +766,14 @@ namespace MobileWebApi.Services
                 return AttendanceMessages.PleasePunchInFirst;
             }
 
-            double? punchTableDuration = CalculateDurationInMinutes(punch.PunchIn, punchOut);
-            double? segmentDuration = CalculateDurationInMinutes(lastTracking.PunchIn, punchOut);
+            var sessionDuration = await CalculateCurrentSessionDurationAsync(punch.Id, punchOut);
+            if (!sessionDuration.HasValue)
+            {
+                _logger.LogWarning(AttendanceMessages.PleasePunchInFirst);
+                return AttendanceMessages.PleasePunchInFirst;
+            }
+
+            var totalDuration = await CalculateLocationTrackingPunchDurationAsync(punch.Id, sessionDuration);
 
             string? imageUrl = null;
             if (req.image != null && req.image.Length > 0)
@@ -778,7 +793,7 @@ namespace MobileWebApi.Services
                 punch.Id,
                 attendanceDate,
                 punchOut,
-                segmentDuration,
+                sessionDuration,
                 userId,
                 coordinateOut,
                 linkOut,
@@ -789,7 +804,7 @@ namespace MobileWebApi.Services
             await _repo.UpdatePunchOutWithTrackingAsync(
                 punch.Id,
                 punchOut,
-                punchTableDuration,
+                totalDuration,
                 userId,
                 MobileSource,
                 coordinateOut,
@@ -798,6 +813,13 @@ namespace MobileWebApi.Services
                 isManual,
                 punchOutReason,
                 tracking);
+
+            var savedPunch = await _repo.GetPunchByIdAsync(punch.Id, tenantId);
+            _logger.LogInformation(
+                "PunchOutMultipleAsync after save - PunchId: {PunchId}, Stored PunchOut: {StoredPunchOut}, Stored Duration: {StoredDuration} minutes (sum of PunchTracking sessions)",
+                punch.Id,
+                savedPunch?.PunchOut,
+                savedPunch?.Duration);
 
             _logger.LogInformation(LogMessages.Attendance.PunchOutSuccessful, employeeId);
             return AttendanceMessages.PunchOutSuccessful;
@@ -814,6 +836,57 @@ namespace MobileWebApi.Services
 
             var diff = punchOut - punchIn.Value;
             return Math.Round(diff.TotalMinutes, 2);
+        }
+
+        /// <summary>
+        /// Calculates duration for the current IN–OUT session using the latest unmatched IN record.
+        /// </summary>
+        private async Task<double?> CalculateCurrentSessionDurationAsync(int punchId, DateTime punchOut)
+        {
+            var lastIn = await _repo.GetLastUnmatchedPunchInAsync(punchId);
+            if (lastIn?.PunchIn == null)
+            {
+                _logger.LogWarning(
+                    "No unmatched punch-in found for PunchId {PunchId} when calculating session duration",
+                    punchId);
+                return null;
+            }
+
+            var sessionDuration = CalculateDurationInMinutes(lastIn.PunchIn, punchOut);
+
+            _logger.LogInformation(
+                "Current session duration - PunchId: {PunchId}, LastIn: {LastIn}, PunchOut: {PunchOut}, SessionDuration: {SessionDuration} min",
+                punchId,
+                lastIn.PunchIn,
+                punchOut,
+                sessionDuration);
+
+            return sessionDuration;
+        }
+
+        /// <summary>
+        /// When location tracking is enabled, Punch.Duration is the sum of all completed
+        /// PunchTracking session durations plus the session being closed now.
+        /// Gaps between auto punch-out and re-punch are excluded.
+        /// </summary>
+        private async Task<double?> CalculateLocationTrackingPunchDurationAsync(
+            int punchId,
+            double? currentSessionDurationMinutes)
+        {
+            var completedSum = await _repo.GetCompletedPunchTrackingDurationSumAsync(punchId);
+
+            _logger.LogInformation(
+                "Location tracking duration calculation - PunchId: {PunchId}, CompletedSessionsSum: {CompletedSum} min, CurrentSession: {CurrentSession} min",
+                punchId,
+                completedSum,
+                currentSessionDurationMinutes);
+
+            if (!currentSessionDurationMinutes.HasValue && completedSum <= 0)
+            {
+                return null;
+            }
+
+            return Math.Round(completedSum + (currentSessionDurationMinutes ?? 0), 2);
         }
 
         public string GenerateGoogleMapLink(double? lat, double? lng)

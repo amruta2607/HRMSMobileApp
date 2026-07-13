@@ -154,6 +154,18 @@ namespace MobileWebApi.Repositories
         }
 
         /// <inheritdoc />
+        public async Task<double> GetCompletedPunchTrackingDurationSumAsync(int punchId)
+        {
+            return await _punchTrackingRepository.GetCompletedSessionDurationSumAsync(punchId);
+        }
+
+        /// <inheritdoc />
+        public async Task<PunchTracking?> GetLastUnmatchedPunchInAsync(int punchId)
+        {
+            return await _punchTrackingRepository.GetLastUnmatchedPunchInAsync(punchId);
+        }
+
+        /// <inheritdoc />
         public async Task InsertPunchTrackingAsync(PunchTracking tracking)
         {
             await _punchTrackingRepository.InsertPunchTrackingAsync(tracking);
@@ -247,7 +259,7 @@ namespace MobileWebApi.Repositories
         public async Task UpdatePunchOutWithTrackingAsync(
             int punchId,
             DateTime punchOut,
-            double? duration,
+            double? totalPunchDuration,
             int userId,
             string outSource,
             string? coordinateOut,
@@ -266,7 +278,6 @@ namespace MobileWebApi.Repositories
                 tracking.Direction = "OUT";
                 tracking.PunchOut = punchOut;
                 tracking.PunchIn = null;
-                tracking.Duration = duration;
                 tracking.InsertUserId = userId;
                 tracking.OutSource = outSource;
                 tracking.CoordinateOut = coordinateOut;
@@ -274,6 +285,12 @@ namespace MobileWebApi.Repositories
                 tracking.ImageUrl = imageUrl;
                 tracking.Manual = manual;
                 tracking.PunchOutReason = punchOutReason;
+
+                _logger.LogInformation(
+                    "UpdatePunchOutWithTracking - PunchId: {PunchId}, SessionDuration: {SessionDuration} min, TotalPunchDuration: {TotalPunchDuration} min",
+                    punchId,
+                    tracking.Duration,
+                    totalPunchDuration);
 
                 await _punchTrackingRepository.InsertPunchTrackingAsync(tracking, conn, transaction);
 
@@ -283,7 +300,7 @@ namespace MobileWebApi.Repositories
                     {
                         PunchId = punchId,
                         PunchOut = punchOut,
-                        Duration = duration,
+                        Duration = totalPunchDuration,
                         UserId = userId,
                         OutSource = outSource,
                         CoordinateOut = coordinateOut,

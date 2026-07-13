@@ -38,6 +38,16 @@ namespace MobileWebApi.Interfaces
         Task<PunchTracking?> GetLastPunchTrackingAsync(int employeeId, int tenantId, DateTime punchDate);
 
         /// <summary>
+        /// Sums duration (in minutes) from completed OUT punch-tracking sessions for a punch record.
+        /// </summary>
+        Task<double> GetCompletedPunchTrackingDurationSumAsync(int punchId);
+
+        /// <summary>
+        /// Gets the most recent IN record not yet paired with an OUT for the punch.
+        /// </summary>
+        Task<PunchTracking?> GetLastUnmatchedPunchInAsync(int punchId);
+
+        /// <summary>
         /// Inserts a punch tracking record.
         /// </summary>
         Task InsertPunchTrackingAsync(PunchTracking tracking);
@@ -75,10 +85,12 @@ namespace MobileWebApi.Interfaces
         /// <summary>
         /// Inserts tracking and updates punch-out in a single transaction.
         /// </summary>
+        /// <param name="totalPunchDuration">Total worked duration for the Punch table (sum of all sessions).</param>
+        /// <param name="tracking">OUT tracking record; Duration must already hold the current session duration.</param>
         Task UpdatePunchOutWithTrackingAsync(
             int punchId,
             DateTime punchOut,
-            double? duration,
+            double? totalPunchDuration,
             int userId,
             string outSource,
             string? coordinateOut,

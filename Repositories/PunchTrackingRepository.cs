@@ -118,6 +118,24 @@ namespace MobileWebApi.Repositories
         }
 
         /// <inheritdoc />
+        public async Task<double> GetCompletedSessionDurationSumAsync(int punchId)
+        {
+            using var connection = _context.CreateConnection();
+            var query = _queryProvider.Get("GetCompletedPunchTrackingDurationSum");
+
+            return await connection.ExecuteScalarAsync<double>(query, new { PunchId = punchId });
+        }
+
+        /// <inheritdoc />
+        public async Task<PunchTracking?> GetLastUnmatchedPunchInAsync(int punchId)
+        {
+            using var connection = _context.CreateConnection();
+            var query = _queryProvider.Get("GetLastUnmatchedPunchIn");
+
+            return await connection.QueryFirstOrDefaultAsync<PunchTracking>(query, new { PunchId = punchId });
+        }
+
+        /// <inheritdoc />
         public async Task<PunchTrackingTimelineResult> GetPunchTrackingTimelineAsync(int punchId)
         {
             var userId = _tenantContext.UserId;
