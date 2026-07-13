@@ -62,6 +62,42 @@ namespace MobileWebApi.Controllers
         }
 
         /// <summary>
+        /// Returns all lookup values required by the Create Asset screen.
+        /// </summary>
+        [HttpGet("lookups")]
+        public async Task<IActionResult> GetLookups()
+        {
+            try
+            {
+                var tenantId = CurrentOrganisationId;
+                var userId = CurrentUserId;
+
+                Logger.LogInformation(LogMessages.Asset.FetchingLookups, userId, tenantId);
+
+                var result = await _assetRepository.GetLookupsAsync();
+                return Ok(result);
+            }
+            catch (TenantAccessException)
+            {
+                return TenantAccessDenied();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(
+                    ExceptionCodes.Asset.GetLookups,
+                    nameof(GetLookups),
+                    ex,
+                    CurrentUserId);
+
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    success = false,
+                    message = GeneralMessages.UnexpectedError
+                });
+            }
+        }
+
+        /// <summary>
         /// Creates a new asset for the authenticated user's organisation.
         /// </summary>
         [HttpPost("Add-Asset")]

@@ -84,6 +84,7 @@ builder.Services.AddScoped<IAssetDashboardRepository, AssetDashboardRepository>(
 builder.Services.AddScoped<IAssetHandOverRepository, AssetHandOverRepository>();
 builder.Services.AddScoped<IAssetQRCodeService, AssetQRCodeService>();
 builder.Services.AddScoped<IScannerRepository, ScannerRepository>();
+builder.Services.AddScoped<ITemplateRepository, TemplateRepository>();
 builder.Services.AddScoped<ITenantConfigurationRepository, TenantConfigurationRepository>();
 builder.Services.AddScoped<IGeoTenantLocationRepository, GeoTenantLocationRepository>();
 builder.Services.AddScoped<IMobileTenantConfigurationRepository, MobileTenantConfigurationRepository>();

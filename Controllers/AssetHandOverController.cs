@@ -63,6 +63,42 @@ namespace MobileWebApi.Controllers
         }
 
         /// <summary>
+        /// Returns lookup data for the Asset HandOver screen.
+        /// </summary>
+        [HttpGet("/api/asset-handover/lookups")]
+        public async Task<IActionResult> GetLookups()
+        {
+            try
+            {
+                var tenantId = CurrentOrganisationId;
+                var userId = CurrentUserId;
+
+                Logger.LogInformation(LogMessages.AssetHandOver.FetchingLookups, userId, tenantId);
+
+                var result = await _assetHandOverRepository.GetLookupsAsync();
+                return Ok(result);
+            }
+            catch (TenantAccessException)
+            {
+                return TenantAccessDenied();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(
+                    ExceptionCodes.AssetHandOver.GetLookups,
+                    nameof(GetLookups),
+                    ex,
+                    CurrentUserId);
+
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    success = false,
+                    message = GeneralMessages.UnexpectedError
+                });
+            }
+        }
+
+        /// <summary>
         /// Creates a new asset handover record and updates the related asset assignment.
         /// </summary>
         [HttpPost]

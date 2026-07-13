@@ -70,6 +70,79 @@ namespace MobileWebApi.Repositories
         }
 
         /// <inheritdoc />
+        public async Task<AssetLookupsResponse> GetLookupsAsync()
+        {
+            try
+            {
+                var tenantId = _tenantContext.GetRequiredOrganisationId();
+                var userId = _tenantContext.UserId;
+
+                _logger.LogInformation(
+                    LogMessages.Asset.FetchingLookups,
+                    userId,
+                    tenantId);
+
+                using var connection = _context.CreateConnection();
+
+                var statuses = (await connection.QueryAsync<AssetLookupItemDto>(
+                    _queries.Get("Asset_LookupAssetStatuses"),
+                    new { TenantId = tenantId })).ToList();
+                var categories = (await connection.QueryAsync<AssetLookupItemDto>(
+                    _queries.Get("Asset_LookupAssetCategories"),
+                    new { TenantId = tenantId })).ToList();
+                var departments = (await connection.QueryAsync<AssetLookupItemDto>(
+                    _queries.Get("Asset_LookupDepartments"),
+                    new { TenantId = tenantId })).ToList();
+                var branches = (await connection.QueryAsync<AssetLookupItemDto>(
+                    _queries.Get("Asset_LookupBranches"),
+                    new { TenantId = tenantId })).ToList();
+                var businessUnits = (await connection.QueryAsync<AssetLookupItemDto>(
+                    _queries.Get("Asset_LookupBusinessUnits"),
+                    new { TenantId = tenantId })).ToList();
+                var assetTypes = (await connection.QueryAsync<AssetLookupItemDto>(
+                    _queries.Get("Asset_LookupAssetTypes"),
+                    new { TenantId = tenantId })).ToList();
+
+                var data = new AssetLookupsData
+                {
+                    AssetStatuses = statuses,
+                    AssetCategories = categories,
+                    Departments = departments,
+                    Branches = branches,
+                    BusinessUnits = businessUnits,
+                    AssetTypes = assetTypes
+                };
+
+                _logger.LogInformation(
+                    LogMessages.Asset.LookupsFetched,
+                    tenantId,
+                    data.AssetStatuses.Count,
+                    data.AssetCategories.Count,
+                    data.Departments.Count,
+                    data.Branches.Count,
+                    data.BusinessUnits.Count,
+                    data.AssetTypes.Count);
+
+                return new AssetLookupsResponse
+                {
+                    Success = true,
+                    Message = AssetMessages.LookupsFetchedSuccessfully,
+                    Data = data
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(
+                    ExceptionCodes.Asset.GetLookups,
+                    nameof(GetLookupsAsync),
+                    ex,
+                    _tenantContext.UserId);
+
+                throw;
+            }
+        }
+
+        /// <inheritdoc />
         public async Task<CreateAssetResponse> CreateAssetAsync(CreateAssetRequest request)
         {
             var tenantId = _tenantContext.GetRequiredOrganisationId();
@@ -370,10 +443,24 @@ namespace MobileWebApi.Repositories
             int tenantId)
         {
             if (!await ExistsForTenantAsync(
+                    connection, transaction, _queries.Get("Asset_ExistsAssetStatus"),
+                    request.AssetStatusId, tenantId))
+            {
+                throw new AssetValidationException(AssetMessages.InvalidAssetStatus);
+            }
+
+            if (!await ExistsForTenantAsync(
                     connection, transaction, _queries.Get("Asset_ExistsAssetCategory"),
                     request.AssetCategoryId, tenantId))
             {
                 throw new AssetValidationException(AssetMessages.InvalidAssetCategory);
+            }
+
+            if (!await ExistsForTenantAsync(
+                    connection, transaction, _queries.Get("Asset_ExistsDepartment"),
+                    request.DepartmentId, tenantId))
+            {
+                throw new AssetValidationException(AssetMessages.InvalidDepartment);
             }
 
             if (!await ExistsForTenantAsync(
@@ -383,36 +470,18 @@ namespace MobileWebApi.Repositories
                 throw new AssetValidationException(AssetMessages.InvalidBranch);
             }
 
-            if (request.DepartmentId.HasValue &&
-                !await ExistsForTenantAsync(
-                    connection, transaction, _queries.Get("Asset_ExistsDepartment"),
-                    request.DepartmentId.Value, tenantId))
-            {
-                throw new AssetValidationException(AssetMessages.InvalidDepartment);
-            }
-
-            if (request.BusinessUnitId.HasValue &&
-                !await ExistsForTenantAsync(
+            if (!await ExistsForTenantAsync(
                     connection, transaction, _queries.Get("Asset_ExistsBusinessUnit"),
-                    request.BusinessUnitId.Value, tenantId))
+                    request.BusinessUnitId, tenantId))
             {
                 throw new AssetValidationException(AssetMessages.InvalidBusinessUnit);
             }
 
-            if (request.AssetTypeId.HasValue &&
-                !await ExistsForTenantAsync(
+            if (!await ExistsForTenantAsync(
                     connection, transaction, _queries.Get("Asset_ExistsAssetType"),
-                    request.AssetTypeId.Value, tenantId))
+                    request.AssetTypeId, tenantId))
             {
                 throw new AssetValidationException(AssetMessages.InvalidAssetType);
-            }
-
-            if (request.AssetStatusId.HasValue &&
-                !await ExistsForTenantAsync(
-                    connection, transaction, _queries.Get("Asset_ExistsAssetStatus"),
-                    request.AssetStatusId.Value, tenantId))
-            {
-                throw new AssetValidationException(AssetMessages.InvalidAssetStatus);
             }
         }
 

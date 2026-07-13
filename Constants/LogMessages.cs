@@ -437,6 +437,9 @@ namespace MobileWebApi.Constants
             public const string ErrorCreatingAsset = "Error creating asset for organisation {OrganisationId}.";
             public const string ErrorUpdatingAsset = "Error updating asset {AssetId} for organisation {OrganisationId}.";
             public const string AssetUpdated = "Asset {AssetId} updated by user {UserId} for organisation {OrganisationId} at {Timestamp}.";
+            public const string FetchingLookups = "Fetching asset lookups for user {UserId} in organisation {OrganisationId}.";
+            public const string LookupsFetched = "Fetched asset lookups for organisation {OrganisationId}: statuses={StatusCount}, categories={CategoryCount}, departments={DepartmentCount}, branches={BranchCount}, businessUnits={BusinessUnitCount}, assetTypes={AssetTypeCount}.";
+            public const string ErrorFetchingLookups = "Error fetching asset lookups for organisation {OrganisationId}.";
         }
 
         // Asset hand over logs
@@ -445,12 +448,22 @@ namespace MobileWebApi.Constants
             public const string ErrorFetchingList = "Error fetching asset hand over list for organisation {OrganisationId}.";
             public const string ErrorHandingOver = "Error handing over asset {AssetId} for organisation {OrganisationId}.";
             public const string AssetHandedOver = "Asset {AssetId} handed over to employee {EmployeeId} by user {UserId} for organisation {OrganisationId} at {Timestamp}.";
+            public const string FetchingLookups = "Fetching asset handover lookups for user {UserId} in organisation {OrganisationId}.";
+            public const string LookupsFetched = "Fetched asset handover lookups for organisation {OrganisationId}: assets={AssetCount}, handOverBy={HandOverByCount}, handOverTo={HandOverToCount}.";
+            public const string ErrorFetchingLookups = "Error fetching asset handover lookups for organisation {OrganisationId}.";
         }
 
         // Scanner logs
         public static class Scanner
         {
             public const string ErrorFetchingAsset = "Error fetching asset by scanner code for organisation {OrganisationId}.";
+        }
+
+        // Template logs
+        public static class Template
+        {
+            public const string FetchingTemplates = "Fetching active templates for organisation {OrganisationId}.";
+            public const string ErrorFetchingTemplates = "Error fetching active templates for organisation {OrganisationId}.";
         }
 
         // Dispute related logs

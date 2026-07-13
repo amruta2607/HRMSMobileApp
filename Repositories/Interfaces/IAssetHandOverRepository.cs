@@ -14,6 +14,11 @@ namespace MobileWebApi.Repositories.Interfaces
         Task<AssetHandOverListResponse> GetListAsync();
 
         /// <summary>
+        /// Retrieves lookup data for the Asset HandOver screen.
+        /// </summary>
+        Task<AssetHandOverLookupsResponse> GetLookupsAsync();
+
+        /// <summary>
         /// Transfers an asset to another employee and records handover history.
         /// </summary>
         Task<AssetOperationResponse> AssetHandoverAsync(AssetHandoverRequest request);

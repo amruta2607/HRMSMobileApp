@@ -14,6 +14,11 @@ namespace MobileWebApi.Repositories.Interfaces
         Task<AssetListResponse> GetAssetsAsync();
 
         /// <summary>
+        /// Retrieves all lookup values required by the Create Asset screen.
+        /// </summary>
+        Task<AssetLookupsResponse> GetLookupsAsync();
+
+        /// <summary>
         /// Creates a new asset for the authenticated user's organisation.
         /// </summary>
         Task<CreateAssetResponse> CreateAssetAsync(CreateAssetRequest request);

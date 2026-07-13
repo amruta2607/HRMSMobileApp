@@ -65,6 +65,64 @@ namespace MobileWebApi.Repositories
         }
 
         /// <inheritdoc />
+        public async Task<AssetHandOverLookupsResponse> GetLookupsAsync()
+        {
+            try
+            {
+                var tenantId = _tenantContext.GetRequiredOrganisationId();
+                var userId = _tenantContext.UserId;
+
+                _logger.LogInformation(
+                    LogMessages.AssetHandOver.FetchingLookups,
+                    userId,
+                    tenantId);
+
+                using var connection = _context.CreateConnection();
+
+                var assets = (await connection.QueryAsync<AssetHandOverLookupAssetDto>(
+                    _queries.Get("AssetHandOver_LookupAssets"),
+                    new { TenantId = tenantId })).ToList();
+
+                var handOverByEmployees = (await connection.QueryAsync<AssetHandOverLookupEmployeeDto>(
+                    _queries.Get("AssetHandOver_LookupHandOverByEmployees"),
+                    new { TenantId = tenantId })).ToList();
+
+                var handOverToEmployees = (await connection.QueryAsync<AssetHandOverLookupEmployeeDto>(
+                    _queries.Get("AssetHandOver_LookupHandOverToEmployees"),
+                    new { TenantId = tenantId })).ToList();
+
+                _logger.LogInformation(
+                    LogMessages.AssetHandOver.LookupsFetched,
+                    tenantId,
+                    assets.Count,
+                    handOverByEmployees.Count,
+                    handOverToEmployees.Count);
+
+                return new AssetHandOverLookupsResponse
+                {
+                    Success = true,
+                    Message = AssetMessages.HandoverLookupsFetchedSuccessfully,
+                    Data = new AssetHandOverLookupsData
+                    {
+                        Assets = assets,
+                        HandOverByEmployees = handOverByEmployees,
+                        HandOverToEmployees = handOverToEmployees
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(
+                    ExceptionCodes.AssetHandOver.GetLookups,
+                    nameof(GetLookupsAsync),
+                    ex,
+                    _tenantContext.UserId);
+
+                throw;
+            }
+        }
+
+        /// <inheritdoc />
         public async Task<AssetOperationResponse> AssetHandoverAsync(AssetHandoverRequest request)
         {
             var tenantId = _tenantContext.GetRequiredOrganisationId();
@@ -84,8 +142,8 @@ namespace MobileWebApi.Repositories
                 if (asset == null)
                     throw new AssetNotFoundException(AssetMessages.NotFound);
 
-                if (IsDisposedOrRetiredStatus(asset.AssetStatusName))
-                    throw new AssetValidationException(AssetMessages.AssetInactiveOrDisposed);
+                if (AssetHandoverStatusHelper.IsUnavailableForHandover(asset.AssetStatusName))
+                    throw new AssetValidationException(AssetMessages.AssetNotAvailableForHandover);
 
                 var handoverToEmployee = await connection.QueryFirstOrDefaultAsync<AssetHandoverEmployeeRow>(
                     _queries.Get("Asset_ValidateEmployee"),
@@ -98,6 +156,17 @@ namespace MobileWebApi.Repositories
                 var handoverByEmployee = await _employeeRepository.GetEmployeebyUserIdAsync(userId);
                 if (handoverByEmployee == null || handoverByEmployee.OrganisationId != tenantId)
                     throw new AssetValidationException(AssetMessages.HandoverByEmployeeRequired);
+
+                if (!handoverByEmployee.IsEmployeeActive)
+                    throw new AssetValidationException(AssetMessages.InvalidHandOverByEmployee);
+
+                var handoverByExists = await connection.ExecuteScalarAsync<int>(
+                    _queries.Get("AssetHandOver_ExistsHandOverByEmployee"),
+                    new { EmployeeId = handoverByEmployee.Id, TenantId = tenantId },
+                    transaction);
+
+                if (handoverByExists != 1)
+                    throw new AssetValidationException(AssetMessages.InvalidHandOverByEmployee);
 
                 if (handoverByEmployee.Id == request.HandoverToEmployeeId)
                     throw new AssetValidationException(AssetMessages.SameHandoverEmployee);
@@ -315,18 +384,6 @@ namespace MobileWebApi.Repositories
                     userId);
                 throw;
             }
-        }
-
-        private static bool IsDisposedOrRetiredStatus(string? statusName)
-        {
-            if (string.IsNullOrWhiteSpace(statusName))
-                return false;
-
-            var normalized = statusName.Trim().ToLowerInvariant();
-            return normalized.Contains("scrapped", StringComparison.Ordinal)
-                || normalized.Contains("scrap", StringComparison.Ordinal)
-                || normalized.Contains("retired", StringComparison.Ordinal)
-                || normalized.Contains("disposed", StringComparison.Ordinal);
         }
 
         private sealed class AssetHandoverRecordRow

@@ -27,5 +27,9 @@ namespace MobileWebApi.Constants
         public const string DuplicateAssetTagNumber = "An asset with this tag number already exists.";
         public const string EmployeeRequiredForMaintenance = "An employee record is required to add maintenance items.";
         public const string RequestBodyCannotBeNull = "Request body cannot be null.";
+        public const string LookupsFetchedSuccessfully = "Asset lookups fetched successfully.";
+        public const string HandoverLookupsFetchedSuccessfully = "Lookup data retrieved successfully.";
+        public const string AssetNotAvailableForHandover = "The selected asset is not available for handover.";
+        public const string InvalidHandOverByEmployee = "The selected hand over by employee is invalid.";
     }
 }

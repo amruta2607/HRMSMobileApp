@@ -21,7 +21,8 @@ namespace MobileWebApi.Models.Requests
         /// <summary>
         /// Asset status identifier.
         /// </summary>
-        public int? AssetStatusId { get; set; }
+        [Range(1, 999999, ErrorMessage = "Asset status is required.")]
+        public int AssetStatusId { get; set; }
 
         /// <summary>
         /// Asset category identifier.
@@ -32,7 +33,8 @@ namespace MobileWebApi.Models.Requests
         /// <summary>
         /// Department identifier.
         /// </summary>
-        public int? DepartmentId { get; set; }
+        [Range(1, 999999, ErrorMessage = "Department is required.")]
+        public int DepartmentId { get; set; }
 
         /// <summary>
         /// Branch identifier.
@@ -43,12 +45,14 @@ namespace MobileWebApi.Models.Requests
         /// <summary>
         /// Business unit identifier.
         /// </summary>
-        public int? BusinessUnitId { get; set; }
+        [Range(1, 999999, ErrorMessage = "Business unit is required.")]
+        public int BusinessUnitId { get; set; }
 
         /// <summary>
         /// Asset type identifier.
         /// </summary>
-        public int? AssetTypeId { get; set; }
+        [Range(1, 999999, ErrorMessage = "Asset type is required.")]
+        public int AssetTypeId { get; set; }
 
         /// <summary>
         /// Asset owner.
