@@ -121,6 +121,8 @@ namespace MobileWebApi.Constants
             public const string UserDeleteUserDatabaseError = "REP100";
             public const string UserDeactivateUserDatabaseError = "REP101";
             public const string UserUpdatePasswordDatabaseError = "REP102";
+            public const string TenantWeekOffGetConfigurationDatabaseError = "REP103";
+            public const string TenantWeekOffGetWeekOffDaysDatabaseError = "REP104";
         }
 
         // Service layer (generic)
@@ -163,6 +165,7 @@ namespace MobileWebApi.Constants
             public const string ForgotPassword = "AUTH-007";
             public const string ResetPassword = "AUTH-008";
             public const string ChangePassword = "AUTH-009";
+            public const string RefreshToken = "AUTH-010";
         }
 
         // Attendance / Shift module (AttendanceService)
@@ -297,6 +300,20 @@ namespace MobileWebApi.Constants
             public const string GetTenantGeofence = "GEOF-001";
         }
 
+        // Location tracking (LocationTrackingController)
+        public static class LocationTracking
+        {
+            public const string RecordLocation = "LOCT-001";
+            public const string RecordLocationBatch = "LOCT-002";
+            public const string AddIssue = "LOCT-004";
+        }
+
+        // Location tracking configuration (MobileLocationTrackingConfigurationController)
+        public static class LocationTrackingConfiguration
+        {
+            public const string GetConfiguration = "LOCT-003";
+        }
+
         // Personal details (PersonalDetailsController)
         public static class PersonalDetails
         {
@@ -334,6 +351,42 @@ namespace MobileWebApi.Constants
         {
             public const string InitiateLeaveWorkflow = "WF-001";
             public const string InsertInitialStage = "WF-002";
+        }
+
+        // Asset dashboard (AssetDashboardRepository)
+        public static class AssetDashboard
+        {
+            public const string GetDashboard = "ASSET-001";
+        }
+
+        // Asset list (AssetRepository)
+        public static class Asset
+        {
+            public const string GetList = "ASSET-002";
+            public const string Create = "ASSET-003";
+            public const string Update = "ASSET-005";
+            public const string GetLookups = "ASSET-008";
+        }
+
+        // Asset hand over list (AssetHandOverRepository)
+        public static class AssetHandOver
+        {
+            public const string GetList = "ASSET-004";
+            public const string Handover = "ASSET-006";
+            public const string Update = "ASSET-007";
+            public const string GetLookups = "ASSET-009";
+        }
+
+        // Scanner (ScannerRepository)
+        public static class Scanner
+        {
+            public const string GetAsset = "SCAN-001";
+        }
+
+        // Template list (TemplateRepository)
+        public static class Template
+        {
+            public const string GetList = "TMPL-001";
         }
     }
 }

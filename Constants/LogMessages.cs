@@ -110,6 +110,8 @@ namespace MobileWebApi.Constants
             public const string ErrorFetchingAttendanceOverview = "Error fetching attendance overview for employee {EmployeeId}";
             public const string InvalidDateForOperation = "Invalid date for {OperationType}: Requested date {RequestDate} does not match today's date {TodayDate}";
             public const string FetchingTodayPunchLogs = "Fetching today's punch logs for user {UserId}";
+            public const string FetchingTenantWeekOffDays = "Fetching tenant week-off days for tenant {TenantId}";
+            public const string ErrorFetchingTenantWeekOffDays = "Error fetching tenant week-off days for tenant {TenantId}";
         }
 
         // Leave related logs
@@ -298,6 +300,36 @@ namespace MobileWebApi.Constants
             public const string ErrorFetchingLocationsForUserId = "Error fetching locations for UserId={UserId}";
         }
 
+        // Location tracking related logs
+        public static class LocationTracking
+        {
+            public const string RecordingLocation = "Recording location for employee {EmployeeId}, tenant {TenantId}";
+            public const string FailedToRecordLocation = "Failed to record location for employee {EmployeeId}";
+            public const string ProcessingLocationBatch = "Processing location batch for employee {EmployeeId}, tenant {TenantId}, record count {RecordCount}";
+            public const string FailedToRecordLocationBatch = "Failed to record location batch for employee {EmployeeId}";
+        }
+
+        public static class LocationTrackingIssue
+        {
+            public const string ApiRequestReceived = "Location tracking issue API request received from user {UserId}";
+            public const string AuthenticatedUser = "Authenticated user {UserId} ({Username}) submitting location tracking issue";
+            public const string ValidationFailed = "Location tracking issue validation failed for user {UserId}: {ValidationMessage}";
+            public const string LoggingIssue = "Logging location tracking issue for employee {EmployeeId}, tenant {TenantId}, issue type {IssueType}, user {UserId}";
+            public const string IssueLoggedSuccessfully = "Location tracking issue {IssueId} logged for employee {EmployeeId}, tenant {TenantId}, user {UserId}";
+            public const string FailedToInsert = "Failed to insert location tracking issue for employee {EmployeeId}, tenant {TenantId}";
+            public const string EmployeeNotFound = "Employee not found for user {UserId} while logging location tracking issue by user {CurrentUserId}";
+            public const string TenantNotFound = "Tenant {TenantId} not found while logging location tracking issue for user {UserId}";
+            public const string EmployeeTenantMismatch = "Employee user {UserId} does not belong to tenant {TenantId} while logging issue by user {CurrentUserId}";
+            public const string NoAdminRecipients = "No active HR or tenant admin users found for tenant {TenantId} to notify about location tracking issue";
+            public const string AdminNotificationsSent = "Sent location tracking issue notifications to {RecipientCount} admin users for issue {IssueId}, tenant {TenantId}";
+            public const string AdminNotificationFailed = "Failed to send admin notifications for location tracking issue {IssueId}, tenant {TenantId}";
+        }
+
+        public static class LocationTrackingConfiguration
+        {
+            public const string FetchingConfiguration = "Fetching location tracking configuration for employee {EmployeeId}, tenant {TenantId}";
+        }
+
         // Transaction related logs
         public static class Transaction
         {
@@ -390,6 +422,48 @@ namespace MobileWebApi.Constants
             public const string ErrorFetchingLatestAnnouncements = "Error fetching latest announcements for mobile dashboard.";
             public const string ErrorFetchingLatestHolidays = "Error fetching latest holidays for mobile dashboard.";
             public const string ErrorFetchingLatestTrainings = "Error fetching latest trainings for mobile dashboard.";
+        }
+
+        // Asset dashboard logs
+        public static class AssetDashboard
+        {
+            public const string ErrorFetchingDashboard = "Error fetching asset dashboard for organisation {OrganisationId}.";
+        }
+
+        // Asset list logs
+        public static class Asset
+        {
+            public const string ErrorFetchingAssets = "Error fetching asset list for organisation {OrganisationId}.";
+            public const string ErrorCreatingAsset = "Error creating asset for organisation {OrganisationId}.";
+            public const string ErrorUpdatingAsset = "Error updating asset {AssetId} for organisation {OrganisationId}.";
+            public const string AssetUpdated = "Asset {AssetId} updated by user {UserId} for organisation {OrganisationId} at {Timestamp}.";
+            public const string FetchingLookups = "Fetching asset lookups for user {UserId} in organisation {OrganisationId}.";
+            public const string LookupsFetched = "Fetched asset lookups for organisation {OrganisationId}: statuses={StatusCount}, categories={CategoryCount}, departments={DepartmentCount}, branches={BranchCount}, businessUnits={BusinessUnitCount}, assetTypes={AssetTypeCount}.";
+            public const string ErrorFetchingLookups = "Error fetching asset lookups for organisation {OrganisationId}.";
+        }
+
+        // Asset hand over logs
+        public static class AssetHandOver
+        {
+            public const string ErrorFetchingList = "Error fetching asset hand over list for organisation {OrganisationId}.";
+            public const string ErrorHandingOver = "Error handing over asset {AssetId} for organisation {OrganisationId}.";
+            public const string AssetHandedOver = "Asset {AssetId} handed over to employee {EmployeeId} by user {UserId} for organisation {OrganisationId} at {Timestamp}.";
+            public const string FetchingLookups = "Fetching asset handover lookups for user {UserId} in organisation {OrganisationId}.";
+            public const string LookupsFetched = "Fetched asset handover lookups for organisation {OrganisationId}: assets={AssetCount}, handOverBy={HandOverByCount}, handOverTo={HandOverToCount}.";
+            public const string ErrorFetchingLookups = "Error fetching asset handover lookups for organisation {OrganisationId}.";
+        }
+
+        // Scanner logs
+        public static class Scanner
+        {
+            public const string ErrorFetchingAsset = "Error fetching asset by scanner code for organisation {OrganisationId}.";
+        }
+
+        // Template logs
+        public static class Template
+        {
+            public const string FetchingTemplates = "Fetching active templates for organisation {OrganisationId}.";
+            public const string ErrorFetchingTemplates = "Error fetching active templates for organisation {OrganisationId}.";
         }
 
         // Dispute related logs

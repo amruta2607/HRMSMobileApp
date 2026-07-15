@@ -29,50 +29,71 @@ namespace MobileWebApi.Controllers
             _attendanceOverviewService = attendanceOverviewService;
         }
 
-        /// <summary>
-        /// Validates that the provided date matches today's date (server local time).
-        /// Returns BadRequest if the date is not today, otherwise returns null.
-        /// </summary>
-        private IActionResult? ValidateDateIsToday(DateTime dateToValidate, string operationType)
-        {
-            // Handle UTC dates - convert to local time if needed
-            DateTime localDate;
-            if (dateToValidate.Kind == DateTimeKind.Utc)
-            {
-                localDate = dateToValidate.ToLocalTime();
-            }
-            else if (dateToValidate.Kind == DateTimeKind.Unspecified)
-            {
-                // If unspecified, assume it's UTC (common from mobile clients) and convert to local
-                localDate = DateTime.SpecifyKind(dateToValidate, DateTimeKind.Utc).ToLocalTime();
-            }
-            else
-            {
-                localDate = dateToValidate;
-            }
+		/// <summary>
+		/// Validates that the provided date matches today's date (server local time).
+		/// Returns BadRequest if the date is not today, otherwise returns null.
+		/// </summary>
+		private IActionResult? ValidateDateIsToday(DateTime dateToValidate, string operationType)
+		{
+			// Log received value for debugging
+			Logger.LogInformation(
+				"Validating {OperationType}. Received Date: {Date}, Kind: {Kind}",
+				operationType,
+				dateToValidate,
+				dateToValidate.Kind);
 
-            // Compare only the Date part with today's date
-            var todayDate = DateTime.Now.Date;
-            var requestDate = localDate.Date;
+			DateTime requestDate;
 
-            if (requestDate != todayDate)
-            {
-                Logger.LogWarning(
-                    LogMessages.Attendance.InvalidDateForOperation,
-                    operationType,
-                    requestDate,
-                    todayDate);
-                return BadRequest(new { Success = false, Message = "Punch in/out is allowed only for today's date." });
-            }
+			switch (dateToValidate.Kind)
+			{
+				case DateTimeKind.Utc:
+					requestDate = dateToValidate.ToLocalTime().Date;
+					break;
 
-            return null; // Validation passed
-        }
+				case DateTimeKind.Local:
+					requestDate = dateToValidate.Date;
+					break;
 
-        /// <summary>
-        /// Validates that the current user can access the specified employee's data.
-        /// HR/TenantAdmin can access all employees. Regular users can only access their own data.
-        /// </summary>
-        private async Task<IActionResult?> ValidateEmployeeAccessAsync(int employeeId)
+				case DateTimeKind.Unspecified:
+					// Treat as local date to avoid incorrect timezone conversion
+					requestDate = dateToValidate.Date;
+					break;
+
+				default:
+					requestDate = dateToValidate.Date;
+					break;
+			}
+
+			DateTime todayDate = DateTime.Now.Date;
+
+			Logger.LogInformation(
+				"Operation: {OperationType}, Request Date: {RequestDate}, Today: {TodayDate}",
+				operationType,
+				requestDate,
+				todayDate);
+
+			if (requestDate != todayDate)
+			{
+				Logger.LogWarning(
+					"Invalid date for {OperationType}: Requested date {RequestDate} does not match today's date {TodayDate}",
+					operationType,
+					requestDate,
+					todayDate);
+
+				return BadRequest(new
+				{
+					Success = false,
+					Message = "Punch in/out is allowed only for today's date."
+				});
+			}
+
+			return null;
+		}
+		/// <summary>
+		/// Validates that the current user can access the specified employee's data.
+		/// HR/TenantAdmin can access all employees. Regular users can only access their own data.
+		/// </summary>
+		private async Task<IActionResult?> ValidateEmployeeAccessAsync(int employeeId)
         {
             // HR or TenantAdmin can access all employees
             if (HasElevatedAccess)
@@ -95,7 +116,37 @@ namespace MobileWebApi.Controllers
                 return UserAccessDenied();
             }
 
-            return null; // Access granted
+			return null; // Access granted
+        }
+
+        /// <summary>
+        /// Maps punch service result messages to appropriate HTTP responses.
+        /// </summary>
+        private IActionResult MapPunchResult(string result)
+        {
+            if (IsPunchValidationError(result))
+            {
+                return BadRequest(new { Success = false, Message = result });
+            }
+
+            if (result.StartsWith("Error while processing", StringComparison.OrdinalIgnoreCase)
+                || result.StartsWith("No employee found", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { Success = false, Message = result });
+            }
+
+            return Ok(new { message = result });
+        }
+
+        private static bool IsPunchValidationError(string result)
+        {
+            return result == AttendanceMessages.PunchInAlreadyDone
+                || result == AttendanceMessages.AlreadyPunchedIn
+                || result == AttendanceMessages.AlreadyPunchedOut
+                || result == AttendanceMessages.PleasePunchInFirst
+                || result == AttendanceMessages.CannotPunchOutWithoutPunchIn
+                || result == AttendanceMessages.PunchOutAlreadyDone
+                || result == AttendanceMessages.PunchInFailed;
         }
 
 		/// <summary>
@@ -143,7 +194,7 @@ namespace MobileWebApi.Controllers
 
                 Logger.LogInformation(LogMessages.Attendance.ProcessingPunchIn, request.userId);
                 var result = await _service.PunchInAsync(request);
-                return Ok(new { message = result });
+                return MapPunchResult(result);
             }
             catch (Exception ex)
             {
@@ -239,7 +290,7 @@ namespace MobileWebApi.Controllers
 
                 Logger.LogInformation(LogMessages.Attendance.ProcessingPunchOut, request.userId);
                 var result = await _service.PunchOutAsync(request);
-                return Ok(new { message = result });
+                return MapPunchResult(result);
             }
             catch (Exception ex)
             {
@@ -644,8 +695,8 @@ namespace MobileWebApi.Controllers
         //}
 
         /// <summary>
-        /// Delete attendance record
-        /// DELETE: attendance/delete-attendance/?id=4
+        /// Delete attendance record (Punch + related PunchTracking).
+        /// DELETE: attendance/delete-attendance?id={punchId}
         /// </summary>
         [HttpDelete("delete-attendance")]
         public async Task<IActionResult> DeleteAttendance([FromQuery] int id)
@@ -657,7 +708,7 @@ namespace MobileWebApi.Controllers
                     return BadRequest(new AttendanceDeleteResponse
                     {
                         Success = false,
-                        Message = AttendanceMessages.EmployeeIdRequired,
+                        Message = AttendanceMessages.PunchIdRequired,
                         Data = null
                     });
                 }
@@ -672,12 +723,22 @@ namespace MobileWebApi.Controllers
                     return Ok(result);
                 }
 
+                if (string.Equals(result.Message, AttendanceMessages.AttendanceNotFound, StringComparison.Ordinal))
+                {
+                    return NotFound(result);
+                }
+
                 return BadRequest(result);
             }
             catch (Exception ex)
             {
                 Logger.LogException(ExceptionCodes.Attendance.DeleteAttendance, nameof(DeleteAttendance), ex, CurrentUserId);
-                return StatusCode(500, new { Success = false, Message = GeneralMessages.SomethingWentWrongContactAdmin });
+                return StatusCode(500, new AttendanceDeleteResponse
+                {
+                    Success = false,
+                    Message = AttendanceMessages.FailedToDeleteAttendance,
+                    Data = null
+                });
             }
         }
 

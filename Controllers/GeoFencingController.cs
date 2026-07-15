@@ -14,14 +14,17 @@ namespace MobileWebApi.Controllers
 	public class GeoFencingController : TenantBaseController
 	{
 		private readonly IGeoTenantLocationRepository _geoRepo;
+		private readonly ITenantConfigurationRepository _tenantConfigurationRepository;
 
 		public GeoFencingController(
 			IGeoTenantLocationRepository geoRepo,
+			ITenantConfigurationRepository tenantConfigurationRepository,
 			ITenantContext tenantContext,
 			ILogger<GeoFencingController> logger)
 			: base(tenantContext, logger)
 		{
 			_geoRepo = geoRepo;
+			_tenantConfigurationRepository = tenantConfigurationRepository;
 		}
 
 		[HttpGet("by-tenant")]
@@ -42,18 +45,20 @@ namespace MobileWebApi.Controllers
 					});
 				}
 
+				var tenantConfig = await _tenantConfigurationRepository
+					.GetByTenantIdAsync(organisationId, geoFence.BranchId);
+				var isGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false;
+
 				return Ok(new
 				{
-					IsGeoFencingEnabled = true,
+					IsGeoFencingEnabled = isGeoFencingEnabled,
 					BranchId = geoFence.BranchId,
 					BranchName = geoFence.BranchName,
-					Latitude = geoFence.Latitude.ToString("F6"),
-					Longitude = geoFence.Longitude.ToString("F6"),
-					Radius = geoFence.Radius,
+					Latitude = isGeoFencingEnabled ? geoFence.Latitude.ToString("F6") : null,
+					Longitude = isGeoFencingEnabled ? geoFence.Longitude.ToString("F6") : null,
+					Radius = isGeoFencingEnabled ? geoFence.Radius : (int?)null,
 					OrganisationId = geoFence.OrganisationId,
-					IsActive=geoFence.IsActive,
-
-
+					IsActive = geoFence.IsActive
 				});
 			}
 			catch (TenantAccessException)
