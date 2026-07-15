@@ -532,17 +532,36 @@ namespace MobileWebApi.Repositories
         }
 
         /// <summary>
-        /// Delete a punch record
+        /// Deletes related PunchTracking rows, then the Punch record, in a single transaction.
         /// </summary>
         public async Task<bool> DeletePunchAsync(int id, int tenantId)
         {
             using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("DeletePunch");
+            conn.Open();
+            using var transaction = conn.BeginTransaction();
+            try
+            {
+                var deleteTrackingQuery = _queryProvider.Get("DeletePunchTrackingByPunchId");
+                await conn.ExecuteAsync(
+                    deleteTrackingQuery,
+                    new { PunchId = id, TenantId = tenantId },
+                    transaction);
 
-            var rowsAffected = await conn.ExecuteAsync(query,
-                new { Id = id, TenantId = tenantId });
+                var deletePunchQuery = _queryProvider.Get("DeletePunch");
+                var rowsAffected = await conn.ExecuteAsync(
+                    deletePunchQuery,
+                    new { Id = id, TenantId = tenantId },
+                    transaction);
 
-            return rowsAffected > 0;
+                transaction.Commit();
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                _logger.LogError(ex, "Failed to delete attendance for PunchId {PunchId}, TenantId {TenantId}", id, tenantId);
+                throw;
+            }
         }
 
         /// <summary>

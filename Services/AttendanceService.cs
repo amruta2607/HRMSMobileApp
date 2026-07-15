@@ -1598,7 +1598,7 @@ namespace MobileWebApi.Services
         }
 
         /// <summary>
-        /// Delete attendance record
+        /// Deletes an attendance (Punch) record and all related PunchTracking rows.
         /// </summary>
         public async Task<AttendanceDeleteResponse> DeleteAttendanceAsync(int id, int tenantId)
         {
@@ -1611,12 +1611,11 @@ namespace MobileWebApi.Services
                     return new AttendanceDeleteResponse
                     {
                         Success = false,
-                        Message = AttendanceMessages.EmployeeIdRequired,
+                        Message = AttendanceMessages.PunchIdRequired,
                         Data = null
                     };
                 }
 
-                // Check if punch record exists
                 var existingPunch = await _repo.GetPunchByIdAsync(id, tenantId);
                 if (existingPunch == null)
                 {
@@ -1628,7 +1627,6 @@ namespace MobileWebApi.Services
                     };
                 }
 
-                // Validate that user has access to this employee's data
                 var employee = await _repo.GetEmployeeByIdAsync(existingPunch.EmployeeId);
                 if (employee == null)
                 {
@@ -1648,14 +1646,15 @@ namespace MobileWebApi.Services
                     {
                         Success = true,
                         Message = AttendanceMessages.AttendanceDeletedSuccessfully,
-                        Data = new { Id = id }
+                        Data = new { PunchId = id }
                     };
                 }
 
+                // Race: punch was deleted between existence check and delete
                 return new AttendanceDeleteResponse
                 {
                     Success = false,
-                    Message = AttendanceMessages.FailedToDeleteAttendance,
+                    Message = AttendanceMessages.AttendanceNotFound,
                     Data = null
                 };
             }
@@ -1665,7 +1664,7 @@ namespace MobileWebApi.Services
                 return new AttendanceDeleteResponse
                 {
                     Success = false,
-                    Message = $"Error deleting attendance record: {ex.Message}",
+                    Message = AttendanceMessages.FailedToDeleteAttendance,
                     Data = null
                 };
             }

@@ -122,7 +122,14 @@ namespace MobileWebApi.Interfaces
         Task<IEnumerable<AttendanceReport>> GetAttendanceReportsByOrganisationAsync(int organisationId, DateTime dateFrom, DateTime dateTo);
         
         // Delete Attendance
+        /// <summary>
+        /// Deletes punch and related PunchTracking rows for the given punch id.
+        /// </summary>
         Task<Punch?> GetPunchByIdAsync(int id, int tenantId);
+
+        /// <summary>
+        /// Deletes PunchTracking then Punch in a single transaction.
+        /// </summary>
         Task<bool> DeletePunchAsync(int id, int tenantId);
 
         // Today punch logs (DeviceLog + Punch table)

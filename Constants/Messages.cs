@@ -155,9 +155,10 @@ namespace MobileWebApi.Constants
         public const string InvalidDateRange = "Invalid date range. From date must be before or equal to To date.";
 
         // Delete attendance messages
-        public const string AttendanceDeletedSuccessfully = "Attendance record deleted successfully.";
+        public const string AttendanceDeletedSuccessfully = "Attendance deleted successfully.";
         public const string AttendanceNotFound = "Attendance record not found.";
-        public const string FailedToDeleteAttendance = "Failed to delete attendance record.";
+        public const string FailedToDeleteAttendance = "An error occurred while deleting attendance.";
+        public const string PunchIdRequired = "Punch ID is required.";
 
         // Attendance status messages
         public const string AttendanceStatusRetrievedSuccessfully = "Attendance status retrieved successfully.";

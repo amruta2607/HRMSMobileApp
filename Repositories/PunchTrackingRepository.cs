@@ -74,8 +74,8 @@ namespace MobileWebApi.Repositories
                     tracking.PunchId,
                     PunchDate = tracking.PunchDate.Date,
                     tracking.Direction,
-                    PunchIn = ToSqlTime(tracking.PunchIn),
-                    PunchOut = ToSqlTime(tracking.PunchOut),
+                    PunchIn = tracking.PunchIn,
+                    PunchOut = tracking.PunchOut,
                     Duration = ToSqlTimeDuration(tracking.Duration),
                     tracking.InsertUserId,
                     tracking.InSource,
@@ -90,12 +90,6 @@ namespace MobileWebApi.Repositories
                 },
                 transaction);
         }
-
-        /// <summary>
-        /// Maps punch clock time to SQL time column.
-        /// </summary>
-        private static TimeSpan? ToSqlTime(DateTime? dateTime) =>
-            dateTime?.TimeOfDay;
 
         /// <summary>
         /// Maps duration in minutes to SQL time column.

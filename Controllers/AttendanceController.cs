@@ -695,8 +695,8 @@ namespace MobileWebApi.Controllers
         //}
 
         /// <summary>
-        /// Delete attendance record
-        /// DELETE: attendance/delete-attendance/?id=4
+        /// Delete attendance record (Punch + related PunchTracking).
+        /// DELETE: attendance/delete-attendance?id={punchId}
         /// </summary>
         [HttpDelete("delete-attendance")]
         public async Task<IActionResult> DeleteAttendance([FromQuery] int id)
@@ -708,7 +708,7 @@ namespace MobileWebApi.Controllers
                     return BadRequest(new AttendanceDeleteResponse
                     {
                         Success = false,
-                        Message = AttendanceMessages.EmployeeIdRequired,
+                        Message = AttendanceMessages.PunchIdRequired,
                         Data = null
                     });
                 }
@@ -723,12 +723,22 @@ namespace MobileWebApi.Controllers
                     return Ok(result);
                 }
 
+                if (string.Equals(result.Message, AttendanceMessages.AttendanceNotFound, StringComparison.Ordinal))
+                {
+                    return NotFound(result);
+                }
+
                 return BadRequest(result);
             }
             catch (Exception ex)
             {
                 Logger.LogException(ExceptionCodes.Attendance.DeleteAttendance, nameof(DeleteAttendance), ex, CurrentUserId);
-                return StatusCode(500, new { Success = false, Message = GeneralMessages.SomethingWentWrongContactAdmin });
+                return StatusCode(500, new AttendanceDeleteResponse
+                {
+                    Success = false,
+                    Message = AttendanceMessages.FailedToDeleteAttendance,
+                    Data = null
+                });
             }
         }
 
