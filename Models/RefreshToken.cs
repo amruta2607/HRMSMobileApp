@@ -41,12 +41,9 @@ namespace MobileWebApi.Models
 		public string? LocationAddress { get; set; }
 
 		/// <summary>
-		/// Active work roles for the logged-in user. Always includes the default "User" role.
+		/// Active work role names for the logged-in user. Always includes the default "User" role.
 		/// </summary>
-		public List<WorkRole> WorkRoles { get; set; } = new()
-		{
-			new WorkRole { WorkRoleId = 0, WorkRoleName = "User" }
-		};
+		public List<string> WorkRoles { get; set; } = new() { "User" };
 	}
 }
 

@@ -137,30 +137,25 @@ namespace MobileWebApi.Repositories
             }
         }
 
-        public async Task<IReadOnlyList<WorkRole>> GetActiveWorkRolesByUserIdAsync(int userId)
+        public async Task<IReadOnlyList<string>> GetActiveWorkRolesByUserIdAsync(int userId)
         {
             if (userId <= 0)
-                return Array.Empty<WorkRole>();
+                return Array.Empty<string>();
 
             try
             {
                 string query = _queryProvider.Get("GetActiveWorkRolesByUserId");
 
                 using var connection = _context.CreateConnection();
-                var roles = await connection.QueryAsync<WorkRole>(
+                var roles = await connection.QueryAsync<string>(
                     query,
                     new { UserId = userId }
                 );
 
                 return roles
-                    .Where(r => r != null && !string.IsNullOrWhiteSpace(r.WorkRoleName))
-                    .GroupBy(r => r.WorkRoleId)
-                    .Select(g => g.First())
-                    .Select(r => new WorkRole
-                    {
-                        WorkRoleId = r.WorkRoleId,
-                        WorkRoleName = r.WorkRoleName.Trim()
-                    })
+                    .Where(r => !string.IsNullOrWhiteSpace(r))
+                    .Select(r => r.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList();
             }
             catch (Exception ex)
@@ -168,30 +163,6 @@ namespace MobileWebApi.Repositories
                 _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetActiveWorkRolesByUserIdAsync));
                 throw new Exception(
                     $"{ExceptionCodes.Repository.UserGetActiveWorkRolesByUserIdDatabaseError}: Failed to fetch active work roles for user",
-                    ex);
-            }
-        }
-
-        public async Task<WorkRole?> GetWorkRoleByNameAsync(string workRoleName, int? tenantId = null)
-        {
-            if (string.IsNullOrWhiteSpace(workRoleName))
-                return null;
-
-            try
-            {
-                string query = _queryProvider.Get("GetWorkRoleByName");
-
-                using var connection = _context.CreateConnection();
-                return await connection.QueryFirstOrDefaultAsync<WorkRole>(
-                    query,
-                    new { WorkRoleName = workRoleName.Trim(), TenantId = tenantId }
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetWorkRoleByNameAsync));
-                throw new Exception(
-                    $"{ExceptionCodes.Repository.UserGetWorkRoleByNameDatabaseError}: Failed to fetch work role by name",
                     ex);
             }
         }

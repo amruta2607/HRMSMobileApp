@@ -101,8 +101,7 @@ namespace MobileWebApi.Controllers
                 var isGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false;
 
                 var workRoles = WorkRoleHelper.BuildLoginWorkRoles(
-                    await _userRepository.GetActiveWorkRolesByUserIdAsync(user.UserId),
-                    await _userRepository.GetWorkRoleByNameAsync(WorkRoleHelper.DefaultWorkRoleName, user.OrganisationId));
+                    await _userRepository.GetActiveWorkRolesByUserIdAsync(user.UserId));
 
                 var response = BuildLoginResponse(authTokens, user, tenantConfig, mobileTenantConfig, moduleAccess, isGeoFencingEnabled, employee, workRoles: workRoles);
 
@@ -485,8 +484,7 @@ namespace MobileWebApi.Controllers
                 };
 
                 var workRoles = WorkRoleHelper.BuildLoginWorkRoles(
-                    await _userRepository.GetActiveWorkRolesByUserIdAsync(user.UserId),
-                    await _userRepository.GetWorkRoleByNameAsync(WorkRoleHelper.DefaultWorkRoleName, tenantId));
+                    await _userRepository.GetActiveWorkRolesByUserIdAsync(user.UserId));
 
                 return Ok(BuildLoginResponse(authTokens, loginUser, tenantConfig, mobileTenantConfig, moduleAccess, isGeoFencingEnabled, employee, tenantId, workRoles));
             }
@@ -925,7 +923,7 @@ namespace MobileWebApi.Controllers
             bool isGeoFencingEnabled,
             Employee? employee = null,
             int? organisationIdOverride = null,
-            IReadOnlyList<WorkRole>? workRoles = null)
+            IReadOnlyList<string>? workRoles = null)
         {
             var attendanceEnabled = mobileTenantConfig?.IsAttendanceEnabled ?? false;
             var tenantLocationTrackingEnabled = mobileTenantConfig?.EnableLocationTracking ?? false;
