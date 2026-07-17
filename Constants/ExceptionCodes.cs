@@ -123,6 +123,8 @@ namespace MobileWebApi.Constants
             public const string UserUpdatePasswordDatabaseError = "REP102";
             public const string TenantWeekOffGetConfigurationDatabaseError = "REP103";
             public const string TenantWeekOffGetWeekOffDaysDatabaseError = "REP104";
+            public const string UserGetActiveWorkRolesByUserIdDatabaseError = "REP105";
+            public const string UserGetWorkRoleByNameDatabaseError = "REP106";
         }
 
         // Service layer (generic)

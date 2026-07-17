@@ -39,6 +39,14 @@ namespace MobileWebApi.Models
 		public int? Radius { get; set; }
 
 		public string? LocationAddress { get; set; }
+
+		/// <summary>
+		/// Active work roles for the logged-in user. Always includes the default "User" role.
+		/// </summary>
+		public List<WorkRole> WorkRoles { get; set; } = new()
+		{
+			new WorkRole { WorkRoleId = 0, WorkRoleName = "User" }
+		};
 	}
 }
 
