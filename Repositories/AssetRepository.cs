@@ -154,17 +154,63 @@ namespace MobileWebApi.Repositories
 
             try
             {
-                await ValidateLookupsAsync(connection, transaction, request, tenantId);
-                await ValidateDuplicateAssetTagAsync(connection, transaction, request.AssetTagNumber, tenantId);
+                var description = OptionalValueHelper.NullIfEmpty(request.Description);
+                var owner = OptionalValueHelper.NullIfEmpty(request.Owner);
+                var location = OptionalValueHelper.NullIfEmpty(request.Location);
+                var purchaseOrderNumber = OptionalValueHelper.NullIfEmpty(request.PurchaseOrderNumber);
+                var purchaseOrderBill = OptionalValueHelper.NullIfEmpty(request.PurchaseOrderBill);
+                var supportCenter = OptionalValueHelper.NullIfEmpty(request.SupportCenter);
+                var manufacturer = OptionalValueHelper.NullIfEmpty(request.Manufacturer);
+                var model = OptionalValueHelper.NullIfEmpty(request.Model);
+                var serialNumber = OptionalValueHelper.NullIfEmpty(request.SerialNumber);
+                var images = OptionalValueHelper.NullIfEmpty(request.Images);
+                var assetTagNumber = OptionalValueHelper.NullIfEmpty(request.AssetTagNumber);
+                var assetName = OptionalValueHelper.NullIfEmpty(request.AssetName)
+                    ?? throw new AssetValidationException(AssetMessages.AssetNameRequired);
+
+                var departmentId = OptionalValueHelper.NullIfNonPositive(request.DepartmentId);
+                var branchId = OptionalValueHelper.NullIfNonPositive(request.BranchId);
+                var businessUnitId = OptionalValueHelper.NullIfNonPositive(request.BusinessUnitId);
+                var assetTypeId = OptionalValueHelper.NullIfNonPositive(request.AssetTypeId);
+                var productionYear = OptionalValueHelper.NullIfNonPositive(request.ProductionYear);
+
+                var purchaseDate = OptionalValueHelper.NullIfDefault(request.PurchaseDate)
+                    ?? throw new AssetValidationException(AssetMessages.PurchaseDateRequired);
+
+                if (request.PurchasePrice < 0)
+                    throw new AssetValidationException(AssetMessages.PurchasePriceRequired);
+
+                var purchasePriceDb = (double)request.PurchasePrice;
+                var actualValue = purchasePriceDb;
+
+                var warrantyExpiryDate = OptionalValueHelper.NullIfDefault(request.WarrantyExpiryDate);
+                var maintenanceDueDate = OptionalValueHelper.NullIfDefault(request.MaintenanceDueDate);
+
+                double? depreciationPercentage = OptionalValueHelper.NullIfNonPositive(
+                    request.DepreciationPercentage.HasValue
+                        ? (double?)request.DepreciationPercentage.Value
+                        : null);
+
+                if (!depreciationPercentage.HasValue)
+                {
+                    var categoryPercentage = AssetDepreciationHelper.GetCategoryYearlyPercentage(
+                        connection, request.AssetCategoryId, tenantId, _queries, transaction);
+                    depreciationPercentage = OptionalValueHelper.NullIfNonPositive(categoryPercentage);
+                }
+
+                await ValidateLookupsAsync(
+                    connection,
+                    transaction,
+                    request.AssetStatusId,
+                    request.AssetCategoryId,
+                    departmentId,
+                    branchId,
+                    businessUnitId,
+                    assetTypeId,
+                    tenantId);
 
                 var number = AssetNumberHelper.GenerateNextNumber(connection, tenantId, _queries, transaction);
                 var assetCode = _qrCodeService.GenerateAssetCode(connection, tenantId, transaction);
-                var depreciationPercentage = request.DepreciationPercentage > 0
-                    ? (double)request.DepreciationPercentage
-                    : AssetDepreciationHelper.GetCategoryYearlyPercentage(
-                        connection, request.AssetCategoryId, tenantId, _queries, transaction);
-
-                var actualValue = (double)request.PurchasePrice;
                 int? responsibleEmployeeId = null;
 
                 if (request.MaintenanceList.Count > 0)
@@ -180,46 +226,47 @@ namespace MobileWebApi.Repositories
                 var assetId = await connection.ExecuteScalarAsync<int>(insertAssetSql, new
                 {
                     Number = number,
-                    request.Description,
-                    request.PurchaseDate,
-                    PurchasePrice = (double)request.PurchasePrice,
-                    request.PurchaseOrderNumber,
-                    request.PurchaseOrderBill,
-                    request.SupportCenter,
-                    request.Manufacturer,
-                    request.Model,
-                    request.SerialNumber,
-                    request.ProductionYear,
-                    request.Images,
-                    request.AssetTagNumber,
+                    Description = description,
+                    PurchaseDate = purchaseDate,
+                    PurchasePrice = purchasePriceDb,
+                    PurchaseOrderNumber = purchaseOrderNumber,
+                    PurchaseOrderBill = purchaseOrderBill,
+                    SupportCenter = supportCenter,
+                    Manufacturer = manufacturer,
+                    Model = model,
+                    SerialNumber = serialNumber,
+                    ProductionYear = productionYear,
+                    Images = images,
+                    AssetTagNumber = assetTagNumber,
                     InsertUserId = userId,
                     TenantId = tenantId,
                     request.AssetStatusId,
                     CategoryId = (int?)null,
-                    request.DepartmentId,
-                    request.AssetName,
+                    DepartmentId = departmentId,
+                    AssetName = assetName,
                     AssetCategoryId = request.AssetCategoryId,
                     ActualValue = actualValue,
-                    request.WarrantyExpiryDate,
-                    request.MaintenanceDueDate,
+                    WarrantyExpiryDate = warrantyExpiryDate,
+                    MaintenanceDueDate = maintenanceDueDate,
                     DepreciationPercentage = depreciationPercentage,
-                    request.BranchId,
+                    BranchId = branchId,
                     AssetCode = assetCode,
-                    request.BusinessUnitId,
-                    request.Location,
-                    request.Owner,
-                    request.AssetTypeId
+                    BusinessUnitId = businessUnitId,
+                    Location = location,
+                    Owner = owner,
+                    AssetTypeId = assetTypeId
                 }, transaction);
 
                 var insertMaintenanceSql = _queries.Get("Asset_InsertMaintenance");
                 foreach (var maintenance in request.MaintenanceList)
                 {
+                    var maintenanceCost = OptionalValueHelper.NullIfNonPositive(maintenance.Cost);
                     await connection.ExecuteAsync(insertMaintenanceSql, new
                     {
                         AssetId = assetId,
-                        Cost = maintenance.Cost.HasValue ? (double?)maintenance.Cost.Value : null,
-                        Attachment = maintenance.Remarks ?? string.Empty,
-                        Date = maintenance.MaintenanceDate,
+                        Cost = maintenanceCost.HasValue ? (double?)maintenanceCost.Value : null,
+                        Attachment = OptionalValueHelper.NullIfEmpty(maintenance.Remarks),
+                        Date = OptionalValueHelper.NullIfDefault(maintenance.MaintenanceDate),
                         ResponsiblePerson = responsibleEmployeeId,
                         InsertUserId = userId,
                         TenantId = tenantId
@@ -356,6 +403,162 @@ namespace MobileWebApi.Repositories
             }
         }
 
+        /// <inheritdoc />
+        public async Task<AssetOperationResponse> DeleteAssetAsync(int assetId, string? ipAddress)
+        {
+            var tenantId = _tenantContext.GetRequiredOrganisationId();
+            var userId = _tenantContext.GetRequiredUserId();
+
+            using var connection = _context.CreateConnection();
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+
+            try
+            {
+                var asset = await connection.QueryFirstOrDefaultAsync<AssetDeleteSummaryRow>(
+                    _queries.Get("Asset_GetSummaryForDelete"),
+                    new { AssetId = assetId, TenantId = tenantId },
+                    transaction);
+
+                if (asset == null)
+                    throw new AssetNotFoundException(AssetMessages.NotFound);
+
+                // Known dependent tables (delete when present even without FK metadata).
+                await DeleteOptionalDependentTablesAsync(
+                    connection,
+                    transaction,
+                    assetId,
+                    new[]
+                    {
+                        "AssetMaintenance",
+                        "AssetHandOver",
+                        "AssetHistory",
+                        "AssetMovement",
+                        "AssetDocuments",
+                        "AssetImages",
+                        "AssetAudit",
+                        "AssetDepreciation",
+                        "AssetAllocation"
+                    });
+
+                // Delete any remaining tables that reference Asset via FK.
+                var children = (await connection.QueryAsync<ForeignKeyChildRow>(
+                    _queries.Get("Asset_GetForeignKeyChildren"),
+                    transaction: transaction)).ToList();
+
+                foreach (var child in children)
+                {
+                    await DeleteFromChildTableAsync(connection, transaction, child.TableName, child.ColumnName, assetId);
+                }
+
+                var rowsAffected = await connection.ExecuteAsync(
+                    _queries.Get("Asset_DeleteById"),
+                    new { AssetId = assetId, TenantId = tenantId },
+                    transaction);
+
+                if (rowsAffected == 0)
+                    throw new AssetNotFoundException(AssetMessages.NotFound);
+
+                transaction.Commit();
+
+                _logger.LogInformation(
+                    LogMessages.Asset.AssetDeleted,
+                    asset.Id,
+                    asset.Number,
+                    asset.AssetName,
+                    userId,
+                    tenantId,
+                    ipAddress ?? "N/A",
+                    DateTime.UtcNow);
+
+                return new AssetOperationResponse
+                {
+                    Success = true,
+                    Message = AssetMessages.DeletedSuccessfully
+                };
+            }
+            catch (AssetNotFoundException)
+            {
+                transaction.Rollback();
+                throw;
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                _logger.LogException(
+                    ExceptionCodes.Asset.Delete,
+                    nameof(DeleteAssetAsync),
+                    ex,
+                    userId);
+                throw;
+            }
+        }
+
+        private static async Task DeleteOptionalDependentTablesAsync(
+            IDbConnection connection,
+            IDbTransaction transaction,
+            int assetId,
+            IEnumerable<string> tableNames)
+        {
+            foreach (var tableName in tableNames)
+            {
+                if (!IsSafeSqlIdentifier(tableName))
+                    continue;
+
+                var exists = await connection.ExecuteScalarAsync<int>(
+                    $"SELECT CASE WHEN OBJECT_ID(N'dbo.[{tableName}]', N'U') IS NULL THEN 0 ELSE 1 END",
+                    transaction: transaction);
+
+                if (exists != 1)
+                    continue;
+
+                await connection.ExecuteAsync(
+                    $"DELETE FROM [dbo].[{tableName}] WHERE [AssetId] = @AssetId",
+                    new { AssetId = assetId },
+                    transaction);
+            }
+        }
+
+        private static async Task DeleteFromChildTableAsync(
+            IDbConnection connection,
+            IDbTransaction transaction,
+            string tableName,
+            string columnName,
+            int assetId)
+        {
+            if (!IsSafeSqlIdentifier(tableName) || !IsSafeSqlIdentifier(columnName))
+                return;
+
+            if (tableName.Equals("Asset", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            await connection.ExecuteAsync(
+                $"DELETE FROM [dbo].[{tableName}] WHERE [{columnName}] = @AssetId",
+                new { AssetId = assetId },
+                transaction);
+        }
+
+        private static bool IsSafeSqlIdentifier(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            return System.Text.RegularExpressions.Regex.IsMatch(value, @"^[A-Za-z0-9_ ]+$");
+        }
+
+        private sealed class AssetDeleteSummaryRow
+        {
+            public int Id { get; set; }
+            public string Number { get; set; } = string.Empty;
+            public string AssetName { get; set; } = string.Empty;
+        }
+
+        private sealed class ForeignKeyChildRow
+        {
+            public string TableName { get; set; } = string.Empty;
+            public string ColumnName { get; set; } = string.Empty;
+        }
+
         private async Task ValidateUpdateLookupsAsync(
             IDbConnection connection,
             IDbTransaction transaction,
@@ -439,65 +642,59 @@ namespace MobileWebApi.Repositories
         private async Task ValidateLookupsAsync(
             IDbConnection connection,
             IDbTransaction transaction,
-            CreateAssetRequest request,
+            int assetStatusId,
+            int assetCategoryId,
+            int? departmentId,
+            int? branchId,
+            int? businessUnitId,
+            int? assetTypeId,
             int tenantId)
         {
             if (!await ExistsForTenantAsync(
                     connection, transaction, _queries.Get("Asset_ExistsAssetStatus"),
-                    request.AssetStatusId, tenantId))
+                    assetStatusId, tenantId))
             {
                 throw new AssetValidationException(AssetMessages.InvalidAssetStatus);
             }
 
             if (!await ExistsForTenantAsync(
                     connection, transaction, _queries.Get("Asset_ExistsAssetCategory"),
-                    request.AssetCategoryId, tenantId))
+                    assetCategoryId, tenantId))
             {
                 throw new AssetValidationException(AssetMessages.InvalidAssetCategory);
             }
 
-            if (!await ExistsForTenantAsync(
+            if (departmentId.HasValue &&
+                !await ExistsForTenantAsync(
                     connection, transaction, _queries.Get("Asset_ExistsDepartment"),
-                    request.DepartmentId, tenantId))
+                    departmentId.Value, tenantId))
             {
                 throw new AssetValidationException(AssetMessages.InvalidDepartment);
             }
 
-            if (!await ExistsForTenantAsync(
+            if (branchId.HasValue &&
+                !await ExistsForTenantAsync(
                     connection, transaction, _queries.Get("Asset_ExistsBranch"),
-                    request.BranchId, tenantId))
+                    branchId.Value, tenantId))
             {
                 throw new AssetValidationException(AssetMessages.InvalidBranch);
             }
 
-            if (!await ExistsForTenantAsync(
+            if (businessUnitId.HasValue &&
+                !await ExistsForTenantAsync(
                     connection, transaction, _queries.Get("Asset_ExistsBusinessUnit"),
-                    request.BusinessUnitId, tenantId))
+                    businessUnitId.Value, tenantId))
             {
                 throw new AssetValidationException(AssetMessages.InvalidBusinessUnit);
             }
 
-            if (!await ExistsForTenantAsync(
+            if (assetTypeId.HasValue &&
+                !await ExistsForTenantAsync(
                     connection, transaction, _queries.Get("Asset_ExistsAssetType"),
-                    request.AssetTypeId, tenantId))
+                    assetTypeId.Value, tenantId))
             {
                 throw new AssetValidationException(AssetMessages.InvalidAssetType);
             }
-        }
-
-        private async Task ValidateDuplicateAssetTagAsync(
-            IDbConnection connection,
-            IDbTransaction transaction,
-            string assetTagNumber,
-            int tenantId)
-        {
-            var exists = await connection.ExecuteScalarAsync<int>(
-                _queries.Get("Asset_ExistsAssetTagNumber"),
-                new { TenantId = tenantId, AssetTagNumber = assetTagNumber },
-                transaction);
-
-            if (exists > 0)
-                throw new AssetValidationException(AssetMessages.DuplicateAssetTagNumber);
         }
 
         private static async Task<bool> ExistsForTenantAsync(

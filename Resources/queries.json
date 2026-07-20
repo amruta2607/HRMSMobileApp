@@ -360,7 +360,13 @@
 
     "AssetDashboard_GetBranchBreakdown": "SELECT TOP 6 ISNULL(a.BranchId, 0) AS BranchId, ISNULL(NULLIF(b.[Name], ''), 'Unassigned') AS BranchName, COUNT(*) AS [Count] FROM [dbo].[Asset] a LEFT JOIN [dbo].[Branch] b ON b.Id = a.BranchId WHERE a.TenantId = @TenantId GROUP BY ISNULL(a.BranchId, 0), ISNULL(NULLIF(b.[Name], ''), 'Unassigned') ORDER BY COUNT(*) DESC",
 
-    "AssetHandOverList": "SELECT h.Id, h.Number, h.AssetId, a.Number AS AssetNumber, a.AssetName, h.HandOverDate, h.HandOverById, ISNULL(empBy.[Name], '') AS HandOverBy, h.HandOverToId, ISNULL(empTo.[Name], '') AS HandOverTo, ISNULL(d.[Name], '') AS Department, ISNULL(b.[Name], '') AS Branch, ISNULL(h.Description, '') AS Remarks FROM [dbo].[AssetHandOver] h INNER JOIN [dbo].[Asset] a ON a.Id = h.AssetId LEFT JOIN [dbo].[Employee] empBy ON empBy.Id = h.HandOverById LEFT JOIN [dbo].[Employee] empTo ON empTo.Id = h.HandOverToId LEFT JOIN [dbo].[Department] d ON d.Id = a.DepartmentId LEFT JOIN [dbo].[Branch] b ON b.Id = a.BranchId WHERE h.TenantId = @TenantId ORDER BY h.HandOverDate DESC, h.Id DESC",
+    "AssetDashboard_GetKpiMetricsScoped": "SELECT COUNT(*) AS TotalCount, SUM(CASE WHEN a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS TotalPrevCount, SUM(CASE WHEN {IN_USE} THEN 1 ELSE 0 END) AS InUseCount, SUM(CASE WHEN {IN_USE} AND a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS InUsePrevCount, SUM(CASE WHEN {MAINTENANCE} THEN 1 ELSE 0 END) AS MaintenanceCount, SUM(CASE WHEN {MAINTENANCE} AND a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS MaintenancePrevCount, SUM(CASE WHEN {OUT_OF_SERVICE} THEN 1 ELSE 0 END) AS OutOfServiceCount, SUM(CASE WHEN {OUT_OF_SERVICE} AND a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS OutOfServicePrevCount FROM [dbo].[Asset] a LEFT JOIN [dbo].[AssetStatus] s ON s.Id = a.AssetStatusId OUTER APPLY (SELECT TOP 1 h.HandOverToId FROM [dbo].[AssetHandOver] h WHERE h.AssetId = a.Id ORDER BY h.HandOverDate DESC, h.Id DESC) latest WHERE {SCOPE_FILTER}",
+
+    "AssetDashboard_GetCategoryBreakdownScoped": "SELECT TOP 6 ISNULL(c.Id, 0) AS CategoryId, ISNULL(c.[Name], 'Others') AS CategoryName, COUNT(*) AS [Count] FROM [dbo].[Asset] a LEFT JOIN [dbo].[Asset Category] c ON c.Id = a.AssetCategoryId OUTER APPLY (SELECT TOP 1 h.HandOverToId FROM [dbo].[AssetHandOver] h WHERE h.AssetId = a.Id ORDER BY h.HandOverDate DESC, h.Id DESC) latest WHERE {SCOPE_FILTER} GROUP BY ISNULL(c.Id, 0), ISNULL(c.[Name], 'Others') ORDER BY COUNT(*) DESC",
+
+    "AssetDashboard_GetBranchBreakdownScoped": "SELECT TOP 6 ISNULL(a.BranchId, 0) AS BranchId, ISNULL(NULLIF(b.[Name], ''), 'Unassigned') AS BranchName, COUNT(*) AS [Count] FROM [dbo].[Asset] a LEFT JOIN [dbo].[Branch] b ON b.Id = a.BranchId OUTER APPLY (SELECT TOP 1 h.HandOverToId FROM [dbo].[AssetHandOver] h WHERE h.AssetId = a.Id ORDER BY h.HandOverDate DESC, h.Id DESC) latest WHERE {SCOPE_FILTER} GROUP BY ISNULL(a.BranchId, 0), ISNULL(NULLIF(b.[Name], ''), 'Unassigned') ORDER BY COUNT(*) DESC",
+
+    "AssetHandOverList": "SELECT h.Id, h.Number, h.AssetId, a.Number AS AssetNumber, a.AssetName, h.HandOverDate, h.HandOverById, ISNULL(empBy.EmployeeNumber, '') AS HandOverByEmployeeCode, ISNULL(empBy.[Name], '') AS HandOverByEmployeeName, h.HandOverToId, ISNULL(empTo.EmployeeNumber, '') AS HandOverToEmployeeCode, ISNULL(empTo.[Name], '') AS HandOverToEmployeeName, ISNULL(d.[Name], '') AS Department, ISNULL(b.[Name], '') AS Branch, ISNULL(h.Description, '') AS Remarks FROM [dbo].[AssetHandOver] h INNER JOIN [dbo].[Asset] a ON a.Id = h.AssetId LEFT JOIN [dbo].[Employee] empBy ON empBy.Id = h.HandOverById LEFT JOIN [dbo].[Employee] empTo ON empTo.Id = h.HandOverToId LEFT JOIN [dbo].[Department] d ON d.Id = a.DepartmentId LEFT JOIN [dbo].[Branch] b ON b.Id = a.BranchId WHERE h.TenantId = @TenantId ORDER BY h.HandOverDate DESC, h.Id DESC",
 
     "GetAssetByScannerId": "SELECT a.Id, a.Number, a.AssetCode, a.AssetName, ISNULL(a.AssetTagNumber, '') AS AssetTagNumber, a.AssetStatusId, ISNULL(s.[Name], '') AS AssetStatus, a.AssetCategoryId, ISNULL(c.[Name], '') AS AssetCategory, a.AssetTypeId, ISNULL(at.TypeName, '') AS AssetType, ISNULL(a.Owner, '') AS Owner, ISNULL(d.[Name], '') AS Department, ISNULL(b.[Name], '') AS Branch, ISNULL(bu.[Name], '') AS BusinessUnit, ISNULL(a.Location, '') AS Location, a.PurchaseDate, a.PurchasePrice, a.ActualValue, ISNULL(a.Manufacturer, '') AS Manufacturer, ISNULL(a.Model, '') AS Model, ISNULL(a.SerialNumber, '') AS SerialNumber, a.ProductionYear, a.MaintenanceDueDate, a.WarrantyExpiryDate, ISNULL(a.Description, '') AS Description, ISNULL(a.Images, '') AS Images, ISNULL(a.QRCodePath, '') AS QRCodePath FROM [dbo].[Asset] a LEFT JOIN [dbo].[AssetStatus] s ON s.Id = a.AssetStatusId LEFT JOIN [dbo].[Asset Category] c ON c.Id = a.AssetCategoryId LEFT JOIN [dbo].[AssetType] at ON at.Id = a.AssetTypeId LEFT JOIN [dbo].[Department] d ON d.Id = a.DepartmentId LEFT JOIN [dbo].[Branch] b ON b.Id = a.BranchId LEFT JOIN [dbo].[BusinessUnit] bu ON bu.Id = a.BusinessUnitId WHERE a.TenantId = @TenantId AND a.Id = @AssetId",
 
@@ -406,7 +412,25 @@
 
     "AssetHandOver_LookupHandOverToEmployees": "SELECT Id, EmployeeNumber AS EmployeeCode, Name AS EmployeeName FROM [dbo].[Employee] WHERE TenantId = @TenantId AND IsEmployeeActive = 1 ORDER BY Name",
 
-    "AssetHandOver_ExistsHandOverByEmployee": "SELECT 1 FROM [dbo].[Employee] WHERE Id = @EmployeeId AND TenantId = @TenantId AND IsEmployeeActive = 1 AND SystemUserId IS NOT NULL"
+    "AssetHandOver_ExistsHandOverByEmployee": "SELECT 1 FROM [dbo].[Employee] WHERE Id = @EmployeeId AND TenantId = @TenantId AND IsEmployeeActive = 1 AND SystemUserId IS NOT NULL",
+
+    "Asset_GetSummaryForDelete": "SELECT a.Id, a.Number, a.AssetName FROM [dbo].[Asset] a WHERE a.Id = @AssetId AND a.TenantId = @TenantId",
+
+    "Asset_GetForeignKeyChildren": "SELECT OBJECT_NAME(fk.parent_object_id) AS TableName, COL_NAME(fc.parent_object_id, fc.parent_column_id) AS ColumnName FROM sys.foreign_keys AS fk INNER JOIN sys.foreign_key_columns AS fc ON fk.object_id = fc.constraint_object_id WHERE fk.referenced_object_id = OBJECT_ID(N'dbo.Asset') AND OBJECT_SCHEMA_NAME(fk.parent_object_id) = N'dbo' ORDER BY OBJECT_NAME(fk.parent_object_id)",
+
+    "Asset_DeleteById": "DELETE FROM [dbo].[Asset] WHERE Id = @AssetId AND TenantId = @TenantId",
+
+    "AssetHandOver_GetSummaryForDelete": "SELECT h.Id, h.Number, h.AssetId FROM [dbo].[AssetHandOver] h WHERE h.Id = @Id AND h.TenantId = @TenantId",
+
+    "AssetHandOver_GetForeignKeyChildren": "SELECT OBJECT_NAME(fk.parent_object_id) AS TableName, COL_NAME(fc.parent_object_id, fc.parent_column_id) AS ColumnName FROM sys.foreign_keys AS fk INNER JOIN sys.foreign_key_columns AS fc ON fk.object_id = fc.constraint_object_id WHERE fk.referenced_object_id = OBJECT_ID(N'dbo.AssetHandOver') AND OBJECT_SCHEMA_NAME(fk.parent_object_id) = N'dbo' ORDER BY OBJECT_NAME(fk.parent_object_id)",
+
+    "AssetHandOver_DeleteById": "DELETE FROM [dbo].[AssetHandOver] WHERE Id = @Id AND TenantId = @TenantId",
+
+    "Me_GetCurrentUser": "SELECT u.UserId, u.Username, ISNULL(u.DisplayName, '') AS DisplayName, ISNULL(u.Email, '') AS Email, ISNULL(u.MobileNumber, '') AS MobileNumber FROM [dbo].[Users] u WHERE u.UserId = @UserId",
+
+    "Me_GetActiveWorkRolesByUserId": "SELECT DISTINCT w.WorkRoleId AS Id, w.WorkRoleName AS Name FROM (SELECT uwg.WorkRoleId FROM [dbo].[UserWorkroleGroup] uwg WHERE uwg.UserId = @UserId UNION SELECT TRY_CAST(s.value AS INT) AS WorkRoleId FROM [dbo].[Users] u CROSS APPLY STRING_SPLIT(CAST(u.WorkRoleId AS NVARCHAR(MAX)), ',') s WHERE u.UserId = @UserId) assigned INNER JOIN [dbo].[WorkRole] w ON w.WorkRoleId = assigned.WorkRoleId WHERE w.WorkRoleName IS NOT NULL AND LTRIM(RTRIM(w.WorkRoleName)) <> '' ORDER BY w.WorkRoleName",
+
+    "Dashboard_UserScopeFilter": "a.TenantId = @TenantId AND latest.HandOverToId = @EmployeeId"
 
   }
 }

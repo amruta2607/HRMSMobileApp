@@ -18,15 +18,18 @@ namespace MobileWebApi.Controllers
     public class AssetHandOverController : TenantBaseController
     {
         private readonly IAssetHandOverRepository _assetHandOverRepository;
+        private readonly IUserRepository _userRepository;
 
         public AssetHandOverController(
             IAssetHandOverRepository assetHandOverRepository,
+            IUserRepository userRepository,
             ITenantContext tenantContext,
             ILogger<AssetHandOverController> logger)
             : base(tenantContext, logger)
         {
             _assetHandOverRepository = assetHandOverRepository
                 ?? throw new ArgumentNullException(nameof(assetHandOverRepository));
+            _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         }
 
         /// <summary>
@@ -206,6 +209,68 @@ namespace MobileWebApi.Controllers
                     message = GeneralMessages.UnexpectedError
                 });
             }
+        }
+
+        /// <summary>
+        /// Deletes an asset handover record. Requires Admin or SuperAdmin work role.
+        /// </summary>
+        /// <response code="200">Handover deleted successfully.</response>
+        /// <response code="403">Caller does not have Admin or SuperAdmin role.</response>
+        /// <response code="404">Handover not found.</response>
+        /// <response code="500">Unexpected server error.</response>
+        [HttpDelete("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> Delete(int id)
+        {
+            try
+            {
+                var userId = CurrentUserId
+                    ?? throw new TenantAccessException(TenantAccessMessages.UserNotAuthenticated);
+
+                if (!await HasAdminOrSuperAdminAccessAsync(userId))
+                {
+                    Logger.LogWarning(LogMessages.AssetHandOver.DeleteForbidden, userId, id);
+                    return StatusCode(StatusCodes.Status403Forbidden, new
+                    {
+                        success = false,
+                        message = AssetMessages.DeleteForbidden
+                    });
+                }
+
+                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+                var result = await _assetHandOverRepository.DeleteAssetHandoverAsync(id, ipAddress);
+                return Ok(result);
+            }
+            catch (AssetHandoverNotFoundException ex)
+            {
+                return NotFound(new { success = false, message = ex.Message });
+            }
+            catch (TenantAccessException)
+            {
+                return Unauthorized();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(
+                    ExceptionCodes.AssetHandOver.Delete,
+                    nameof(Delete),
+                    ex,
+                    CurrentUserId);
+
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = GeneralMessages.UnexpectedError
+                });
+            }
+        }
+
+        private async Task<bool> HasAdminOrSuperAdminAccessAsync(int userId)
+        {
+            var roles = await _userRepository.GetActiveWorkRolesByUserIdAsync(userId);
+            return WorkRoleHelper.IsAdminOrSuperAdmin(roles);
         }
     }
 }

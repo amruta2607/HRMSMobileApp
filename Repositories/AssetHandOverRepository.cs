@@ -18,20 +18,17 @@ namespace MobileWebApi.Repositories
     {
         private readonly DapperContext _context;
         private readonly ITenantContext _tenantContext;
-        private readonly IEmployeeRepository _employeeRepository;
         private readonly QueryProvider _queries;
         private readonly ILogger<AssetHandOverRepository> _logger;
 
         public AssetHandOverRepository(
             DapperContext context,
             ITenantContext tenantContext,
-            IEmployeeRepository employeeRepository,
             QueryProvider queries,
             ILogger<AssetHandOverRepository> logger)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
-            _employeeRepository = employeeRepository ?? throw new ArgumentNullException(nameof(employeeRepository));
             _queries = queries ?? throw new ArgumentNullException(nameof(queries));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -153,22 +150,23 @@ namespace MobileWebApi.Repositories
                 if (handoverToEmployee == null)
                     throw new AssetEmployeeNotFoundException(AssetMessages.EmployeeNotFound);
 
-                var handoverByEmployee = await _employeeRepository.GetEmployeebyUserIdAsync(userId);
-                if (handoverByEmployee == null || handoverByEmployee.OrganisationId != tenantId)
-                    throw new AssetValidationException(AssetMessages.HandoverByEmployeeRequired);
-
-                if (!handoverByEmployee.IsEmployeeActive)
-                    throw new AssetValidationException(AssetMessages.InvalidHandOverByEmployee);
-
                 var handoverByExists = await connection.ExecuteScalarAsync<int>(
                     _queries.Get("AssetHandOver_ExistsHandOverByEmployee"),
-                    new { EmployeeId = handoverByEmployee.Id, TenantId = tenantId },
+                    new { EmployeeId = request.HandoverByEmployeeId, TenantId = tenantId },
                     transaction);
 
                 if (handoverByExists != 1)
                     throw new AssetValidationException(AssetMessages.InvalidHandOverByEmployee);
 
-                if (handoverByEmployee.Id == request.HandoverToEmployeeId)
+                var handoverByEmployee = await connection.QueryFirstOrDefaultAsync<AssetHandoverEmployeeRow>(
+                    _queries.Get("Asset_ValidateEmployee"),
+                    new { EmployeeId = request.HandoverByEmployeeId, TenantId = tenantId },
+                    transaction);
+
+                if (handoverByEmployee == null)
+                    throw new AssetValidationException(AssetMessages.InvalidHandOverByEmployee);
+
+                if (request.HandoverByEmployeeId == request.HandoverToEmployeeId)
                     throw new AssetValidationException(AssetMessages.SameHandoverEmployee);
 
                 var lastHandoverToId = await connection.QueryFirstOrDefaultAsync<int?>(
@@ -185,28 +183,33 @@ namespace MobileWebApi.Repositories
                     _queries,
                     transaction);
 
-                var newLocation = string.IsNullOrWhiteSpace(request.Location)
-                    ? asset.Location
-                    : request.Location.Trim();
+                var requestLocation = OptionalValueHelper.NullIfEmpty(request.Location);
+                var handoverLocation = requestLocation;
+                var assetLocation = requestLocation ?? OptionalValueHelper.NullIfEmpty(asset.Location);
+                var remarks = OptionalValueHelper.NullIfEmpty(request.Remarks);
+                var handoverDate = OptionalValueHelper.NullIfDefault(request.HandoverDate)
+                    ?? throw new AssetValidationException(AssetMessages.HandoverDateRequired);
 
-                var departmentId = handoverToEmployee.DepartmentId ?? asset.DepartmentId;
-                var branchId = handoverToEmployee.BranchId ?? asset.BranchId;
-                var businessUnitId = asset.BusinessUnitId;
+                var departmentId = OptionalValueHelper.NullIfNonPositive(
+                    handoverToEmployee.DepartmentId ?? asset.DepartmentId);
+                var branchId = OptionalValueHelper.NullIfNonPositive(
+                    handoverToEmployee.BranchId ?? asset.BranchId);
+                var businessUnitId = OptionalValueHelper.NullIfNonPositive(asset.BusinessUnitId);
 
                 await connection.ExecuteScalarAsync<int>(
                     _queries.Get("AssetHandOver_Insert"),
                     new
                     {
                         Number = handoverNumber,
-                        Description = request.Remarks,
-                        HandOverDate = request.HandoverDate,
-                        HandOverById = handoverByEmployee.Id,
+                        Description = remarks,
+                        HandOverDate = handoverDate,
+                        HandOverById = request.HandoverByEmployeeId,
                         HandOverToId = request.HandoverToEmployeeId,
                         AssetId = request.AssetId,
                         InsertUserId = userId,
                         TenantId = tenantId,
                         BusinessUnitId = businessUnitId,
-                        Location = newLocation
+                        Location = handoverLocation
                     },
                     transaction);
 
@@ -216,8 +219,8 @@ namespace MobileWebApi.Repositories
                     {
                         AssetId = request.AssetId,
                         TenantId = tenantId,
-                        Owner = handoverToEmployee.Name,
-                        Location = newLocation,
+                        Owner = OptionalValueHelper.NullIfEmpty(handoverToEmployee.Name),
+                        Location = assetLocation,
                         DepartmentId = departmentId,
                         BranchId = branchId,
                         BusinessUnitId = businessUnitId,
@@ -384,6 +387,108 @@ namespace MobileWebApi.Repositories
                     userId);
                 throw;
             }
+        }
+
+        /// <inheritdoc />
+        public async Task<AssetOperationResponse> DeleteAssetHandoverAsync(int handoverId, string? ipAddress)
+        {
+            var tenantId = _tenantContext.GetRequiredOrganisationId();
+            var userId = _tenantContext.GetRequiredUserId();
+
+            using var connection = _context.CreateConnection();
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+
+            try
+            {
+                var handover = await connection.QueryFirstOrDefaultAsync<AssetHandoverDeleteSummaryRow>(
+                    _queries.Get("AssetHandOver_GetSummaryForDelete"),
+                    new { Id = handoverId, TenantId = tenantId },
+                    transaction);
+
+                if (handover == null)
+                    throw new AssetHandoverNotFoundException(AssetMessages.HandoverNotFound);
+
+                var children = (await connection.QueryAsync<AssetHandoverForeignKeyChildRow>(
+                    _queries.Get("AssetHandOver_GetForeignKeyChildren"),
+                    transaction: transaction)).ToList();
+
+                foreach (var child in children)
+                {
+                    if (!IsSafeSqlIdentifier(child.TableName) || !IsSafeSqlIdentifier(child.ColumnName))
+                        continue;
+
+                    if (child.TableName.Equals("AssetHandOver", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    await connection.ExecuteAsync(
+                        $"DELETE FROM [dbo].[{child.TableName}] WHERE [{child.ColumnName}] = @Id",
+                        new { Id = handoverId },
+                        transaction);
+                }
+
+                var rowsAffected = await connection.ExecuteAsync(
+                    _queries.Get("AssetHandOver_DeleteById"),
+                    new { Id = handoverId, TenantId = tenantId },
+                    transaction);
+
+                if (rowsAffected == 0)
+                    throw new AssetHandoverNotFoundException(AssetMessages.HandoverNotFound);
+
+                transaction.Commit();
+
+                _logger.LogInformation(
+                    LogMessages.AssetHandOver.HandoverDeleted,
+                    handover.Id,
+                    handover.Number,
+                    handover.AssetId,
+                    userId,
+                    tenantId,
+                    ipAddress ?? "N/A",
+                    DateTime.UtcNow);
+
+                return new AssetOperationResponse
+                {
+                    Success = true,
+                    Message = AssetMessages.HandoverDeletedSuccessfully
+                };
+            }
+            catch (AssetHandoverNotFoundException)
+            {
+                transaction.Rollback();
+                throw;
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                _logger.LogException(
+                    ExceptionCodes.AssetHandOver.Delete,
+                    nameof(DeleteAssetHandoverAsync),
+                    ex,
+                    userId);
+                throw;
+            }
+        }
+
+        private static bool IsSafeSqlIdentifier(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            return System.Text.RegularExpressions.Regex.IsMatch(value, @"^[A-Za-z0-9_ ]+$");
+        }
+
+        private sealed class AssetHandoverDeleteSummaryRow
+        {
+            public int Id { get; set; }
+            public string Number { get; set; } = string.Empty;
+            public int AssetId { get; set; }
+        }
+
+        private sealed class AssetHandoverForeignKeyChildRow
+        {
+            public string TableName { get; set; } = string.Empty;
+            public string ColumnName { get; set; } = string.Empty;
         }
 
         private sealed class AssetHandoverRecordRow

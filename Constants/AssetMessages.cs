@@ -5,6 +5,9 @@ namespace MobileWebApi.Constants
     /// </summary>
     public static class AssetMessages
     {
+        public const string DeletedSuccessfully = "Asset deleted successfully.";
+        public const string HandoverDeletedSuccessfully = "Asset handover deleted successfully.";
+        public const string DeleteForbidden = "You are not authorized to delete this record.";
         public const string CreatedSuccessfully = "Asset created successfully.";
         public const string UpdatedSuccessfully = "Asset updated successfully.";
         public const string HandedOverSuccessfully = "Asset handed over successfully.";
@@ -25,6 +28,10 @@ namespace MobileWebApi.Constants
         public const string InvalidAssetType = "The selected asset type is invalid.";
         public const string InvalidAssetStatus = "The selected asset status is invalid.";
         public const string DuplicateAssetTagNumber = "An asset with this tag number already exists.";
+        public const string AssetNameRequired = "Asset name is required.";
+        public const string PurchaseDateRequired = "Purchase date is required.";
+        public const string PurchasePriceRequired = "Purchase price is required.";
+        public const string HandoverDateRequired = "Handover date is required.";
         public const string EmployeeRequiredForMaintenance = "An employee record is required to add maintenance items.";
         public const string RequestBodyCannotBeNull = "Request body cannot be null.";
         public const string LookupsFetchedSuccessfully = "Asset lookups fetched successfully.";

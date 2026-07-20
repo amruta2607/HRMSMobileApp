@@ -82,6 +82,8 @@ builder.Services.AddScoped<IDisputeService, DisputeService>();
 builder.Services.AddScoped<IAssetRepository, AssetRepository>();
 builder.Services.AddScoped<IAssetDashboardRepository, AssetDashboardRepository>();
 builder.Services.AddScoped<IAssetHandOverRepository, AssetHandOverRepository>();
+builder.Services.AddScoped<IMeRepository, MeRepository>();
+builder.Services.AddScoped<IMeService, MeService>();
 builder.Services.AddScoped<IAssetQRCodeService, AssetQRCodeService>();
 builder.Services.AddScoped<IScannerRepository, ScannerRepository>();
 builder.Services.AddScoped<ITemplateRepository, TemplateRepository>();

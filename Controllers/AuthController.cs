@@ -4,6 +4,7 @@ using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using MobileWebApi.Helper;
 using MobileWebApi.Constants;
+using MobileWebApi.Services;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text.RegularExpressions;
@@ -21,6 +22,7 @@ namespace MobileWebApi.Controllers
         private readonly IOtpService _otpService;
         private readonly IEmailService _emailService;
         private readonly ISmsService _smsService;
+        private readonly IMeService _meService;
         private readonly ILogger<AuthController> _logger;
         private readonly IWebHostEnvironment _environment;
         private readonly ITenantConfigurationRepository _tenantConfigurationRepository;
@@ -34,6 +36,7 @@ namespace MobileWebApi.Controllers
             IOtpService otpService,
             IEmailService emailService,
             ISmsService smsService,
+            IMeService meService,
             ILogger<AuthController> logger,
             IWebHostEnvironment environment,
             ITenantConfigurationRepository tenantConfigurationRepository,
@@ -46,11 +49,51 @@ namespace MobileWebApi.Controllers
             _otpService = otpService;
             _emailService = emailService;
             _smsService = smsService;
+            _meService = meService ?? throw new ArgumentNullException(nameof(meService));
             _logger = logger;
             _environment = environment;
             _tenantConfigurationRepository = tenantConfigurationRepository;
             _mobileTenantConfigurationRepository = mobileTenantConfigurationRepository;
             _mobileModuleAccessService = mobileModuleAccessService;
+        }
+
+        /// <summary>
+        /// Returns the currently authenticated user's profile and assigned work roles.
+        /// </summary>
+        [Authorize]
+        [HttpGet("me")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            try
+            {
+                var profile = await _meService.GetCurrentUserAsync();
+                if (profile == null)
+                    return Unauthorized();
+
+                return Ok(profile);
+            }
+            catch (TenantAccessException)
+            {
+                return Unauthorized();
+            }
+            catch (Exception ex)
+            {
+                var userIdClaim = User.FindFirst("UserId")?.Value;
+                int? userId = int.TryParse(userIdClaim, out var id) ? id : null;
+                _logger.LogException(
+                    ExceptionCodes.Me.GetCurrentUser,
+                    nameof(GetCurrentUser),
+                    ex,
+                    userId);
+
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = GeneralMessages.UnexpectedError
+                });
+            }
         }
 
         /// <summary>

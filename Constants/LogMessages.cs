@@ -430,6 +430,19 @@ namespace MobileWebApi.Constants
             public const string ErrorFetchingDashboard = "Error fetching asset dashboard for organisation {OrganisationId}.";
         }
 
+        // Me API logs
+        public static class Me
+        {
+            public const string UserNotFound = "Me profile not found for UserId {UserId}, TenantId {TenantId}.";
+            public const string ProfileLoaded = "Me profile loaded for UserId {UserId}, TenantId {TenantId}, EffectiveWorkRole {EffectiveWorkRole} in {ElapsedMs}ms.";
+        }
+
+        // Role-based dashboard logs
+        public static class Dashboard
+        {
+            public const string StatsLoaded = "Dashboard stats loaded for UserId {UserId}, TenantId {TenantId}, EffectiveWorkRole {EffectiveWorkRole} in {ElapsedMs}ms.";
+        }
+
         // Asset list logs
         public static class Asset
         {
@@ -440,6 +453,9 @@ namespace MobileWebApi.Constants
             public const string FetchingLookups = "Fetching asset lookups for user {UserId} in organisation {OrganisationId}.";
             public const string LookupsFetched = "Fetched asset lookups for organisation {OrganisationId}: statuses={StatusCount}, categories={CategoryCount}, departments={DepartmentCount}, branches={BranchCount}, businessUnits={BusinessUnitCount}, assetTypes={AssetTypeCount}.";
             public const string ErrorFetchingLookups = "Error fetching asset lookups for organisation {OrganisationId}.";
+            public const string AssetDeleted = "Asset deleted. AssetId={AssetId}, Number={AssetNumber}, Name={AssetName}, DeletedByUserId={UserId}, TenantId={TenantId}, IpAddress={IpAddress}, DeletedAtUtc={Timestamp}.";
+            public const string ErrorDeletingAsset = "Error deleting asset {AssetId} for organisation {OrganisationId}.";
+            public const string DeleteForbidden = "User {UserId} attempted to delete asset {AssetId} without Admin/SuperAdmin role.";
         }
 
         // Asset hand over logs
@@ -451,6 +467,9 @@ namespace MobileWebApi.Constants
             public const string FetchingLookups = "Fetching asset handover lookups for user {UserId} in organisation {OrganisationId}.";
             public const string LookupsFetched = "Fetched asset handover lookups for organisation {OrganisationId}: assets={AssetCount}, handOverBy={HandOverByCount}, handOverTo={HandOverToCount}.";
             public const string ErrorFetchingLookups = "Error fetching asset handover lookups for organisation {OrganisationId}.";
+            public const string HandoverDeleted = "Asset handover deleted. HandoverId={HandoverId}, Number={HandoverNumber}, AssetId={AssetId}, DeletedByUserId={UserId}, TenantId={TenantId}, IpAddress={IpAddress}, DeletedAtUtc={Timestamp}.";
+            public const string ErrorDeletingHandover = "Error deleting asset handover {HandoverId} for organisation {OrganisationId}.";
+            public const string DeleteForbidden = "User {UserId} attempted to delete asset handover {HandoverId} without Admin/SuperAdmin role.";
         }
 
         // Scanner logs
