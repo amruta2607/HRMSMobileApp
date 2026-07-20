@@ -428,9 +428,7 @@
 
     "Me_GetCurrentUser": "SELECT u.UserId, u.Username, ISNULL(u.DisplayName, '') AS DisplayName, ISNULL(u.Email, '') AS Email, ISNULL(u.MobileNumber, '') AS MobileNumber FROM [dbo].[Users] u WHERE u.UserId = @UserId",
 
-    "Me_GetActiveWorkRolesByUserId": "SELECT DISTINCT w.WorkRoleId AS Id, w.WorkRoleName AS Name FROM (SELECT uwg.WorkRoleId FROM [dbo].[UserWorkroleGroup] uwg WHERE uwg.UserId = @UserId UNION SELECT TRY_CAST(s.value AS INT) AS WorkRoleId FROM [dbo].[Users] u CROSS APPLY STRING_SPLIT(CAST(u.WorkRoleId AS NVARCHAR(MAX)), ',') s WHERE u.UserId = @UserId) assigned INNER JOIN [dbo].[WorkRole] w ON w.WorkRoleId = assigned.WorkRoleId WHERE w.WorkRoleName IS NOT NULL AND LTRIM(RTRIM(w.WorkRoleName)) <> '' ORDER BY w.WorkRoleName",
-
-    "Dashboard_UserScopeFilter": "a.TenantId = @TenantId AND latest.HandOverToId = @EmployeeId"
+    "Me_GetActiveWorkRolesByUserId": "SELECT DISTINCT w.WorkRoleId AS Id, w.WorkRoleName AS Name FROM (SELECT uwg.WorkRoleId FROM [dbo].[UserWorkroleGroup] uwg WHERE uwg.UserId = @UserId UNION SELECT TRY_CAST(s.value AS INT) AS WorkRoleId FROM [dbo].[Users] u CROSS APPLY STRING_SPLIT(CAST(u.WorkRoleId AS NVARCHAR(MAX)), ',') s WHERE u.UserId = @UserId) assigned INNER JOIN [dbo].[WorkRole] w ON w.WorkRoleId = assigned.WorkRoleId WHERE w.WorkRoleName IS NOT NULL AND LTRIM(RTRIM(w.WorkRoleName)) <> '' ORDER BY w.WorkRoleName"
 
   }
 }

@@ -95,40 +95,16 @@ namespace MobileWebApi.Repositories
                 var primaryWorkRole = WorkRoleHelper.ResolvePrimaryWorkRole(workRoleNames);
                 var scope = WorkRoleHelper.ResolveDashboardAccessScope(primaryWorkRole);
 
-                int? employeeId = null;
-                if (scope == DashboardAccessScope.AssignedAssets)
-                {
-                    employeeId = await connection.QueryFirstOrDefaultAsync<int?>(
-                        _queries.Get("GetEmployeeIdByUserId"),
-                        new { UserId = userId });
-
-                    if (!employeeId.HasValue || employeeId.Value <= 0)
-                    {
-                        stopwatch.Stop();
-                        _logger.LogInformation(
-                            LogMessages.Dashboard.StatsLoaded,
-                            userId,
-                            tenantId,
-                            primaryWorkRole,
-                            stopwatch.ElapsedMilliseconds);
-
-                        return new AssetDashboardResponse();
-                    }
-                }
-
-                var scopeFilter = scope switch
-                {
-                    DashboardAccessScope.AllTenants => "1 = 1",
-                    DashboardAccessScope.Tenant => "a.TenantId = @TenantId",
-                    _ => _queries.Get("Dashboard_UserScopeFilter")
-                };
+                var scopeFilter = scope == DashboardAccessScope.AllTenants
+                    ? "1 = 1"
+                    : "a.TenantId = @TenantId";
 
                 var startOfMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
 
                 var kpiRow = await QueryKpiMetricsAsync(
                     connection,
                     tenantId,
-                    employeeId,
+                    employeeId: null,
                     startOfMonth,
                     scopeFilter,
                     useScopedQuery: true);
@@ -140,9 +116,9 @@ namespace MobileWebApi.Repositories
                     UnderMaintenance = BuildKpi(kpiRow.MaintenanceCount, kpiRow.MaintenancePrevCount),
                     OutOfService = BuildKpi(kpiRow.OutOfServiceCount, kpiRow.OutOfServicePrevCount),
                     CategoryBreakdown = await BuildCategoryBreakdownAsync(
-                        connection, tenantId, employeeId, scopeFilter, useScopedQuery: true),
+                        connection, tenantId, employeeId: null, scopeFilter, useScopedQuery: true),
                     BranchBreakdown = await BuildBranchBreakdownAsync(
-                        connection, tenantId, employeeId, scopeFilter, useScopedQuery: true)
+                        connection, tenantId, employeeId: null, scopeFilter, useScopedQuery: true)
                 };
 
                 stopwatch.Stop();

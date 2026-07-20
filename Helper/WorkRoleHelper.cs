@@ -94,19 +94,18 @@ namespace MobileWebApi.Helper
 
         /// <summary>
         /// Resolves dashboard data visibility scope from the primary work role.
+        /// SuperAdmin sees all tenants; Admin and User see their own tenant.
         /// </summary>
         public static DashboardAccessScope ResolveDashboardAccessScope(string? primaryWorkRole)
         {
-            if (string.IsNullOrWhiteSpace(primaryWorkRole))
-                return DashboardAccessScope.AssignedAssets;
-
-            if (primaryWorkRole.Equals(SuperAdminWorkRoleName, StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrWhiteSpace(primaryWorkRole)
+                && primaryWorkRole.Equals(SuperAdminWorkRoleName, StringComparison.OrdinalIgnoreCase))
+            {
                 return DashboardAccessScope.AllTenants;
+            }
 
-            if (primaryWorkRole.Equals(AdminWorkRoleName, StringComparison.OrdinalIgnoreCase))
-                return DashboardAccessScope.Tenant;
-
-            return DashboardAccessScope.AssignedAssets;
+            // Admin and User share tenant-scoped visibility.
+            return DashboardAccessScope.Tenant;
         }
 
         /// <summary>
@@ -128,10 +127,7 @@ namespace MobileWebApi.Helper
         /// <summary>SuperAdmin — all assets across every tenant.</summary>
         AllTenants = 0,
 
-        /// <summary>Admin — assets belonging to the user's tenant only.</summary>
-        Tenant = 1,
-
-        /// <summary>User — assets currently assigned to the logged-in employee only.</summary>
-        AssignedAssets = 2
+        /// <summary>Admin and User — all assets belonging to the user's tenant.</summary>
+        Tenant = 1
     }
 }
