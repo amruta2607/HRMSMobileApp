@@ -4,15 +4,14 @@ namespace MobileWebApi.Models.Requests
 {
     /// <summary>
     /// Request payload for creating a new asset from the mobile application.
-    /// Only database NOT NULL fields are validated; nullable columns accept null/empty.
+    /// Only database NOT NULL fields (PurchaseDate, PurchasePrice) are validated.
     /// </summary>
     public class CreateAssetRequest
     {
         /// <summary>
-        /// Asset display name.
+        /// Asset display name (nullable).
         /// </summary>
-        [Required(ErrorMessage = "Asset name is required.")]
-        public string AssetName { get; set; } = string.Empty;
+        public string? AssetName { get; set; }
 
         /// <summary>
         /// Asset description (nullable).
@@ -20,44 +19,42 @@ namespace MobileWebApi.Models.Requests
         public string? Description { get; set; }
 
         /// <summary>
-        /// Asset status identifier.
+        /// Asset status identifier (nullable).
         /// </summary>
-        [Range(1, 999999, ErrorMessage = "Asset status is required.")]
-        public int AssetStatusId { get; set; }
+        public int? AssetStatusId { get; set; }
 
         /// <summary>
-        /// Asset category identifier.
+        /// Asset category identifier (nullable).
         /// </summary>
-        [Range(1, 999999, ErrorMessage = "Asset category is required.")]
-        public int AssetCategoryId { get; set; }
+        public int? AssetCategoryId { get; set; }
 
         /// <summary>
-        /// Department identifier.
+        /// Department identifier (nullable).
         /// </summary>
         public int? DepartmentId { get; set; }
 
         /// <summary>
-        /// Branch identifier.
+        /// Branch identifier (nullable).
         /// </summary>
         public int? BranchId { get; set; }
 
         /// <summary>
-        /// Business unit identifier.
+        /// Business unit identifier (nullable).
         /// </summary>
         public int? BusinessUnitId { get; set; }
 
         /// <summary>
-        /// Asset type identifier.
+        /// Asset type identifier (nullable).
         /// </summary>
         public int? AssetTypeId { get; set; }
 
         /// <summary>
-        /// Asset owner.
+        /// Asset owner (nullable).
         /// </summary>
         public string? Owner { get; set; }
 
         /// <summary>
-        /// Asset location.
+        /// Asset location (nullable).
         /// </summary>
         public string? Location { get; set; }
 
@@ -110,22 +107,27 @@ namespace MobileWebApi.Models.Requests
         public int? ProductionYear { get; set; }
 
         /// <summary>
-        /// Asset tag number (nullable).
+        /// Asset tag number (nullable). Duplicate check runs only when non-empty; blank stores NULL.
         /// </summary>
         public string? AssetTagNumber { get; set; }
 
         /// <summary>
-        /// Yearly depreciation percentage.
+        /// Yearly depreciation percentage (nullable).
         /// </summary>
         public decimal? DepreciationPercentage { get; set; }
 
         /// <summary>
-        /// Warranty expiry date.
+        /// Actual value (nullable). When omitted, defaults from purchase price.
+        /// </summary>
+        public decimal? ActualValue { get; set; }
+
+        /// <summary>
+        /// Warranty expiry date (nullable).
         /// </summary>
         public DateTime? WarrantyExpiryDate { get; set; }
 
         /// <summary>
-        /// Next maintenance due date.
+        /// Next maintenance due date (nullable).
         /// </summary>
         public DateTime? MaintenanceDueDate { get; set; }
 

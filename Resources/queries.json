@@ -334,7 +334,9 @@
 
     "Asset_ExistsAssetStatus": "SELECT 1 FROM [dbo].[AssetStatus] WHERE Id = @Id AND (TenantId = @TenantId OR TenantId IS NULL)",
 
-    "Asset_ExistsAssetTagNumber": "SELECT COUNT(1) FROM [dbo].[Asset] WHERE TenantId = @TenantId AND AssetTagNumber = @AssetTagNumber",
+    "Asset_ExistsAssetTagNumber": "SELECT COUNT(1) FROM [dbo].[Asset] WHERE TenantId = @TenantId AND AssetTagNumber IS NOT NULL AND LTRIM(RTRIM(AssetTagNumber)) <> '' AND AssetTagNumber = @AssetTagNumber",
+
+    "Asset_ExistsAssetTagNumberExceptId": "SELECT COUNT(1) FROM [dbo].[Asset] WHERE TenantId = @TenantId AND Id <> @AssetId AND AssetTagNumber IS NOT NULL AND LTRIM(RTRIM(AssetTagNumber)) <> '' AND AssetTagNumber = @AssetTagNumber",
 
     "Asset_GetTenantNumberConfig": "SELECT AssetNumberPrefix, AssetNumberUseDate, AssetNumberLength FROM [dbo].[Tenant] WHERE TenantId = @TenantId",
 
@@ -374,7 +376,7 @@
 
     "Asset_GetById": "SELECT a.Id, a.AssetStatusId, ISNULL(s.[Name], '') AS AssetStatusName, ISNULL(a.Owner, '') AS Owner, ISNULL(a.Location, '') AS Location, a.DepartmentId, a.BusinessUnitId, a.BranchId FROM [dbo].[Asset] a LEFT JOIN [dbo].[AssetStatus] s ON s.Id = a.AssetStatusId WHERE a.Id = @AssetId AND a.TenantId = @TenantId",
 
-    "Asset_Update": "UPDATE [dbo].[Asset] SET AssetName = @AssetName, AssetCategoryId = @AssetCategoryId, AssetTypeId = @AssetTypeId, AssetStatusId = @AssetStatusId, DepartmentId = @DepartmentId, BranchId = @BranchId, BusinessUnitId = @BusinessUnitId, Location = @Location, Owner = @Owner, Manufacturer = @Manufacturer, Model = @Model, SerialNumber = @SerialNumber, ProductionYear = @ProductionYear, PurchaseDate = @PurchaseDate, PurchasePrice = @PurchasePrice, ActualValue = @ActualValue, WarrantyExpiryDate = @WarrantyExpiryDate, MaintenanceDueDate = @MaintenanceDueDate, Description = @Description, Images = @Images, UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE Id = @AssetId AND TenantId = @TenantId",
+    "Asset_Update": "UPDATE [dbo].[Asset] SET AssetName = @AssetName, AssetCategoryId = @AssetCategoryId, AssetTypeId = @AssetTypeId, AssetStatusId = @AssetStatusId, DepartmentId = @DepartmentId, BranchId = @BranchId, BusinessUnitId = @BusinessUnitId, Location = @Location, Owner = @Owner, Manufacturer = @Manufacturer, Model = @Model, SerialNumber = @SerialNumber, ProductionYear = @ProductionYear, PurchaseDate = @PurchaseDate, PurchasePrice = @PurchasePrice, ActualValue = @ActualValue, WarrantyExpiryDate = @WarrantyExpiryDate, MaintenanceDueDate = @MaintenanceDueDate, Description = @Description, Images = @Images, AssetTagNumber = @AssetTagNumber, UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE Id = @AssetId AND TenantId = @TenantId",
 
     "Asset_ValidateEmployee": "SELECT Id, Name, DepartmentId, BranchId FROM [dbo].[Employee] WHERE Id = @EmployeeId AND TenantId = @TenantId AND IsEmployeeActive = 1",
 

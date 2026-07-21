@@ -165,9 +165,10 @@ namespace MobileWebApi.Repositories
                 var serialNumber = OptionalValueHelper.NullIfEmpty(request.SerialNumber);
                 var images = OptionalValueHelper.NullIfEmpty(request.Images);
                 var assetTagNumber = OptionalValueHelper.NullIfEmpty(request.AssetTagNumber);
-                var assetName = OptionalValueHelper.NullIfEmpty(request.AssetName)
-                    ?? throw new AssetValidationException(AssetMessages.AssetNameRequired);
+                var assetName = OptionalValueHelper.NullIfEmpty(request.AssetName);
 
+                var assetStatusId = OptionalValueHelper.NullIfNonPositive(request.AssetStatusId);
+                var assetCategoryId = OptionalValueHelper.NullIfNonPositive(request.AssetCategoryId);
                 var departmentId = OptionalValueHelper.NullIfNonPositive(request.DepartmentId);
                 var branchId = OptionalValueHelper.NullIfNonPositive(request.BranchId);
                 var businessUnitId = OptionalValueHelper.NullIfNonPositive(request.BusinessUnitId);
@@ -181,7 +182,9 @@ namespace MobileWebApi.Repositories
                     throw new AssetValidationException(AssetMessages.PurchasePriceRequired);
 
                 var purchasePriceDb = (double)request.PurchasePrice;
-                var actualValue = purchasePriceDb;
+                double? actualValue = request.ActualValue.HasValue && request.ActualValue.Value > 0
+                    ? (double?)request.ActualValue.Value
+                    : purchasePriceDb;
 
                 var warrantyExpiryDate = OptionalValueHelper.NullIfDefault(request.WarrantyExpiryDate);
                 var maintenanceDueDate = OptionalValueHelper.NullIfDefault(request.MaintenanceDueDate);
@@ -191,23 +194,34 @@ namespace MobileWebApi.Repositories
                         ? (double?)request.DepreciationPercentage.Value
                         : null);
 
-                if (!depreciationPercentage.HasValue)
+                if (!depreciationPercentage.HasValue && assetCategoryId.HasValue)
                 {
                     var categoryPercentage = AssetDepreciationHelper.GetCategoryYearlyPercentage(
-                        connection, request.AssetCategoryId, tenantId, _queries, transaction);
+                        connection, assetCategoryId.Value, tenantId, _queries, transaction);
                     depreciationPercentage = OptionalValueHelper.NullIfNonPositive(categoryPercentage);
                 }
 
-                await ValidateLookupsAsync(
+                await ValidateOptionalLookupsAsync(
                     connection,
                     transaction,
-                    request.AssetStatusId,
-                    request.AssetCategoryId,
+                    assetStatusId,
+                    assetCategoryId,
                     departmentId,
                     branchId,
                     businessUnitId,
                     assetTypeId,
                     tenantId);
+
+                // Duplicate tag check only for real tag values; blank/null skips and stores NULL.
+                if (!string.IsNullOrEmpty(assetTagNumber))
+                {
+                    await EnsureAssetTagNumberIsUniqueAsync(
+                        connection,
+                        transaction,
+                        assetTagNumber,
+                        tenantId,
+                        excludeAssetId: null);
+                }
 
                 var number = AssetNumberHelper.GenerateNextNumber(connection, tenantId, _queries, transaction);
                 var assetCode = _qrCodeService.GenerateAssetCode(connection, tenantId, transaction);
@@ -240,11 +254,11 @@ namespace MobileWebApi.Repositories
                     AssetTagNumber = assetTagNumber,
                     InsertUserId = userId,
                     TenantId = tenantId,
-                    request.AssetStatusId,
+                    AssetStatusId = assetStatusId,
                     CategoryId = (int?)null,
                     DepartmentId = departmentId,
                     AssetName = assetName,
-                    AssetCategoryId = request.AssetCategoryId,
+                    AssetCategoryId = assetCategoryId,
                     ActualValue = actualValue,
                     WarrantyExpiryDate = warrantyExpiryDate,
                     MaintenanceDueDate = maintenanceDueDate,
@@ -292,7 +306,12 @@ namespace MobileWebApi.Repositories
             catch (SqlException ex) when (ex.Number is 2601 or 2627)
             {
                 transaction.Rollback();
-                throw new AssetValidationException(AssetMessages.DuplicateAssetTagNumber);
+                // Only surface tag-duplicate when a non-empty tag was provided; other unique keys rethrow.
+                var attemptedTag = OptionalValueHelper.NullIfEmpty(request.AssetTagNumber);
+                if (!string.IsNullOrEmpty(attemptedTag))
+                    throw new AssetValidationException(AssetMessages.DuplicateAssetTagNumber);
+
+                throw;
             }
             catch (Exception ex)
             {
@@ -326,12 +345,58 @@ namespace MobileWebApi.Repositories
                 if (asset == null)
                     throw new AssetNotFoundException(AssetMessages.NotFound);
 
-                await ValidateUpdateLookupsAsync(connection, transaction, request, tenantId);
-                ValidateUpdateDates(request);
+                var purchaseDate = OptionalValueHelper.NullIfDefault(request.PurchaseDate)
+                    ?? throw new AssetValidationException(AssetMessages.PurchaseDateRequired);
 
-                var actualValue = request.ActualValue.HasValue
-                    ? (double?)request.ActualValue.Value
-                    : (double?)request.PurchasePrice;
+                if (request.PurchasePrice < 0)
+                    throw new AssetValidationException(AssetMessages.PurchasePriceRequired);
+
+                var assetName = OptionalValueHelper.NullIfEmpty(request.AssetName);
+                var description = OptionalValueHelper.NullIfEmpty(request.Description);
+                var owner = OptionalValueHelper.NullIfEmpty(request.Owner);
+                var location = OptionalValueHelper.NullIfEmpty(request.Location);
+                var manufacturer = OptionalValueHelper.NullIfEmpty(request.Manufacturer);
+                var model = OptionalValueHelper.NullIfEmpty(request.Model);
+                var serialNumber = OptionalValueHelper.NullIfEmpty(request.SerialNumber);
+                var images = OptionalValueHelper.NullIfEmpty(request.Images);
+                var assetTagNumber = OptionalValueHelper.NullIfEmpty(request.AssetTagNumber);
+
+                var assetCategoryId = OptionalValueHelper.NullIfNonPositive(request.AssetCategoryId);
+                var assetTypeId = OptionalValueHelper.NullIfNonPositive(request.AssetTypeId);
+                var assetStatusId = OptionalValueHelper.NullIfNonPositive(request.AssetStatusId);
+                var departmentId = OptionalValueHelper.NullIfNonPositive(request.DepartmentId);
+                var branchId = OptionalValueHelper.NullIfNonPositive(request.BranchId);
+                var businessUnitId = OptionalValueHelper.NullIfNonPositive(request.BusinessUnitId);
+                var productionYear = OptionalValueHelper.NullIfNonPositive(request.ProductionYear);
+
+                var warrantyExpiryDate = OptionalValueHelper.NullIfDefault(request.WarrantyExpiryDate);
+                var maintenanceDueDate = OptionalValueHelper.NullIfDefault(request.MaintenanceDueDate);
+
+                await ValidateOptionalLookupsAsync(
+                    connection,
+                    transaction,
+                    assetStatusId,
+                    assetCategoryId,
+                    departmentId,
+                    branchId,
+                    businessUnitId,
+                    assetTypeId,
+                    tenantId);
+
+                // Duplicate tag check only for real tag values; blank/null skips and stores NULL.
+                if (!string.IsNullOrEmpty(assetTagNumber))
+                {
+                    await EnsureAssetTagNumberIsUniqueAsync(
+                        connection,
+                        transaction,
+                        assetTagNumber,
+                        tenantId,
+                        excludeAssetId: assetId);
+                }
+
+                double? actualValue = OptionalValueHelper.NullIfNonPositive(
+                    request.ActualValue.HasValue ? (double?)request.ActualValue.Value : null)
+                    ?? (double)request.PurchasePrice;
 
                 var rowsAffected = await connection.ExecuteAsync(
                     _queries.Get("Asset_Update"),
@@ -339,26 +404,27 @@ namespace MobileWebApi.Repositories
                     {
                         AssetId = assetId,
                         TenantId = tenantId,
-                        request.AssetName,
-                        request.AssetCategoryId,
-                        request.AssetTypeId,
-                        request.AssetStatusId,
-                        request.DepartmentId,
-                        request.BranchId,
-                        request.BusinessUnitId,
-                        request.Location,
-                        request.Owner,
-                        request.Manufacturer,
-                        request.Model,
-                        request.SerialNumber,
-                        request.ProductionYear,
-                        request.PurchaseDate,
+                        AssetName = assetName,
+                        AssetCategoryId = assetCategoryId,
+                        AssetTypeId = assetTypeId,
+                        AssetStatusId = assetStatusId,
+                        DepartmentId = departmentId,
+                        BranchId = branchId,
+                        BusinessUnitId = businessUnitId,
+                        Location = location,
+                        Owner = owner,
+                        Manufacturer = manufacturer,
+                        Model = model,
+                        SerialNumber = serialNumber,
+                        ProductionYear = productionYear,
+                        PurchaseDate = purchaseDate,
                         PurchasePrice = (double)request.PurchasePrice,
                         ActualValue = actualValue,
-                        request.WarrantyExpiryDate,
-                        request.MaintenanceDueDate,
-                        request.Description,
-                        request.Images,
+                        WarrantyExpiryDate = warrantyExpiryDate,
+                        MaintenanceDueDate = maintenanceDueDate,
+                        Description = description,
+                        Images = images,
+                        AssetTagNumber = assetTagNumber,
                         UpdateUserId = userId
                     },
                     transaction);
@@ -389,6 +455,15 @@ namespace MobileWebApi.Repositories
             catch (AssetNotFoundException)
             {
                 transaction.Rollback();
+                throw;
+            }
+            catch (SqlException ex) when (ex.Number is 2601 or 2627)
+            {
+                transaction.Rollback();
+                var attemptedTag = OptionalValueHelper.NullIfEmpty(request.AssetTagNumber);
+                if (!string.IsNullOrEmpty(attemptedTag))
+                    throw new AssetValidationException(AssetMessages.DuplicateAssetTagNumber);
+
                 throw;
             }
             catch (Exception ex)
@@ -559,107 +634,57 @@ namespace MobileWebApi.Repositories
             public string ColumnName { get; set; } = string.Empty;
         }
 
-        private async Task ValidateUpdateLookupsAsync(
+        /// <summary>
+        /// Ensures AssetTagNumber is unique within the tenant. Call only when the tag is non-empty.
+        /// </summary>
+        private async Task EnsureAssetTagNumberIsUniqueAsync(
             IDbConnection connection,
             IDbTransaction transaction,
-            UpdateAssetRequest request,
-            int tenantId)
+            string assetTagNumber,
+            int tenantId,
+            int? excludeAssetId)
         {
-            if (!await ExistsForTenantAsync(
-                    connection, transaction, _queries.Get("Asset_ExistsAssetCategory"),
-                    request.AssetCategoryId, tenantId))
-            {
-                throw new AssetValidationException(AssetMessages.InvalidAssetCategory);
-            }
+            var sqlKey = excludeAssetId.HasValue
+                ? "Asset_ExistsAssetTagNumberExceptId"
+                : "Asset_ExistsAssetTagNumber";
 
-            if (!await ExistsForTenantAsync(
-                    connection, transaction, _queries.Get("Asset_ExistsBranch"),
-                    request.BranchId, tenantId))
-            {
-                throw new AssetValidationException(AssetMessages.InvalidBranch);
-            }
+            var count = excludeAssetId.HasValue
+                ? await connection.ExecuteScalarAsync<int>(
+                    _queries.Get(sqlKey),
+                    new { TenantId = tenantId, AssetTagNumber = assetTagNumber, AssetId = excludeAssetId.Value },
+                    transaction)
+                : await connection.ExecuteScalarAsync<int>(
+                    _queries.Get(sqlKey),
+                    new { TenantId = tenantId, AssetTagNumber = assetTagNumber },
+                    transaction);
 
-            if (request.DepartmentId.HasValue &&
-                !await ExistsForTenantAsync(
-                    connection, transaction, _queries.Get("Asset_ExistsDepartment"),
-                    request.DepartmentId.Value, tenantId))
-            {
-                throw new AssetValidationException(AssetMessages.InvalidDepartment);
-            }
-
-            if (request.BusinessUnitId.HasValue &&
-                !await ExistsForTenantAsync(
-                    connection, transaction, _queries.Get("Asset_ExistsBusinessUnit"),
-                    request.BusinessUnitId.Value, tenantId))
-            {
-                throw new AssetValidationException(AssetMessages.InvalidBusinessUnit);
-            }
-
-            if (request.AssetTypeId.HasValue &&
-                !await ExistsForTenantAsync(
-                    connection, transaction, _queries.Get("Asset_ExistsAssetType"),
-                    request.AssetTypeId.Value, tenantId))
-            {
-                throw new AssetValidationException(AssetMessages.InvalidAssetType);
-            }
-
-            if (request.AssetStatusId.HasValue &&
-                !await ExistsForTenantAsync(
-                    connection, transaction, _queries.Get("Asset_ExistsAssetStatus"),
-                    request.AssetStatusId.Value, tenantId))
-            {
-                throw new AssetValidationException(AssetMessages.InvalidAssetStatus);
-            }
+            if (count > 0)
+                throw new AssetValidationException(AssetMessages.DuplicateAssetTagNumber);
         }
 
-        private static void ValidateUpdateDates(UpdateAssetRequest request)
-        {
-            if (request.WarrantyExpiryDate.HasValue &&
-                request.WarrantyExpiryDate.Value.Date < request.PurchaseDate.Date)
-            {
-                throw new AssetValidationException(AssetMessages.InvalidWarrantyDate);
-            }
-
-            if (request.MaintenanceDueDate.HasValue &&
-                request.MaintenanceDueDate.Value.Date < request.PurchaseDate.Date)
-            {
-                throw new AssetValidationException(AssetMessages.InvalidMaintenanceDate);
-            }
-        }
-
-        private sealed class AssetSummaryRow
-        {
-            public int Id { get; set; }
-            public int? AssetStatusId { get; set; }
-            public string AssetStatusName { get; set; } = string.Empty;
-            public string Owner { get; set; } = string.Empty;
-            public string Location { get; set; } = string.Empty;
-            public int? DepartmentId { get; set; }
-            public int? BusinessUnitId { get; set; }
-            public int? BranchId { get; set; }
-        }
-
-        private async Task ValidateLookupsAsync(
+        private async Task ValidateOptionalLookupsAsync(
             IDbConnection connection,
             IDbTransaction transaction,
-            int assetStatusId,
-            int assetCategoryId,
+            int? assetStatusId,
+            int? assetCategoryId,
             int? departmentId,
             int? branchId,
             int? businessUnitId,
             int? assetTypeId,
             int tenantId)
         {
-            if (!await ExistsForTenantAsync(
+            if (assetStatusId.HasValue &&
+                !await ExistsForTenantAsync(
                     connection, transaction, _queries.Get("Asset_ExistsAssetStatus"),
-                    assetStatusId, tenantId))
+                    assetStatusId.Value, tenantId))
             {
                 throw new AssetValidationException(AssetMessages.InvalidAssetStatus);
             }
 
-            if (!await ExistsForTenantAsync(
+            if (assetCategoryId.HasValue &&
+                !await ExistsForTenantAsync(
                     connection, transaction, _queries.Get("Asset_ExistsAssetCategory"),
-                    assetCategoryId, tenantId))
+                    assetCategoryId.Value, tenantId))
             {
                 throw new AssetValidationException(AssetMessages.InvalidAssetCategory);
             }
@@ -695,6 +720,18 @@ namespace MobileWebApi.Repositories
             {
                 throw new AssetValidationException(AssetMessages.InvalidAssetType);
             }
+        }
+
+        private sealed class AssetSummaryRow
+        {
+            public int Id { get; set; }
+            public int? AssetStatusId { get; set; }
+            public string AssetStatusName { get; set; } = string.Empty;
+            public string Owner { get; set; } = string.Empty;
+            public string Location { get; set; } = string.Empty;
+            public int? DepartmentId { get; set; }
+            public int? BusinessUnitId { get; set; }
+            public int? BranchId { get; set; }
         }
 
         private static async Task<bool> ExistsForTenantAsync(
