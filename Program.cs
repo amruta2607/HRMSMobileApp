@@ -157,7 +157,10 @@ builder.Services.AddSwaggerGen(c =>
 	});
 
 	c.OperationFilter<HideMobileDashboardResponseSchemaFilter>();
+	c.OperationFilter<FileUploadOperationFilter>();
+	c.OperationFilter<AttendanceDateTimeOperationFilter>();
 	c.SchemaFilter<LocationTrackingTimestampSchemaFilter>();
+	c.SchemaFilter<AttendanceDateTimeSchemaFilter>();
 	c.SchemaFilter<AssetRequestSchemaFilter>();
 });
 
