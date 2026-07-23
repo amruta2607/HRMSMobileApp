@@ -41,9 +41,14 @@ namespace MobileWebApi.Models.Responses
         public int? HandOverById { get; set; }
 
         /// <summary>
+        /// Employee code who handed over the asset.
+        /// </summary>
+        public string HandOverByEmployeeCode { get; set; } = string.Empty;
+
+        /// <summary>
         /// Employee name who handed over the asset.
         /// </summary>
-        public string HandOverBy { get; set; } = string.Empty;
+        public string HandOverByEmployeeName { get; set; } = string.Empty;
 
         /// <summary>
         /// Employee identifier who received the asset.
@@ -51,9 +56,14 @@ namespace MobileWebApi.Models.Responses
         public int? HandOverToId { get; set; }
 
         /// <summary>
+        /// Employee code who received the asset.
+        /// </summary>
+        public string HandOverToEmployeeCode { get; set; } = string.Empty;
+
+        /// <summary>
         /// Employee name who received the asset.
         /// </summary>
-        public string HandOverTo { get; set; } = string.Empty;
+        public string HandOverToEmployeeName { get; set; } = string.Empty;
 
         /// <summary>
         /// Department name from the related asset.

@@ -6,6 +6,8 @@
 
 
     "GetUserByEmail": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, e.BranchId, u.Department AS Designation, wr.WorkRoleName FROM Users u LEFT JOIN Employee e ON e.SystemUserId = u.UserId OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(CAST(u.WorkRoleId AS NVARCHAR(MAX)), ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.Email = @Email",
+
+    "GetUserByUsernameOrEmail": "SELECT TOP 1 u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, e.BranchId, u.Department AS Designation, wr.WorkRoleName FROM Users u LEFT JOIN Employee e ON e.SystemUserId = u.UserId OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(CAST(u.WorkRoleId AS NVARCHAR(MAX)), ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE LOWER(LTRIM(RTRIM(u.Username))) = LOWER(LTRIM(RTRIM(@Login))) OR LOWER(LTRIM(RTRIM(u.Email))) = LOWER(LTRIM(RTRIM(@Login))) ORDER BY CASE WHEN LOWER(LTRIM(RTRIM(u.Username))) = LOWER(LTRIM(RTRIM(@Login))) THEN 0 ELSE 1 END",
     "GetUserByMobile": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PinNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(u.WorkRoleId, ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.MobileNumber = @MobileNumber",
 
     "GetUsersByOrganisationId": "SELECT UserId,Username,Email,IsActive,MobileNumber,PinNumber,department AS Designation,IsHrUser,IsTenantAdmin,TenantId AS OrganisationId,BranchId,WorkRoleId FROM Users WHERE TenantId = @OrganisationId",
@@ -53,6 +55,7 @@
     "GetEmployeesByOrganisationId": "SELECT Id,Name,Description,EmployeeNumber,Street,City,State,ZipCode,Phone,Email,Picture,DateOfBirth,PlaceOfBirth,BiometricNumber,TaxNumber,LatestEducationDegree,GenderId,GradeId,ESINo,PFNo,SalarySlab,BasicSalary,IsPerDayWagesEmployee,PerDayOverTimeWages,DesignationId,DepartmentId,BranchId,SupervisorId,LeaveQuota,LeaveTaken,DateOfJoining,BankAccountForPayroll,IFSCCode,BankNameForPayroll,BankBranchName,SpouseName,SpouseDateOfBirth,SpouseProfession,SpouseStreet,SpouseCity,SpouseState,SpouseZipCode,SpousePhone,SpouseEmail,SystemUserId,TenantId AS OrganisationId,CostToCompany,CtcFrequencyType,IsEmployeeActive,CategoryId,BloodGroup,MaritalStatus,PermanentStreet,PermanentCity,PermanentState,PermanentZipCode,PermanentPhone,PermanentEmail,PersonalEmail,CountryId,StateId,PermanentCountryId,GroupName,NotificationGroupName,UANNo,IsPayrollOnHold,FirstName,MiddleName,LastName,CompensationTemplateId FROM Employee WHERE TenantId = @OrganisationId",
     "GetEmployeesByBranchExceptUser": "SELECT Id,Name,Description,EmployeeNumber,Street,City,State,ZipCode,Phone,Email,Picture,DateOfBirth,PlaceOfBirth,BiometricNumber,TaxNumber,LatestEducationDegree,GenderId,GradeId,ESINo,PFNo,SalarySlab,BasicSalary,IsPerDayWagesEmployee,PerDayOverTimeWages,DesignationId,DepartmentId,BranchId,SupervisorId,LeaveQuota,LeaveTaken,DateOfJoining,BankAccountForPayroll,IFSCCode,BankNameForPayroll,BankBranchName,SpouseName,SpouseDateOfBirth,SpouseProfession,SpouseStreet,SpouseCity,SpouseState,SpouseZipCode,SpousePhone,SpouseEmail,SystemUserId,TenantId AS OrganisationId,CostToCompany,CtcFrequencyType,IsEmployeeActive,CategoryId,BloodGroup,MaritalStatus,PermanentStreet,PermanentCity,PermanentState,PermanentZipCode,PermanentPhone,PermanentEmail,PersonalEmail,CountryId,StateId,PermanentCountryId,GroupName,NotificationGroupName,UANNo,IsPayrollOnHold,FirstName,MiddleName,LastName,CompensationTemplateId FROM Employee WHERE BranchId = @BranchId AND SystemUserId <> @UserId",
     "GetWorkRoleIdByName": "SELECT WorkRoleId FROM WorkRole WHERE WorkRoleName = @WorkRoleName",
+    "GetActiveWorkRolesByUserId": "SELECT DISTINCT w.WorkRoleName FROM (SELECT uwg.WorkRoleId FROM UserWorkroleGroup uwg WHERE uwg.UserId = @UserId UNION SELECT TRY_CAST(s.value AS INT) AS WorkRoleId FROM Users u CROSS APPLY STRING_SPLIT(CAST(u.WorkRoleId AS NVARCHAR(MAX)), ',') s WHERE u.UserId = @UserId) assigned INNER JOIN WorkRole w ON w.WorkRoleId = assigned.WorkRoleId WHERE w.WorkRoleName IS NOT NULL AND LTRIM(RTRIM(w.WorkRoleName)) <> '' ORDER BY w.WorkRoleName",
 
     "UpdateUser": "UPDATE Users SET DisplayName = @DisplayName, Email = @EmailId, MobileNumber = @MobileNumber, PinNumber = @PinNumber, WorkRoleId = @WorkRoleId, IsActive = @IsActive WHERE UserId = @UserId",
 
@@ -121,7 +124,7 @@
 
     "GetNextLeaveRequestNumber": "SELECT TOP 1 Number FROM LeaveRequest WHERE TenantId = @OrganisationId ORDER BY Id DESC",
 
-    "GetUserByUsernameForWebLogin": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.BranchId, u.department AS Designation, w.WorkRoleName FROM Users u LEFT JOIN WorkRole w ON w.WorkRoleId = u.WorkRoleId WHERE u.Username = @Username",
+    "GetUserByUsernameForWebLogin": "SELECT TOP 1 u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.BranchId, u.department AS Designation, w.WorkRoleName FROM Users u LEFT JOIN WorkRole w ON w.WorkRoleId = u.WorkRoleId WHERE LOWER(LTRIM(RTRIM(u.Username))) = LOWER(LTRIM(RTRIM(@Username))) OR LOWER(LTRIM(RTRIM(u.Email))) = LOWER(LTRIM(RTRIM(@Username))) ORDER BY CASE WHEN LOWER(LTRIM(RTRIM(u.Username))) = LOWER(LTRIM(RTRIM(@Username))) THEN 0 ELSE 1 END",
 
     "CreateUser": "INSERT INTO Users (Username, DisplayName, Email, MobileNumber, PinNumber, PasswordHash, PasswordSalt, WorkRoleId, TenantId, BranchId, IsHrUser, IsTenantAdmin, IsActive) VALUES (@Username, @DisplayName, @Email, @MobileNumber, @PinNumber, @PasswordHash, @PasswordSalt, @WorkRoleId, @OrganisationId, @BranchId, @IsHrUser, @IsTenantAdmin, @IsActive); SELECT CAST(SCOPE_IDENTITY() AS INT);",
 
@@ -333,7 +336,9 @@
 
     "Asset_ExistsAssetStatus": "SELECT 1 FROM [dbo].[AssetStatus] WHERE Id = @Id AND (TenantId = @TenantId OR TenantId IS NULL)",
 
-    "Asset_ExistsAssetTagNumber": "SELECT COUNT(1) FROM [dbo].[Asset] WHERE TenantId = @TenantId AND AssetTagNumber = @AssetTagNumber",
+    "Asset_ExistsAssetTagNumber": "SELECT COUNT(1) FROM [dbo].[Asset] WHERE TenantId = @TenantId AND AssetTagNumber IS NOT NULL AND LTRIM(RTRIM(AssetTagNumber)) <> '' AND AssetTagNumber = @AssetTagNumber",
+
+    "Asset_ExistsAssetTagNumberExceptId": "SELECT COUNT(1) FROM [dbo].[Asset] WHERE TenantId = @TenantId AND Id <> @AssetId AND AssetTagNumber IS NOT NULL AND LTRIM(RTRIM(AssetTagNumber)) <> '' AND AssetTagNumber = @AssetTagNumber",
 
     "Asset_GetTenantNumberConfig": "SELECT AssetNumberPrefix, AssetNumberUseDate, AssetNumberLength FROM [dbo].[Tenant] WHERE TenantId = @TenantId",
 
@@ -359,7 +364,13 @@
 
     "AssetDashboard_GetBranchBreakdown": "SELECT TOP 6 ISNULL(a.BranchId, 0) AS BranchId, ISNULL(NULLIF(b.[Name], ''), 'Unassigned') AS BranchName, COUNT(*) AS [Count] FROM [dbo].[Asset] a LEFT JOIN [dbo].[Branch] b ON b.Id = a.BranchId WHERE a.TenantId = @TenantId GROUP BY ISNULL(a.BranchId, 0), ISNULL(NULLIF(b.[Name], ''), 'Unassigned') ORDER BY COUNT(*) DESC",
 
-    "AssetHandOverList": "SELECT h.Id, h.Number, h.AssetId, a.Number AS AssetNumber, a.AssetName, h.HandOverDate, h.HandOverById, ISNULL(empBy.[Name], '') AS HandOverBy, h.HandOverToId, ISNULL(empTo.[Name], '') AS HandOverTo, ISNULL(d.[Name], '') AS Department, ISNULL(b.[Name], '') AS Branch, ISNULL(h.Description, '') AS Remarks FROM [dbo].[AssetHandOver] h INNER JOIN [dbo].[Asset] a ON a.Id = h.AssetId LEFT JOIN [dbo].[Employee] empBy ON empBy.Id = h.HandOverById LEFT JOIN [dbo].[Employee] empTo ON empTo.Id = h.HandOverToId LEFT JOIN [dbo].[Department] d ON d.Id = a.DepartmentId LEFT JOIN [dbo].[Branch] b ON b.Id = a.BranchId WHERE h.TenantId = @TenantId ORDER BY h.HandOverDate DESC, h.Id DESC",
+    "AssetDashboard_GetKpiMetricsScoped": "SELECT COUNT(*) AS TotalCount, SUM(CASE WHEN a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS TotalPrevCount, SUM(CASE WHEN {IN_USE} THEN 1 ELSE 0 END) AS InUseCount, SUM(CASE WHEN {IN_USE} AND a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS InUsePrevCount, SUM(CASE WHEN {MAINTENANCE} THEN 1 ELSE 0 END) AS MaintenanceCount, SUM(CASE WHEN {MAINTENANCE} AND a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS MaintenancePrevCount, SUM(CASE WHEN {OUT_OF_SERVICE} THEN 1 ELSE 0 END) AS OutOfServiceCount, SUM(CASE WHEN {OUT_OF_SERVICE} AND a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS OutOfServicePrevCount FROM [dbo].[Asset] a LEFT JOIN [dbo].[AssetStatus] s ON s.Id = a.AssetStatusId OUTER APPLY (SELECT TOP 1 h.HandOverToId FROM [dbo].[AssetHandOver] h WHERE h.AssetId = a.Id ORDER BY h.HandOverDate DESC, h.Id DESC) latest WHERE {SCOPE_FILTER}",
+
+    "AssetDashboard_GetCategoryBreakdownScoped": "SELECT TOP 6 ISNULL(c.Id, 0) AS CategoryId, ISNULL(c.[Name], 'Others') AS CategoryName, COUNT(*) AS [Count] FROM [dbo].[Asset] a LEFT JOIN [dbo].[Asset Category] c ON c.Id = a.AssetCategoryId OUTER APPLY (SELECT TOP 1 h.HandOverToId FROM [dbo].[AssetHandOver] h WHERE h.AssetId = a.Id ORDER BY h.HandOverDate DESC, h.Id DESC) latest WHERE {SCOPE_FILTER} GROUP BY ISNULL(c.Id, 0), ISNULL(c.[Name], 'Others') ORDER BY COUNT(*) DESC",
+
+    "AssetDashboard_GetBranchBreakdownScoped": "SELECT TOP 6 ISNULL(a.BranchId, 0) AS BranchId, ISNULL(NULLIF(b.[Name], ''), 'Unassigned') AS BranchName, COUNT(*) AS [Count] FROM [dbo].[Asset] a LEFT JOIN [dbo].[Branch] b ON b.Id = a.BranchId OUTER APPLY (SELECT TOP 1 h.HandOverToId FROM [dbo].[AssetHandOver] h WHERE h.AssetId = a.Id ORDER BY h.HandOverDate DESC, h.Id DESC) latest WHERE {SCOPE_FILTER} GROUP BY ISNULL(a.BranchId, 0), ISNULL(NULLIF(b.[Name], ''), 'Unassigned') ORDER BY COUNT(*) DESC",
+
+    "AssetHandOverList": "SELECT h.Id, h.Number, h.AssetId, a.Number AS AssetNumber, a.AssetName, h.HandOverDate, h.HandOverById, ISNULL(empBy.EmployeeNumber, '') AS HandOverByEmployeeCode, ISNULL(empBy.[Name], '') AS HandOverByEmployeeName, h.HandOverToId, ISNULL(empTo.EmployeeNumber, '') AS HandOverToEmployeeCode, ISNULL(empTo.[Name], '') AS HandOverToEmployeeName, ISNULL(d.[Name], '') AS Department, ISNULL(b.[Name], '') AS Branch, ISNULL(h.Description, '') AS Remarks FROM [dbo].[AssetHandOver] h INNER JOIN [dbo].[Asset] a ON a.Id = h.AssetId LEFT JOIN [dbo].[Employee] empBy ON empBy.Id = h.HandOverById LEFT JOIN [dbo].[Employee] empTo ON empTo.Id = h.HandOverToId LEFT JOIN [dbo].[Department] d ON d.Id = a.DepartmentId LEFT JOIN [dbo].[Branch] b ON b.Id = a.BranchId WHERE h.TenantId = @TenantId ORDER BY h.HandOverDate DESC, h.Id DESC",
 
     "GetAssetByScannerId": "SELECT a.Id, a.Number, a.AssetCode, a.AssetName, ISNULL(a.AssetTagNumber, '') AS AssetTagNumber, a.AssetStatusId, ISNULL(s.[Name], '') AS AssetStatus, a.AssetCategoryId, ISNULL(c.[Name], '') AS AssetCategory, a.AssetTypeId, ISNULL(at.TypeName, '') AS AssetType, ISNULL(a.Owner, '') AS Owner, ISNULL(d.[Name], '') AS Department, ISNULL(b.[Name], '') AS Branch, ISNULL(bu.[Name], '') AS BusinessUnit, ISNULL(a.Location, '') AS Location, a.PurchaseDate, a.PurchasePrice, a.ActualValue, ISNULL(a.Manufacturer, '') AS Manufacturer, ISNULL(a.Model, '') AS Model, ISNULL(a.SerialNumber, '') AS SerialNumber, a.ProductionYear, a.MaintenanceDueDate, a.WarrantyExpiryDate, ISNULL(a.Description, '') AS Description, ISNULL(a.Images, '') AS Images, ISNULL(a.QRCodePath, '') AS QRCodePath FROM [dbo].[Asset] a LEFT JOIN [dbo].[AssetStatus] s ON s.Id = a.AssetStatusId LEFT JOIN [dbo].[Asset Category] c ON c.Id = a.AssetCategoryId LEFT JOIN [dbo].[AssetType] at ON at.Id = a.AssetTypeId LEFT JOIN [dbo].[Department] d ON d.Id = a.DepartmentId LEFT JOIN [dbo].[Branch] b ON b.Id = a.BranchId LEFT JOIN [dbo].[BusinessUnit] bu ON bu.Id = a.BusinessUnitId WHERE a.TenantId = @TenantId AND a.Id = @AssetId",
 
@@ -367,7 +378,7 @@
 
     "Asset_GetById": "SELECT a.Id, a.AssetStatusId, ISNULL(s.[Name], '') AS AssetStatusName, ISNULL(a.Owner, '') AS Owner, ISNULL(a.Location, '') AS Location, a.DepartmentId, a.BusinessUnitId, a.BranchId FROM [dbo].[Asset] a LEFT JOIN [dbo].[AssetStatus] s ON s.Id = a.AssetStatusId WHERE a.Id = @AssetId AND a.TenantId = @TenantId",
 
-    "Asset_Update": "UPDATE [dbo].[Asset] SET AssetName = @AssetName, AssetCategoryId = @AssetCategoryId, AssetTypeId = @AssetTypeId, AssetStatusId = @AssetStatusId, DepartmentId = @DepartmentId, BranchId = @BranchId, BusinessUnitId = @BusinessUnitId, Location = @Location, Owner = @Owner, Manufacturer = @Manufacturer, Model = @Model, SerialNumber = @SerialNumber, ProductionYear = @ProductionYear, PurchaseDate = @PurchaseDate, PurchasePrice = @PurchasePrice, ActualValue = @ActualValue, WarrantyExpiryDate = @WarrantyExpiryDate, MaintenanceDueDate = @MaintenanceDueDate, Description = @Description, Images = @Images, UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE Id = @AssetId AND TenantId = @TenantId",
+    "Asset_Update": "UPDATE [dbo].[Asset] SET AssetName = @AssetName, AssetCategoryId = @AssetCategoryId, AssetTypeId = @AssetTypeId, AssetStatusId = @AssetStatusId, DepartmentId = @DepartmentId, BranchId = @BranchId, BusinessUnitId = @BusinessUnitId, Location = @Location, Owner = @Owner, Manufacturer = @Manufacturer, Model = @Model, SerialNumber = @SerialNumber, ProductionYear = @ProductionYear, PurchaseDate = @PurchaseDate, PurchasePrice = @PurchasePrice, ActualValue = @ActualValue, WarrantyExpiryDate = @WarrantyExpiryDate, MaintenanceDueDate = @MaintenanceDueDate, Description = @Description, Images = @Images, AssetTagNumber = @AssetTagNumber, UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE Id = @AssetId AND TenantId = @TenantId",
 
     "Asset_ValidateEmployee": "SELECT Id, Name, DepartmentId, BranchId FROM [dbo].[Employee] WHERE Id = @EmployeeId AND TenantId = @TenantId AND IsEmployeeActive = 1",
 
@@ -405,7 +416,23 @@
 
     "AssetHandOver_LookupHandOverToEmployees": "SELECT Id, EmployeeNumber AS EmployeeCode, Name AS EmployeeName FROM [dbo].[Employee] WHERE TenantId = @TenantId AND IsEmployeeActive = 1 ORDER BY Name",
 
-    "AssetHandOver_ExistsHandOverByEmployee": "SELECT 1 FROM [dbo].[Employee] WHERE Id = @EmployeeId AND TenantId = @TenantId AND IsEmployeeActive = 1 AND SystemUserId IS NOT NULL"
+    "AssetHandOver_ExistsHandOverByEmployee": "SELECT 1 FROM [dbo].[Employee] WHERE Id = @EmployeeId AND TenantId = @TenantId AND IsEmployeeActive = 1 AND SystemUserId IS NOT NULL",
+
+    "Asset_GetSummaryForDelete": "SELECT a.Id, a.Number, a.AssetName FROM [dbo].[Asset] a WHERE a.Id = @AssetId AND a.TenantId = @TenantId",
+
+    "Asset_GetForeignKeyChildren": "SELECT OBJECT_NAME(fk.parent_object_id) AS TableName, COL_NAME(fc.parent_object_id, fc.parent_column_id) AS ColumnName FROM sys.foreign_keys AS fk INNER JOIN sys.foreign_key_columns AS fc ON fk.object_id = fc.constraint_object_id WHERE fk.referenced_object_id = OBJECT_ID(N'dbo.Asset') AND OBJECT_SCHEMA_NAME(fk.parent_object_id) = N'dbo' ORDER BY OBJECT_NAME(fk.parent_object_id)",
+
+    "Asset_DeleteById": "DELETE FROM [dbo].[Asset] WHERE Id = @AssetId AND TenantId = @TenantId",
+
+    "AssetHandOver_GetSummaryForDelete": "SELECT h.Id, h.Number, h.AssetId FROM [dbo].[AssetHandOver] h WHERE h.Id = @Id AND h.TenantId = @TenantId",
+
+    "AssetHandOver_GetForeignKeyChildren": "SELECT OBJECT_NAME(fk.parent_object_id) AS TableName, COL_NAME(fc.parent_object_id, fc.parent_column_id) AS ColumnName FROM sys.foreign_keys AS fk INNER JOIN sys.foreign_key_columns AS fc ON fk.object_id = fc.constraint_object_id WHERE fk.referenced_object_id = OBJECT_ID(N'dbo.AssetHandOver') AND OBJECT_SCHEMA_NAME(fk.parent_object_id) = N'dbo' ORDER BY OBJECT_NAME(fk.parent_object_id)",
+
+    "AssetHandOver_DeleteById": "DELETE FROM [dbo].[AssetHandOver] WHERE Id = @Id AND TenantId = @TenantId",
+
+    "Me_GetCurrentUser": "SELECT u.UserId, u.Username, ISNULL(u.DisplayName, '') AS DisplayName, ISNULL(u.Email, '') AS Email, ISNULL(u.MobileNumber, '') AS MobileNumber FROM [dbo].[Users] u WHERE u.UserId = @UserId",
+
+    "Me_GetActiveWorkRolesByUserId": "SELECT DISTINCT w.WorkRoleId AS Id, w.WorkRoleName AS Name FROM (SELECT uwg.WorkRoleId FROM [dbo].[UserWorkroleGroup] uwg WHERE uwg.UserId = @UserId UNION SELECT TRY_CAST(s.value AS INT) AS WorkRoleId FROM [dbo].[Users] u CROSS APPLY STRING_SPLIT(CAST(u.WorkRoleId AS NVARCHAR(MAX)), ',') s WHERE u.UserId = @UserId) assigned INNER JOIN [dbo].[WorkRole] w ON w.WorkRoleId = assigned.WorkRoleId WHERE w.WorkRoleName IS NOT NULL AND LTRIM(RTRIM(w.WorkRoleName)) <> '' ORDER BY w.WorkRoleName"
 
   }
 }

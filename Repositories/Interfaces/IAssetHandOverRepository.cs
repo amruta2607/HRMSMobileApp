@@ -27,5 +27,10 @@ namespace MobileWebApi.Repositories.Interfaces
         /// Updates an existing asset handover record for the authenticated user's organisation.
         /// </summary>
         Task<AssetOperationResponse> UpdateAssetHandoverAsync(int handoverId, UpdateAssetHandoverRequest request);
+
+        /// <summary>
+        /// Deletes an asset handover record for the authenticated user's organisation.
+        /// </summary>
+        Task<AssetOperationResponse> DeleteAssetHandoverAsync(int handoverId, string? ipAddress);
     }
 }

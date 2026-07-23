@@ -4,6 +4,7 @@ using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using MobileWebApi.Helper;
 using MobileWebApi.Constants;
+using MobileWebApi.Services;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text.RegularExpressions;
@@ -21,6 +22,7 @@ namespace MobileWebApi.Controllers
         private readonly IOtpService _otpService;
         private readonly IEmailService _emailService;
         private readonly ISmsService _smsService;
+        private readonly IMeService _meService;
         private readonly ILogger<AuthController> _logger;
         private readonly IWebHostEnvironment _environment;
         private readonly ITenantConfigurationRepository _tenantConfigurationRepository;
@@ -34,6 +36,7 @@ namespace MobileWebApi.Controllers
             IOtpService otpService,
             IEmailService emailService,
             ISmsService smsService,
+            IMeService meService,
             ILogger<AuthController> logger,
             IWebHostEnvironment environment,
             ITenantConfigurationRepository tenantConfigurationRepository,
@@ -46,6 +49,7 @@ namespace MobileWebApi.Controllers
             _otpService = otpService;
             _emailService = emailService;
             _smsService = smsService;
+            _meService = meService ?? throw new ArgumentNullException(nameof(meService));
             _logger = logger;
             _environment = environment;
             _tenantConfigurationRepository = tenantConfigurationRepository;
@@ -54,8 +58,47 @@ namespace MobileWebApi.Controllers
         }
 
         /// <summary>
-        /// Email and Password Login
-        /// Authenticates user with Email and Password
+        /// Returns the currently authenticated user's profile and assigned work roles.
+        /// </summary>
+        [Authorize]
+        [HttpGet("me")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            try
+            {
+                var profile = await _meService.GetCurrentUserAsync();
+                if (profile == null)
+                    return Unauthorized();
+
+                return Ok(profile);
+            }
+            catch (TenantAccessException)
+            {
+                return Unauthorized();
+            }
+            catch (Exception ex)
+            {
+                var userIdClaim = User.FindFirst("UserId")?.Value;
+                int? userId = int.TryParse(userIdClaim, out var id) ? id : null;
+                _logger.LogException(
+                    ExceptionCodes.Me.GetCurrentUser,
+                    nameof(GetCurrentUser),
+                    ex,
+                    userId);
+
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = GeneralMessages.UnexpectedError
+                });
+            }
+        }
+
+        /// <summary>
+        /// Username/Email and Password Login
+        /// Authenticates user with Username or Email and Password
         /// POST: api/auth/login-email
         /// </summary>
         [HttpPost("login-email")]
@@ -63,27 +106,29 @@ namespace MobileWebApi.Controllers
         {
             try
             {
-                _logger.LogInformation(LogMessages.Auth.LoginAttempt, request.email);
+                var usernameOrEmail = request?.GetUsernameOrEmail() ?? string.Empty;
+                _logger.LogInformation(LogMessages.Auth.LoginAttempt, usernameOrEmail);
 
-                if (string.IsNullOrWhiteSpace(request.email) || string.IsNullOrWhiteSpace(request.password))
+                if (string.IsNullOrWhiteSpace(usernameOrEmail) || string.IsNullOrWhiteSpace(request?.password))
                 {
-                    _logger.LogWarning(LogMessages.Auth.LoginFailed, request.email);
+                    _logger.LogWarning(LogMessages.Auth.LoginFailed, usernameOrEmail);
                     return BadRequest(new { Success = false, Message = AuthMessages.InvalidCredentials });
                 }
 
-                var user = await _userRepository.GetUserByEmailAsync(request.email);
+                var user = await _userRepository.GetUserByUsernameOrEmailAsync(usernameOrEmail);
 
+                // Generic failure for missing/inactive users — do not reveal which identifier failed.
                 if (user == null || !user.IsActive)
                 {
-                    _logger.LogWarning(LogMessages.Auth.LoginFailed, request.email);
-                    return Unauthorized(new { Success = false, Message = UserMessages.UserNotFound });
+                    _logger.LogWarning(LogMessages.Auth.LoginFailed, usernameOrEmail);
+                    return Unauthorized(new { Success = false, Message = AuthMessages.InvalidCredentials });
                 }
 
                 // Validate password using the same process as Change Password and Reset Password
                 bool isPasswordValid = ValidateUserPassword(request.password, user);
                 if (!isPasswordValid)
                 {
-                    _logger.LogWarning(LogMessages.Auth.LoginFailed, request.email);
+                    _logger.LogWarning(LogMessages.Auth.LoginFailed, usernameOrEmail);
                     return Unauthorized(new { Success = false, Message = AuthMessages.InvalidCredentials });
                 }
 
@@ -96,11 +141,14 @@ namespace MobileWebApi.Controllers
                 var employee = await _employeeRepository.GetEmployeebyUserIdAsync(user.UserId);
                 var authTokens = await _tokenService.GenerateTokensAsync(user);
 
-                _logger.LogInformation(LogMessages.Auth.LoginSuccessful, request.email);
+                _logger.LogInformation(LogMessages.Auth.LoginSuccessful, usernameOrEmail);
 
                 var isGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false;
 
-                var response = BuildLoginResponse(authTokens, user, tenantConfig, mobileTenantConfig, moduleAccess, isGeoFencingEnabled, employee);
+                var workRoles = WorkRoleHelper.BuildLoginWorkRoles(
+                    await _userRepository.GetActiveWorkRolesByUserIdAsync(user.UserId));
+
+                var response = BuildLoginResponse(authTokens, user, tenantConfig, mobileTenantConfig, moduleAccess, isGeoFencingEnabled, employee, workRoles: workRoles);
 
                 return Ok(response);
             }
@@ -480,7 +528,10 @@ namespace MobileWebApi.Controllers
                     OrganisationId = tenantId
                 };
 
-                return Ok(BuildLoginResponse(authTokens, loginUser, tenantConfig, mobileTenantConfig, moduleAccess, isGeoFencingEnabled, employee, tenantId));
+                var workRoles = WorkRoleHelper.BuildLoginWorkRoles(
+                    await _userRepository.GetActiveWorkRolesByUserIdAsync(user.UserId));
+
+                return Ok(BuildLoginResponse(authTokens, loginUser, tenantConfig, mobileTenantConfig, moduleAccess, isGeoFencingEnabled, employee, tenantId, workRoles));
             }
             catch (Exception ex)
             {
@@ -916,7 +967,8 @@ namespace MobileWebApi.Controllers
             MobileAccessDto? moduleAccess,
             bool isGeoFencingEnabled,
             Employee? employee = null,
-            int? organisationIdOverride = null)
+            int? organisationIdOverride = null,
+            IReadOnlyList<string>? workRoles = null)
         {
             var attendanceEnabled = mobileTenantConfig?.IsAttendanceEnabled ?? false;
             var tenantLocationTrackingEnabled = mobileTenantConfig?.EnableLocationTracking ?? false;
@@ -951,7 +1003,10 @@ namespace MobileWebApi.Controllers
                 Radius = isGeoFencingEnabled ? tenantConfig?.Radius : null,
                 LocationAddress = isGeoFencingEnabled ? tenantConfig?.LocationAddress : null,
                 IsActive = tenantConfig?.IsActive ?? false,
-                ModuleAccess = moduleAccess
+                ModuleAccess = moduleAccess,
+                WorkRoles = workRoles != null
+                    ? workRoles.ToList()
+                    : WorkRoleHelper.BuildLoginWorkRoles(null)
             };
         }
 

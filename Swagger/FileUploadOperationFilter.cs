@@ -10,6 +10,11 @@ namespace MobileWebApi.Swagger
     /// Builds multipart/form-data request bodies from individual [FromForm] parameters
     /// so Swagger UI shows separate fields (not an empty JSON object).
     /// </summary>
+    /// <remarks>
+    /// DateTime form fields include OpenAPI Example values in yyyy-MM-ddTHH:mm:ss format.
+    /// Swagger UI limitation: some versions still show the property name as the input
+    /// placeholder; the Example (e.g. 2026-07-22T09:15:35) is documented on the schema.
+    /// </remarks>
     public class FileUploadOperationFilter : IOperationFilter
     {
         public void Apply(OpenApiOperation operation, OperationFilterContext context)
@@ -29,40 +34,36 @@ namespace MobileWebApi.Swagger
 
             foreach (var parameter in formParameters)
             {
+                var modelMetadata = parameter.ModelMetadata;
+                var modelType = modelMetadata?.ModelType ?? typeof(string);
+                var underlying = Nullable.GetUnderlyingType(modelType) ?? modelType;
+
+                // Expand complex [FromForm] models (e.g. PunchInRequest) into form fields.
+                if (modelMetadata?.Properties is { Count: > 0 } children &&
+                    underlying != typeof(IFormFile) &&
+                    underlying != typeof(IFormFile[]) &&
+                    underlying != typeof(string) &&
+                    !underlying.IsPrimitive &&
+                    underlying != typeof(decimal) &&
+                    underlying != typeof(DateTime) &&
+                    underlying != typeof(Guid))
+                {
+                    foreach (var child in children)
+                    {
+                        AddFormProperty(
+                            properties,
+                            encoding,
+                            child.BinderModelName ?? child.PropertyName ?? child.Name,
+                            child.ModelType);
+                    }
+                    continue;
+                }
+
                 var name = parameter.Name;
                 if (string.IsNullOrEmpty(name) || properties.ContainsKey(name))
                     continue;
 
-                var modelType = parameter.ModelMetadata?.ModelType ?? typeof(string);
-                var underlying = Nullable.GetUnderlyingType(modelType) ?? modelType;
-
-                if (underlying == typeof(IFormFile) || underlying == typeof(IFormFile[]))
-                {
-                    properties[name] = new OpenApiSchema
-                    {
-                        Type = "string",
-                        Format = "binary",
-                        Description = "Optional punch photo (JPG/PNG, max 2 MB)"
-                    };
-                    encoding[name] = new OpenApiEncoding
-                    {
-                        Style = ParameterStyle.Form,
-                        ContentType = "image/jpeg, image/png"
-                    };
-                    continue;
-                }
-
-                properties[name] = underlying switch
-                {
-                    _ when underlying == typeof(int) => new OpenApiSchema { Type = "integer", Format = "int32" },
-                    _ when underlying == typeof(long) => new OpenApiSchema { Type = "integer", Format = "int64" },
-                    _ when underlying == typeof(double) || underlying == typeof(float) => new OpenApiSchema { Type = "number", Format = "double" },
-                    _ when underlying == typeof(bool) => new OpenApiSchema { Type = "boolean" },
-                    _ when underlying == typeof(DateTime) => new OpenApiSchema { Type = "string", Format = "date-time" },
-                    _ => new OpenApiSchema { Type = "string" }
-                };
-
-                encoding[name] = new OpenApiEncoding { Style = ParameterStyle.Form };
+                AddFormProperty(properties, encoding, name, modelType);
             }
 
             if (properties.Count == 0)
@@ -86,6 +87,58 @@ namespace MobileWebApi.Swagger
             };
 
             operation.Parameters?.Clear();
+        }
+
+        private static void AddFormProperty(
+            IDictionary<string, OpenApiSchema> properties,
+            IDictionary<string, OpenApiEncoding> encoding,
+            string? name,
+            Type modelType)
+        {
+            if (string.IsNullOrEmpty(name) || properties.ContainsKey(name))
+                return;
+
+            var underlying = Nullable.GetUnderlyingType(modelType) ?? modelType;
+
+            if (underlying == typeof(IFormFile) || underlying == typeof(IFormFile[]))
+            {
+                properties[name] = new OpenApiSchema
+                {
+                    Type = "string",
+                    Format = "binary",
+                    Description = "Optional punch photo (JPG/PNG, max 2 MB)"
+                };
+                encoding[name] = new OpenApiEncoding
+                {
+                    Style = ParameterStyle.Form,
+                    ContentType = "image/jpeg, image/png"
+                };
+                return;
+            }
+
+            properties[name] = underlying switch
+            {
+                _ when underlying == typeof(int) => new OpenApiSchema { Type = "integer", Format = "int32" },
+                _ when underlying == typeof(long) => new OpenApiSchema { Type = "integer", Format = "int64" },
+                _ when underlying == typeof(double) || underlying == typeof(float) => new OpenApiSchema { Type = "number", Format = "double" },
+                _ when underlying == typeof(bool) => new OpenApiSchema { Type = "boolean" },
+                _ when underlying == typeof(DateTime) => CreateDateTimeSchema(name),
+                _ => new OpenApiSchema { Type = "string" }
+            };
+
+            encoding[name] = new OpenApiEncoding { Style = ParameterStyle.Form };
+        }
+
+        private static OpenApiSchema CreateDateTimeSchema(string propertyName)
+        {
+            var example = AttendanceDateTimeSwaggerExamples.Resolve(propertyName);
+            return new OpenApiSchema
+            {
+                Type = "string",
+                Format = "date-time",
+                Example = AttendanceDateTimeSwaggerExamples.ToOpenApiString(propertyName),
+                Description = $"Format: {AttendanceDateTimeSwaggerExamples.FormatHint}. Example: {example}"
+            };
         }
 
         private static bool ConsumesMultipart(OperationFilterContext context)

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Dapper;
 using MobileWebApi.Constants;
 using MobileWebApi.Data;
@@ -10,8 +11,8 @@ using MobileWebApi.Resources;
 namespace MobileWebApi.Repositories
 {
     /// <summary>
-    /// Provides tenant-scoped asset dashboard data using Dapper.
-    /// Business logic mirrors the web Asset Dashboard repository.
+    /// Provides asset dashboard data using Dapper.
+    /// Role dashboard uses the same response shape with work-role visibility filters.
     /// </summary>
     public class AssetDashboardRepository : IAssetDashboardRepository
     {
@@ -43,7 +44,13 @@ namespace MobileWebApi.Repositories
 
                 using var connection = _context.CreateConnection();
 
-                var kpiRow = await QueryKpiMetricsAsync(connection, tenantId, startOfMonth);
+                var kpiRow = await QueryKpiMetricsAsync(
+                    connection,
+                    tenantId,
+                    employeeId: null,
+                    startOfMonth,
+                    scopeFilter: "a.TenantId = @TenantId",
+                    useScopedQuery: false);
 
                 return new AssetDashboardResponse
                 {
@@ -51,8 +58,10 @@ namespace MobileWebApi.Repositories
                     AssetsInUse = BuildKpi(kpiRow.InUseCount, kpiRow.InUsePrevCount),
                     UnderMaintenance = BuildKpi(kpiRow.MaintenanceCount, kpiRow.MaintenancePrevCount),
                     OutOfService = BuildKpi(kpiRow.OutOfServiceCount, kpiRow.OutOfServicePrevCount),
-                    CategoryBreakdown = await BuildCategoryBreakdownAsync(connection, tenantId),
-                    BranchBreakdown = await BuildBranchBreakdownAsync(connection, tenantId)
+                    CategoryBreakdown = await BuildCategoryBreakdownAsync(
+                        connection, tenantId, employeeId: null, "a.TenantId = @TenantId", useScopedQuery: false),
+                    BranchBreakdown = await BuildBranchBreakdownAsync(
+                        connection, tenantId, employeeId: null, "a.TenantId = @TenantId", useScopedQuery: false)
                 };
             }
             catch (Exception ex)
@@ -63,6 +72,73 @@ namespace MobileWebApi.Repositories
                     ex,
                     _tenantContext.UserId);
 
+                throw;
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<AssetDashboardResponse> GetRoleDashboardAsync()
+        {
+            var stopwatch = Stopwatch.StartNew();
+            var userId = _tenantContext.GetRequiredUserId();
+            var tenantId = _tenantContext.GetRequiredOrganisationId();
+
+            try
+            {
+                using var connection = _context.CreateConnection();
+
+                var assignedRoleNames = (await connection.QueryAsync<string>(
+                    _queries.Get("GetActiveWorkRolesByUserId"),
+                    new { UserId = userId })).ToList();
+
+                var workRoleNames = WorkRoleHelper.BuildLoginWorkRoles(assignedRoleNames);
+                var primaryWorkRole = WorkRoleHelper.ResolvePrimaryWorkRole(workRoleNames);
+                var scope = WorkRoleHelper.ResolveDashboardAccessScope(primaryWorkRole);
+
+                var scopeFilter = scope == DashboardAccessScope.AllTenants
+                    ? "1 = 1"
+                    : "a.TenantId = @TenantId";
+
+                var startOfMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+
+                var kpiRow = await QueryKpiMetricsAsync(
+                    connection,
+                    tenantId,
+                    employeeId: null,
+                    startOfMonth,
+                    scopeFilter,
+                    useScopedQuery: true);
+
+                var response = new AssetDashboardResponse
+                {
+                    TotalAssets = BuildKpi(kpiRow.TotalCount, kpiRow.TotalPrevCount),
+                    AssetsInUse = BuildKpi(kpiRow.InUseCount, kpiRow.InUsePrevCount),
+                    UnderMaintenance = BuildKpi(kpiRow.MaintenanceCount, kpiRow.MaintenancePrevCount),
+                    OutOfService = BuildKpi(kpiRow.OutOfServiceCount, kpiRow.OutOfServicePrevCount),
+                    CategoryBreakdown = await BuildCategoryBreakdownAsync(
+                        connection, tenantId, employeeId: null, scopeFilter, useScopedQuery: true),
+                    BranchBreakdown = await BuildBranchBreakdownAsync(
+                        connection, tenantId, employeeId: null, scopeFilter, useScopedQuery: true)
+                };
+
+                stopwatch.Stop();
+                _logger.LogInformation(
+                    LogMessages.Dashboard.StatsLoaded,
+                    userId,
+                    tenantId,
+                    primaryWorkRole,
+                    stopwatch.ElapsedMilliseconds);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                _logger.LogException(
+                    ExceptionCodes.Dashboard.GetDashboard,
+                    nameof(GetRoleDashboardAsync),
+                    ex,
+                    userId);
                 throw;
             }
         }
@@ -84,10 +160,18 @@ namespace MobileWebApi.Repositories
         private async Task<KpiMetricsRow> QueryKpiMetricsAsync(
             System.Data.IDbConnection connection,
             int tenantId,
-            DateTime startOfMonth)
+            int? employeeId,
+            DateTime startOfMonth,
+            string scopeFilter,
+            bool useScopedQuery)
         {
             var outOfService = _queries.Get("AssetDashboard_StatusOutOfService");
-            var sql = _queries.Get("AssetDashboard_GetKpiMetrics")
+            var sqlKey = useScopedQuery
+                ? "AssetDashboard_GetKpiMetricsScoped"
+                : "AssetDashboard_GetKpiMetrics";
+
+            var sql = _queries.Get(sqlKey)
+                .Replace("{SCOPE_FILTER}", scopeFilter)
                 .Replace("{IN_USE}", _queries.Get("AssetDashboard_StatusInUse"))
                 .Replace("{OUT_OF_SERVICE}", outOfService)
                 .Replace("{MAINTENANCE}", _queries.Get("AssetDashboard_StatusMaintenance")
@@ -96,6 +180,7 @@ namespace MobileWebApi.Repositories
             var result = await connection.QueryFirstOrDefaultAsync<KpiMetricsRow>(sql, new
             {
                 TenantId = tenantId,
+                EmployeeId = employeeId,
                 StartOfMonth = startOfMonth
             });
 
@@ -104,10 +189,22 @@ namespace MobileWebApi.Repositories
 
         private async Task<List<AssetCategoryBreakdownDto>> BuildCategoryBreakdownAsync(
             System.Data.IDbConnection connection,
-            int tenantId)
+            int tenantId,
+            int? employeeId,
+            string scopeFilter,
+            bool useScopedQuery)
         {
-            var sql = _queries.Get("AssetDashboard_GetCategoryBreakdown");
-            var rows = (await connection.QueryAsync<CategoryRow>(sql, new { TenantId = tenantId })).ToList();
+            var sqlKey = useScopedQuery
+                ? "AssetDashboard_GetCategoryBreakdownScoped"
+                : "AssetDashboard_GetCategoryBreakdown";
+
+            var sql = _queries.Get(sqlKey).Replace("{SCOPE_FILTER}", scopeFilter);
+            var rows = (await connection.QueryAsync<CategoryRow>(sql, new
+            {
+                TenantId = tenantId,
+                EmployeeId = employeeId
+            })).ToList();
+
             var total = rows.Sum(r => r.Count);
             var safeTotal = Math.Max(total, 1);
 
@@ -122,10 +219,22 @@ namespace MobileWebApi.Repositories
 
         private async Task<List<AssetBranchBreakdownDto>> BuildBranchBreakdownAsync(
             System.Data.IDbConnection connection,
-            int tenantId)
+            int tenantId,
+            int? employeeId,
+            string scopeFilter,
+            bool useScopedQuery)
         {
-            var sql = _queries.Get("AssetDashboard_GetBranchBreakdown");
-            var rows = (await connection.QueryAsync<BranchRow>(sql, new { TenantId = tenantId })).ToList();
+            var sqlKey = useScopedQuery
+                ? "AssetDashboard_GetBranchBreakdownScoped"
+                : "AssetDashboard_GetBranchBreakdown";
+
+            var sql = _queries.Get(sqlKey).Replace("{SCOPE_FILTER}", scopeFilter);
+            var rows = (await connection.QueryAsync<BranchRow>(sql, new
+            {
+                TenantId = tenantId,
+                EmployeeId = employeeId
+            })).ToList();
+
             var total = rows.Sum(r => r.Count);
             var safeTotal = Math.Max(total, 1);
 

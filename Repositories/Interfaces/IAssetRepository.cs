@@ -27,5 +27,10 @@ namespace MobileWebApi.Repositories.Interfaces
         /// Updates editable fields on an existing asset for the authenticated user's organisation.
         /// </summary>
         Task<AssetOperationResponse> UpdateAssetAsync(int assetId, UpdateAssetRequest request);
+
+        /// <summary>
+        /// Deletes an asset and all related dependent records for the authenticated user's organisation.
+        /// </summary>
+        Task<AssetOperationResponse> DeleteAssetAsync(int assetId, string? ipAddress);
     }
 }

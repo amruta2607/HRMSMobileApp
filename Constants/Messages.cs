@@ -5,7 +5,7 @@ namespace MobileWebApi.Constants
     /// </summary>
     public static class AuthMessages
     {
-        public const string InvalidCredentials = "Invalid username or password.";
+        public const string InvalidCredentials = "Invalid username/email or password.";
         public const string TokenGenerated = "Token generated successfully.";
         public const string UsernameMissingInToken = "Username missing in token.";
         public const string OrganisationIdMissingInToken = "OrganisationId missing in token.";

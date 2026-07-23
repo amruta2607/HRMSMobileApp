@@ -123,6 +123,7 @@ namespace MobileWebApi.Constants
             public const string UserUpdatePasswordDatabaseError = "REP102";
             public const string TenantWeekOffGetConfigurationDatabaseError = "REP103";
             public const string TenantWeekOffGetWeekOffDaysDatabaseError = "REP104";
+            public const string UserGetActiveWorkRolesByUserIdDatabaseError = "REP105";
         }
 
         // Service layer (generic)
@@ -359,6 +360,18 @@ namespace MobileWebApi.Constants
             public const string GetDashboard = "ASSET-001";
         }
 
+        // Me API (MeRepository / MeController)
+        public static class Me
+        {
+            public const string GetCurrentUser = "ME-001";
+        }
+
+        // Role-based dashboard (DashboardRepository / DashboardController)
+        public static class Dashboard
+        {
+            public const string GetDashboard = "DASH-001";
+        }
+
         // Asset list (AssetRepository)
         public static class Asset
         {
@@ -366,6 +379,7 @@ namespace MobileWebApi.Constants
             public const string Create = "ASSET-003";
             public const string Update = "ASSET-005";
             public const string GetLookups = "ASSET-008";
+            public const string Delete = "ASSET-010";
         }
 
         // Asset hand over list (AssetHandOverRepository)
@@ -375,6 +389,7 @@ namespace MobileWebApi.Constants
             public const string Handover = "ASSET-006";
             public const string Update = "ASSET-007";
             public const string GetLookups = "ASSET-009";
+            public const string Delete = "ASSET-011";
         }
 
         // Scanner (ScannerRepository)
