@@ -300,36 +300,6 @@ namespace MobileWebApi.Constants
             public const string ErrorFetchingLocationsForUserId = "Error fetching locations for UserId={UserId}";
         }
 
-        // Location tracking related logs
-        public static class LocationTracking
-        {
-            public const string RecordingLocation = "Recording location for employee {EmployeeId}, tenant {TenantId}";
-            public const string FailedToRecordLocation = "Failed to record location for employee {EmployeeId}";
-            public const string ProcessingLocationBatch = "Processing location batch for employee {EmployeeId}, tenant {TenantId}, record count {RecordCount}";
-            public const string FailedToRecordLocationBatch = "Failed to record location batch for employee {EmployeeId}";
-        }
-
-        public static class LocationTrackingIssue
-        {
-            public const string ApiRequestReceived = "Location tracking issue API request received from user {UserId}";
-            public const string AuthenticatedUser = "Authenticated user {UserId} ({Username}) submitting location tracking issue";
-            public const string ValidationFailed = "Location tracking issue validation failed for user {UserId}: {ValidationMessage}";
-            public const string LoggingIssue = "Logging location tracking issue for employee {EmployeeId}, tenant {TenantId}, issue type {IssueType}, user {UserId}";
-            public const string IssueLoggedSuccessfully = "Location tracking issue {IssueId} logged for employee {EmployeeId}, tenant {TenantId}, user {UserId}";
-            public const string FailedToInsert = "Failed to insert location tracking issue for employee {EmployeeId}, tenant {TenantId}";
-            public const string EmployeeNotFound = "Employee not found for user {UserId} while logging location tracking issue by user {CurrentUserId}";
-            public const string TenantNotFound = "Tenant {TenantId} not found while logging location tracking issue for user {UserId}";
-            public const string EmployeeTenantMismatch = "Employee user {UserId} does not belong to tenant {TenantId} while logging issue by user {CurrentUserId}";
-            public const string NoAdminRecipients = "No active HR or tenant admin users found for tenant {TenantId} to notify about location tracking issue";
-            public const string AdminNotificationsSent = "Sent location tracking issue notifications to {RecipientCount} admin users for issue {IssueId}, tenant {TenantId}";
-            public const string AdminNotificationFailed = "Failed to send admin notifications for location tracking issue {IssueId}, tenant {TenantId}";
-        }
-
-        public static class LocationTrackingConfiguration
-        {
-            public const string FetchingConfiguration = "Fetching location tracking configuration for employee {EmployeeId}, tenant {TenantId}";
-        }
-
         // Transaction related logs
         public static class Transaction
         {

@@ -971,15 +971,6 @@ namespace MobileWebApi.Controllers
             IReadOnlyList<string>? workRoles = null)
         {
             var attendanceEnabled = mobileTenantConfig?.IsAttendanceEnabled ?? false;
-            var tenantLocationTrackingEnabled = mobileTenantConfig?.EnableLocationTracking ?? false;
-            var enableEmployeeLevelLocationTracking = mobileTenantConfig?.EnableEmployeeLevelLocationTracking ?? false;
-            var employeeLocationTracking = employee?.EnableLocationTracking;
-
-            var locationTracking = LocationTrackingSettingsHelper.Resolve(
-                attendanceEnabled,
-                tenantLocationTrackingEnabled,
-                enableEmployeeLevelLocationTracking,
-                employeeLocationTracking);
 
             return new TokenWithRefreshResponse
             {
@@ -992,10 +983,7 @@ namespace MobileWebApi.Controllers
                 UserId = user.UserId,
                 Username = user.Username,
                 OrganisationId = organisationIdOverride ?? user.OrganisationId,
-                AttendanceEnabled = locationTracking.AttendanceEnabled,
-                EnableLocationTracking = locationTracking.EnableLocationTracking,
-                EnableEmployeeLevelLocationTracking = locationTracking.EnableEmployeeLevelLocationTracking,
-                EmployeeLocationTrackingEnabled = locationTracking.EmployeeLocationTrackingEnabled,
+                AttendanceEnabled = attendanceEnabled,
                 IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
                 IsGeoFencingEnabled = isGeoFencingEnabled,
                 Latitude = isGeoFencingEnabled ? tenantConfig?.Latitude : null,
