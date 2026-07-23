@@ -61,7 +61,7 @@ namespace MobileWebApi.Repositories
                 using var connection = _context.CreateConnection();
                 return await connection.QueryFirstOrDefaultAsync<User>(
                     query,
-                    new { Username = username }
+                    new { Username = username.Trim() }
                 );
             }
             catch (Exception ex)
@@ -72,6 +72,37 @@ namespace MobileWebApi.Repositories
                     ex);
             }
         }
+
+        /// <summary>
+        /// Finds a user by username or email (case-insensitive). Username match is preferred if both match different rows.
+        /// </summary>
+        public async Task<User?> GetUserByUsernameOrEmailAsync(string usernameOrEmail)
+        {
+            if (string.IsNullOrWhiteSpace(usernameOrEmail))
+                return null;
+
+            try
+            {
+                string query = _queryProvider.Get("GetUserByUsernameOrEmail");
+
+                if (string.IsNullOrWhiteSpace(query))
+                    throw new InvalidOperationException("SQL query 'GetUserByUsernameOrEmail' not found.");
+
+                using var connection = _context.CreateConnection();
+                return await connection.QueryFirstOrDefaultAsync<User>(
+                    query,
+                    new { Login = usernameOrEmail.Trim() }
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetUserByUsernameOrEmailAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.UserGetUserByEmailDatabaseError}: Failed to fetch user by username or email",
+                    ex);
+            }
+        }
+
         public async Task<User?> GetUserByEmailAsync(string email)
         {
             if (string.IsNullOrWhiteSpace(email))

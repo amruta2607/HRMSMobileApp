@@ -6,6 +6,8 @@
 
 
     "GetUserByEmail": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, e.BranchId, u.Department AS Designation, wr.WorkRoleName FROM Users u LEFT JOIN Employee e ON e.SystemUserId = u.UserId OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(CAST(u.WorkRoleId AS NVARCHAR(MAX)), ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.Email = @Email",
+
+    "GetUserByUsernameOrEmail": "SELECT TOP 1 u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, e.BranchId, u.Department AS Designation, wr.WorkRoleName FROM Users u LEFT JOIN Employee e ON e.SystemUserId = u.UserId OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(CAST(u.WorkRoleId AS NVARCHAR(MAX)), ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE LOWER(LTRIM(RTRIM(u.Username))) = LOWER(LTRIM(RTRIM(@Login))) OR LOWER(LTRIM(RTRIM(u.Email))) = LOWER(LTRIM(RTRIM(@Login))) ORDER BY CASE WHEN LOWER(LTRIM(RTRIM(u.Username))) = LOWER(LTRIM(RTRIM(@Login))) THEN 0 ELSE 1 END",
     "GetUserByMobile": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PinNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.department AS Designation, wr.WorkRoleName FROM Users u OUTER APPLY (SELECT w.WorkRoleName FROM STRING_SPLIT(u.WorkRoleId, ',') s LEFT JOIN WorkRole w ON w.WorkRoleId = TRY_CAST(s.value AS INT)) wr WHERE u.MobileNumber = @MobileNumber",
 
     "GetUsersByOrganisationId": "SELECT UserId,Username,Email,IsActive,MobileNumber,PinNumber,department AS Designation,IsHrUser,IsTenantAdmin,TenantId AS OrganisationId,BranchId,WorkRoleId FROM Users WHERE TenantId = @OrganisationId",
@@ -122,7 +124,7 @@
 
     "GetNextLeaveRequestNumber": "SELECT TOP 1 Number FROM LeaveRequest WHERE TenantId = @OrganisationId ORDER BY Id DESC",
 
-    "GetUserByUsernameForWebLogin": "SELECT u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.BranchId, u.department AS Designation, w.WorkRoleName FROM Users u LEFT JOIN WorkRole w ON w.WorkRoleId = u.WorkRoleId WHERE u.Username = @Username",
+    "GetUserByUsernameForWebLogin": "SELECT TOP 1 u.UserId, u.Username, u.Email, u.MobileNumber, u.PasswordHash, u.PasswordSalt, u.IsActive, u.IsHrUser, u.IsTenantAdmin, u.TenantId AS OrganisationId, u.BranchId, u.department AS Designation, w.WorkRoleName FROM Users u LEFT JOIN WorkRole w ON w.WorkRoleId = u.WorkRoleId WHERE LOWER(LTRIM(RTRIM(u.Username))) = LOWER(LTRIM(RTRIM(@Username))) OR LOWER(LTRIM(RTRIM(u.Email))) = LOWER(LTRIM(RTRIM(@Username))) ORDER BY CASE WHEN LOWER(LTRIM(RTRIM(u.Username))) = LOWER(LTRIM(RTRIM(@Username))) THEN 0 ELSE 1 END",
 
     "CreateUser": "INSERT INTO Users (Username, DisplayName, Email, MobileNumber, PinNumber, PasswordHash, PasswordSalt, WorkRoleId, TenantId, BranchId, IsHrUser, IsTenantAdmin, IsActive) VALUES (@Username, @DisplayName, @Email, @MobileNumber, @PinNumber, @PasswordHash, @PasswordSalt, @WorkRoleId, @OrganisationId, @BranchId, @IsHrUser, @IsTenantAdmin, @IsActive); SELECT CAST(SCOPE_IDENTITY() AS INT);",
 

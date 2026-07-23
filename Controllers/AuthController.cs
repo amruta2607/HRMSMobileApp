@@ -97,8 +97,8 @@ namespace MobileWebApi.Controllers
         }
 
         /// <summary>
-        /// Email and Password Login
-        /// Authenticates user with Email and Password
+        /// Username/Email and Password Login
+        /// Authenticates user with Username or Email and Password
         /// POST: api/auth/login-email
         /// </summary>
         [HttpPost("login-email")]
@@ -106,27 +106,29 @@ namespace MobileWebApi.Controllers
         {
             try
             {
-                _logger.LogInformation(LogMessages.Auth.LoginAttempt, request.email);
+                var usernameOrEmail = request?.GetUsernameOrEmail() ?? string.Empty;
+                _logger.LogInformation(LogMessages.Auth.LoginAttempt, usernameOrEmail);
 
-                if (string.IsNullOrWhiteSpace(request.email) || string.IsNullOrWhiteSpace(request.password))
+                if (string.IsNullOrWhiteSpace(usernameOrEmail) || string.IsNullOrWhiteSpace(request?.password))
                 {
-                    _logger.LogWarning(LogMessages.Auth.LoginFailed, request.email);
+                    _logger.LogWarning(LogMessages.Auth.LoginFailed, usernameOrEmail);
                     return BadRequest(new { Success = false, Message = AuthMessages.InvalidCredentials });
                 }
 
-                var user = await _userRepository.GetUserByEmailAsync(request.email);
+                var user = await _userRepository.GetUserByUsernameOrEmailAsync(usernameOrEmail);
 
+                // Generic failure for missing/inactive users — do not reveal which identifier failed.
                 if (user == null || !user.IsActive)
                 {
-                    _logger.LogWarning(LogMessages.Auth.LoginFailed, request.email);
-                    return Unauthorized(new { Success = false, Message = UserMessages.UserNotFound });
+                    _logger.LogWarning(LogMessages.Auth.LoginFailed, usernameOrEmail);
+                    return Unauthorized(new { Success = false, Message = AuthMessages.InvalidCredentials });
                 }
 
                 // Validate password using the same process as Change Password and Reset Password
                 bool isPasswordValid = ValidateUserPassword(request.password, user);
                 if (!isPasswordValid)
                 {
-                    _logger.LogWarning(LogMessages.Auth.LoginFailed, request.email);
+                    _logger.LogWarning(LogMessages.Auth.LoginFailed, usernameOrEmail);
                     return Unauthorized(new { Success = false, Message = AuthMessages.InvalidCredentials });
                 }
 
@@ -139,7 +141,7 @@ namespace MobileWebApi.Controllers
                 var employee = await _employeeRepository.GetEmployeebyUserIdAsync(user.UserId);
                 var authTokens = await _tokenService.GenerateTokensAsync(user);
 
-                _logger.LogInformation(LogMessages.Auth.LoginSuccessful, request.email);
+                _logger.LogInformation(LogMessages.Auth.LoginSuccessful, usernameOrEmail);
 
                 var isGeoFencingEnabled = tenantConfig?.IsGeoFencingEnabled ?? false;
 

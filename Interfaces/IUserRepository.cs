@@ -8,6 +8,7 @@ namespace MobileWebApi.Interfaces
         Task<User?> GetUserByIdAsync(int id);
         Task<User?> GetUserByUsernameOrMobileAsync(string login);
         Task<User?> GetUserByUsernameForWebLoginAsync(string username);
+        Task<User?> GetUserByUsernameOrEmailAsync(string usernameOrEmail);
         Task<User?> GetUserByEmailAsync(string email);
         Task<User?> GetUserByMobileAsync(string mobileNumber);
         Task<IReadOnlyList<string>> GetActiveWorkRolesByUserIdAsync(int userId);
