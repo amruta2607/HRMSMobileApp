@@ -76,14 +76,13 @@ namespace MobileWebApi.Models.Requests
         /// <summary>
         /// Purchase date (NOT NULL).
         /// </summary>
-        [Required(ErrorMessage = "Purchase date is required.")]
+     
         public DateTime PurchaseDate { get; set; }
 
         /// <summary>
         /// Purchase price (NOT NULL).
         /// </summary>
-        [Required(ErrorMessage = "Purchase price is required.")]
-        [Range(0, double.MaxValue, ErrorMessage = "Purchase price must be greater than or equal to 0.")]
+      
         public decimal PurchasePrice { get; set; }
 
         /// <summary>

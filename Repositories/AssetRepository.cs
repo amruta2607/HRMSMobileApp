@@ -345,8 +345,8 @@ namespace MobileWebApi.Repositories
                 if (asset == null)
                     throw new AssetNotFoundException(AssetMessages.NotFound);
 
-                var purchaseDate = OptionalValueHelper.NullIfDefault(request.PurchaseDate)
-                    ?? throw new AssetValidationException(AssetMessages.PurchaseDateRequired);
+                //var purchaseDate = OptionalValueHelper.NullIfDefault(request.PurchaseDate)
+                //    ?? throw new AssetValidationException(AssetMessages.PurchaseDateRequired);
 
                 if (request.PurchasePrice < 0)
                     throw new AssetValidationException(AssetMessages.PurchasePriceRequired);
@@ -368,8 +368,9 @@ namespace MobileWebApi.Repositories
                 var branchId = OptionalValueHelper.NullIfNonPositive(request.BranchId);
                 var businessUnitId = OptionalValueHelper.NullIfNonPositive(request.BusinessUnitId);
                 var productionYear = OptionalValueHelper.NullIfNonPositive(request.ProductionYear);
+                var purchaseDate = OptionalValueHelper.NullIfDefault(request.PurchaseDate);
 
-                var warrantyExpiryDate = OptionalValueHelper.NullIfDefault(request.WarrantyExpiryDate);
+				var warrantyExpiryDate = OptionalValueHelper.NullIfDefault(request.WarrantyExpiryDate);
                 var maintenanceDueDate = OptionalValueHelper.NullIfDefault(request.MaintenanceDueDate);
 
                 await ValidateOptionalLookupsAsync(
