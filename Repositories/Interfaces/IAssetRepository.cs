@@ -32,5 +32,10 @@ namespace MobileWebApi.Repositories.Interfaces
         /// Deletes an asset and all related dependent records for the authenticated user's organisation.
         /// </summary>
         Task<AssetOperationResponse> DeleteAssetAsync(int assetId, string? ipAddress);
+
+        /// <summary>
+        /// Retrieves the QR code for an asset belonging to the authenticated user's organisation.
+        /// </summary>
+        Task<AssetQrCodeResponse> GetAssetQrCodeAsync(int assetId);
     }
 }

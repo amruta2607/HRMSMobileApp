@@ -570,6 +570,83 @@ namespace MobileWebApi.Repositories
             }
         }
 
+        /// <inheritdoc />
+        public async Task<AssetQrCodeResponse> GetAssetQrCodeAsync(int assetId)
+        {
+            var tenantId = _tenantContext.GetRequiredOrganisationId();
+            var userId = _tenantContext.UserId;
+
+            try
+            {
+                _logger.LogInformation(
+                    LogMessages.Asset.FetchingQrCode,
+                    assetId,
+                    userId,
+                    tenantId);
+
+                using var connection = _context.CreateConnection();
+                var asset = await connection.QueryFirstOrDefaultAsync<AssetQrCodeRow>(
+                    _queries.Get("Asset_GetQrCodeById"),
+                    new { AssetId = assetId, TenantId = tenantId });
+
+                if (asset == null)
+                    throw new AssetNotFoundException(AssetMessages.NotFound);
+
+                var qrCode = asset.QRCodePath;
+
+                if (string.IsNullOrWhiteSpace(qrCode))
+                {
+                    _logger.LogWarning(
+                        LogMessages.Asset.QrCodeNotFound,
+                        assetId,
+                        tenantId);
+                    throw new AssetQrCodeNotFoundException(AssetMessages.QrCodeNotFound);
+                }
+
+                var assetTagNumber = !string.IsNullOrWhiteSpace(asset.AssetTagNumber)
+                    ? asset.AssetTagNumber
+                    : asset.AssetCode;
+
+                _logger.LogInformation(
+                    LogMessages.Asset.QrCodeFetched,
+                    assetId,
+                    tenantId);
+
+                return new AssetQrCodeResponse
+                {
+                    Success = true,
+                    AssetId = asset.Id,
+                    AssetTagNumber = assetTagNumber,
+                    AssetName = asset.AssetName,
+                    QrCode = qrCode
+                };
+            }
+            catch (AssetNotFoundException)
+            {
+                throw;
+            }
+            catch (AssetQrCodeNotFoundException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    LogMessages.Asset.ErrorFetchingQrCode,
+                    assetId,
+                    tenantId);
+
+                _logger.LogException(
+                    ExceptionCodes.Asset.GetQrCode,
+                    nameof(GetAssetQrCodeAsync),
+                    ex,
+                    userId);
+
+                throw;
+            }
+        }
+
         private static async Task DeleteOptionalDependentTablesAsync(
             IDbConnection connection,
             IDbTransaction transaction,
@@ -627,6 +704,17 @@ namespace MobileWebApi.Repositories
             public int Id { get; set; }
             public string Number { get; set; } = string.Empty;
             public string AssetName { get; set; } = string.Empty;
+        }
+
+        private sealed class AssetQrCodeRow
+        {
+            public int Id { get; set; }
+            public string? AssetName { get; set; }
+            public string? AssetTagNumber { get; set; }
+            public string? AssetCode { get; set; }
+            public string? QRCodePath { get; set; }
+            public string? QRCodeText { get; set; }
+            public bool? QRCodeGenerated { get; set; }
         }
 
         private sealed class ForeignKeyChildRow

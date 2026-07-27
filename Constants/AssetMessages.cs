@@ -14,7 +14,11 @@ namespace MobileWebApi.Constants
         public const string HandoverUpdatedSuccessfully = "Asset handover updated successfully.";
         public const string HandoverNotFound = "Asset handover record not found.";
         public const string NotFound = "Asset not found.";
+        public const string QrCodeNotFound = "QR Code not found.";
+        public const string NotFoundForQrCodeGeneration = "Asset was not found for QR code generation.";
+        public const string QrCodeFetchedSuccessfully = "Asset QR code fetched successfully.";
         public const string EmployeeNotFound = "Employee not found.";
+
         public const string AssetInactiveOrDisposed = "Asset is disposed or retired and cannot be handed over.";
         public const string SameHandoverEmployee = "Asset is already assigned to this employee.";
         public const string HandoverByEmployeeRequired = "A valid employee record is required to perform handover.";

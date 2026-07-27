@@ -456,10 +456,15 @@ namespace MobileWebApi.Constants
             public const string AssetDeleted = "Asset deleted. AssetId={AssetId}, Number={AssetNumber}, Name={AssetName}, DeletedByUserId={UserId}, TenantId={TenantId}, IpAddress={IpAddress}, DeletedAtUtc={Timestamp}.";
             public const string ErrorDeletingAsset = "Error deleting asset {AssetId} for organisation {OrganisationId}.";
             public const string DeleteForbidden = "User {UserId} attempted to delete asset {AssetId} without Admin/SuperAdmin role.";
+            public const string FetchingQrCode = "Fetching QR code for asset {AssetId} by user {UserId} in organisation {OrganisationId}.";
+            public const string QrCodeFetched = "Fetched QR code for asset {AssetId} in organisation {OrganisationId}.";
+            public const string ErrorFetchingQrCode = "Error fetching QR code for asset {AssetId} in organisation {OrganisationId}.";
+            public const string QrCodeNotFound = "QR code not found for asset {AssetId} in organisation {OrganisationId}.";
         }
 
         // Asset hand over logs
         public static class AssetHandOver
+
         {
             public const string ErrorFetchingList = "Error fetching asset hand over list for organisation {OrganisationId}.";
             public const string ErrorHandingOver = "Error handing over asset {AssetId} for organisation {OrganisationId}.";

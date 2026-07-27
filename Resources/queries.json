@@ -350,7 +350,10 @@
 
     "Asset_GetForQrCode": "SELECT Id, AssetCode, QRCodePath, QRCodeText, QRCodeGenerated, QRCodeGeneratedDate FROM [dbo].[Asset] WHERE Id = @AssetId AND TenantId = @TenantId",
 
+    "Asset_GetQrCodeById": "SELECT a.Id, a.AssetName, a.AssetTagNumber, a.AssetCode, a.QRCodePath, a.QRCodeText, a.QRCodeGenerated FROM [dbo].[Asset] a WHERE a.Id = @AssetId AND a.TenantId = @TenantId",
+
     "Asset_UpdateQrCode": "UPDATE [dbo].[Asset] SET AssetCode = @AssetCode, QRCodePath = @QRCodePath, QRCodeText = @QRCodeText, QRCodeGenerated = 1, QRCodeGeneratedDate = @QRCodeGeneratedDate WHERE Id = @AssetId AND TenantId = @TenantId",
+
 
     "AssetDashboard_GetKpiMetrics": "SELECT COUNT(*) AS TotalCount, SUM(CASE WHEN a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS TotalPrevCount, SUM(CASE WHEN {IN_USE} THEN 1 ELSE 0 END) AS InUseCount, SUM(CASE WHEN {IN_USE} AND a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS InUsePrevCount, SUM(CASE WHEN {MAINTENANCE} THEN 1 ELSE 0 END) AS MaintenanceCount, SUM(CASE WHEN {MAINTENANCE} AND a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS MaintenancePrevCount, SUM(CASE WHEN {OUT_OF_SERVICE} THEN 1 ELSE 0 END) AS OutOfServiceCount, SUM(CASE WHEN {OUT_OF_SERVICE} AND a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS OutOfServicePrevCount FROM [dbo].[Asset] a LEFT JOIN [dbo].[AssetStatus] s ON s.Id = a.AssetStatusId WHERE a.TenantId = @TenantId",
 

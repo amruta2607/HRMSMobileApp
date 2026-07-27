@@ -380,7 +380,9 @@ namespace MobileWebApi.Constants
             public const string Update = "ASSET-005";
             public const string GetLookups = "ASSET-008";
             public const string Delete = "ASSET-010";
+            public const string GetQrCode = "ASSET-012";
         }
+
 
         // Asset hand over list (AssetHandOverRepository)
         public static class AssetHandOver
