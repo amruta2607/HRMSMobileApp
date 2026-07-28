@@ -22,8 +22,12 @@ namespace MobileWebApi.Swagger
             if (!ConsumesMultipart(context))
                 return;
 
+            // When a complex [FromForm] model contains an IFormFile, ApiExplorer flattens it:
+            // scalar properties are described with BindingSource.Form, but the IFormFile
+            // property is described with BindingSource.FormFile. Both must be collected,
+            // otherwise the file field is silently dropped and no upload control is rendered.
             var formParameters = context.ApiDescription.ParameterDescriptions
-                .Where(p => p.Source == BindingSource.Form)
+                .Where(p => p.Source == BindingSource.Form || p.Source == BindingSource.FormFile)
                 .ToList();
 
             if (formParameters.Count == 0)
