@@ -22,8 +22,11 @@ namespace MobileWebApi.Swagger
             if (!ConsumesMultipart(context))
                 return;
 
+            // IFormFile properties on a [FromForm] model are reported by the ApiExplorer
+            // with BindingSource.FormFile (not BindingSource.Form), so both must be included
+            // or the file upload field is dropped from the generated schema.
             var formParameters = context.ApiDescription.ParameterDescriptions
-                .Where(p => p.Source == BindingSource.Form)
+                .Where(p => p.Source == BindingSource.Form || p.Source == BindingSource.FormFile)
                 .ToList();
 
             if (formParameters.Count == 0)
