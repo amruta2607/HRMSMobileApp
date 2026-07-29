@@ -87,12 +87,35 @@ namespace MobileWebApi.Services
             (bool AttendanceEnabled, bool EnableLocationTracking, bool EnableEmployeeLevelLocationTracking, bool EmployeeLocationTrackingEnabled) settings,
             LocationTrackingConfiguration configuration)
         {
+            // Hierarchical master-switch resolution (mirrors the login API):
+            // 1. EnableLocationTracking is the master switch. If it is off, all
+            //    employee-level flags are forced false and employee settings ignored.
+            // 2. When on, EnableEmployeeLevelLocationTracking gates whether the
+            //    employee's own EnableLocationTracking value is surfaced.
+            bool effectiveEnableEmployeeLevelLocationTracking;
+            bool effectiveEmployeeLocationTrackingEnabled;
+            if (!settings.EnableLocationTracking)
+            {
+                effectiveEnableEmployeeLevelLocationTracking = false;
+                effectiveEmployeeLocationTrackingEnabled = false;
+            }
+            else if (!settings.EnableEmployeeLevelLocationTracking)
+            {
+                effectiveEnableEmployeeLevelLocationTracking = false;
+                effectiveEmployeeLocationTrackingEnabled = false;
+            }
+            else
+            {
+                effectiveEnableEmployeeLevelLocationTracking = true;
+                effectiveEmployeeLocationTrackingEnabled = settings.EmployeeLocationTrackingEnabled;
+            }
+
             return new LocationTrackingConfigurationResponse
             {
                 AttendanceEnabled = settings.AttendanceEnabled,
                 EnableLocationTracking = settings.EnableLocationTracking,
-                EnableEmployeeLevelLocationTracking = settings.EnableEmployeeLevelLocationTracking,
-                EmployeeLocationTrackingEnabled = settings.EmployeeLocationTrackingEnabled,
+                EnableEmployeeLevelLocationTracking = effectiveEnableEmployeeLevelLocationTracking,
+                EmployeeLocationTrackingEnabled = effectiveEmployeeLocationTrackingEnabled,
 
                 GPSPollingInterval = configuration.GPSPollingInterval,
                 MinimumDisplacement = configuration.MinimumDisplacement,
