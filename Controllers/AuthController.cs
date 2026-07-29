@@ -981,6 +981,30 @@ namespace MobileWebApi.Controllers
                 enableEmployeeLevelLocationTracking,
                 employeeLocationTracking);
 
+            // Hierarchical master-switch resolution:
+            // 1. EnableLocationTracking is the master switch. If it is off, all
+            //    employee-level flags are forced false and employee settings ignored.
+            // 2. When on, EnableEmployeeLevelLocationTracking gates whether the
+            //    employee's own EnableLocationTracking value is surfaced.
+            var effectiveEnableLocationTracking = locationTracking.EnableLocationTracking;
+            bool effectiveEnableEmployeeLevelLocationTracking;
+            bool effectiveEmployeeLocationTrackingEnabled;
+            if (!effectiveEnableLocationTracking)
+            {
+                effectiveEnableEmployeeLevelLocationTracking = false;
+                effectiveEmployeeLocationTrackingEnabled = false;
+            }
+            else if (!enableEmployeeLevelLocationTracking)
+            {
+                effectiveEnableEmployeeLevelLocationTracking = false;
+                effectiveEmployeeLocationTrackingEnabled = false;
+            }
+            else
+            {
+                effectiveEnableEmployeeLevelLocationTracking = true;
+                effectiveEmployeeLocationTrackingEnabled = employeeLocationTracking ?? false;
+            }
+
             return new TokenWithRefreshResponse
             {
                 Success = true,
@@ -993,9 +1017,9 @@ namespace MobileWebApi.Controllers
                 Username = user.Username,
                 OrganisationId = organisationIdOverride ?? user.OrganisationId,
                 AttendanceEnabled = locationTracking.AttendanceEnabled,
-                EnableLocationTracking = locationTracking.EnableLocationTracking,
-                EnableEmployeeLevelLocationTracking = locationTracking.EnableEmployeeLevelLocationTracking,
-                EmployeeLocationTrackingEnabled = locationTracking.EmployeeLocationTrackingEnabled,
+                EnableLocationTracking = effectiveEnableLocationTracking,
+                EnableEmployeeLevelLocationTracking = effectiveEnableEmployeeLevelLocationTracking,
+                EmployeeLocationTrackingEnabled = effectiveEmployeeLocationTrackingEnabled,
                 IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
                 IsGeoFencingEnabled = isGeoFencingEnabled,
                 Latitude = isGeoFencingEnabled ? tenantConfig?.Latitude : null,
