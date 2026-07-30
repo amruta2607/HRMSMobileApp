@@ -1,10 +1,7 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace MobileWebApi.Models.Requests
 {
     /// <summary>
     /// Request payload for updating an existing asset from the mobile application.
-    /// Only database NOT NULL fields (PurchaseDate, PurchasePrice) are validated.
     /// </summary>
     public class UpdateAssetRequest
     {

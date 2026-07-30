@@ -42,5 +42,17 @@ namespace MobileWebApi.Constants
         public const string HandoverLookupsFetchedSuccessfully = "Lookup data retrieved successfully.";
         public const string AssetNotAvailableForHandover = "The selected asset is not available for handover.";
         public const string InvalidHandOverByEmployee = "The selected hand over by employee is invalid.";
+
+        // Asset maintenance messages
+        public const string MaintenanceCreatedSuccessfully = "Asset maintenance created successfully.";
+        public const string MaintenanceUpdatedSuccessfully = "Asset maintenance updated successfully.";
+        public const string MaintenanceRetrievedSuccessfully = "Asset maintenance records retrieved successfully.";
+        public const string MaintenanceDeletedSuccessfully = "Asset maintenance deleted successfully.";
+        public const string MaintenanceNotFound = "Asset maintenance record not found.";
+        public const string MaintenanceDateRequired = "Maintenance date is required.";
+        public const string MaintenanceCostInvalid = "Cost must be greater than or equal to 0.";
+        public const string MaintenanceDeleteForbidden = "You are not authorized to delete this asset maintenance record.";
+        public const string InvalidAsset = "The selected asset is invalid.";
+        public const string AttachmentUploadFailed = "Failed to upload one or more attachments. No changes were saved.";
     }
 }

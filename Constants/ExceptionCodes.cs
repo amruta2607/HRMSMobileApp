@@ -394,6 +394,18 @@ namespace MobileWebApi.Constants
             public const string Delete = "ASSET-011";
         }
 
+        // Asset maintenance (AssetMaintenanceRepository / AssetMaintenanceService)
+        public static class AssetMaintenance
+        {
+            public const string Create = "ASSET-013";
+            public const string GetById = "ASSET-014";
+            public const string GetList = "ASSET-015";
+            public const string Delete = "ASSET-016";
+            public const string Update = "ASSET-017";
+            public const string GetByAsset = "ASSET-018";
+            public const string AttachmentUpload = "ASSET-019";
+        }
+
         // Scanner (ScannerRepository)
         public static class Scanner
         {

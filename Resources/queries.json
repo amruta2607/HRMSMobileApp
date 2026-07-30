@@ -399,6 +399,24 @@
 
     "AssetHandOver_Update": "UPDATE [dbo].[AssetHandOver] SET Description = @Description, HandOverDate = @HandOverDate, HandOverToId = @HandOverToId, Location = @Location, UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE Id = @Id AND TenantId = @TenantId",
 
+    "AssetMaintenance_ExistsAsset": "SELECT 1 FROM [dbo].[Asset] WHERE Id = @AssetId AND TenantId = @TenantId",
+
+    "AssetMaintenance_Insert": "INSERT INTO [dbo].[AssetMaintenance] (AssetId, Cost, Attachment, Date, ResponsiblePerson, AssetNumber, AssetName, AssetDescription, InsertDate, InsertUserId, UpdateDate, UpdateUserId, TenantId) VALUES (@AssetId, @Cost, @Attachment, @Date, @ResponsiblePerson, @AssetNumber, @AssetName, @AssetDescription, GETDATE(), @InsertUserId, NULL, NULL, @TenantId); SELECT CAST(SCOPE_IDENTITY() AS INT);",
+
+    "AssetMaintenance_GetById": "SELECT Id, AssetId, Cost, Attachment, Date, ResponsiblePerson, AssetNumber, AssetName, AssetDescription FROM [dbo].[AssetMaintenance] WHERE Id = @Id AND TenantId = @TenantId",
+
+    "AssetMaintenance_GetForDelete": "SELECT Id, AssetId FROM [dbo].[AssetMaintenance] WHERE Id = @Id AND TenantId = @TenantId",
+
+    "AssetMaintenance_Update": "UPDATE [dbo].[AssetMaintenance] SET AssetId = @AssetId, Cost = @Cost, Attachment = COALESCE(@Attachment, Attachment), Date = @Date, ResponsiblePerson = @ResponsiblePerson, AssetNumber = @AssetNumber, AssetName = @AssetName, AssetDescription = @AssetDescription, UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE Id = @Id AND TenantId = @TenantId",
+
+    "AssetMaintenance_GetByAssetId": "SELECT Id, AssetId, AssetNumber, AssetName, AssetDescription, Cost, Attachment, Date, ResponsiblePerson FROM [dbo].[AssetMaintenance] WHERE AssetId = @AssetId AND TenantId = @TenantId ORDER BY Date DESC, InsertDate DESC",
+
+    "AssetMaintenance_GetCount": "SELECT COUNT(1) FROM [dbo].[AssetMaintenance] WHERE TenantId = @TenantId AND (@Search IS NULL OR AssetNumber LIKE @Search OR AssetName LIKE @Search OR ResponsiblePerson LIKE @Search OR AssetDescription LIKE @Search)",
+
+    "AssetMaintenance_GetPaged": "SELECT Id, AssetId, Cost, Attachment, Date, ResponsiblePerson, AssetNumber, AssetName, AssetDescription FROM [dbo].[AssetMaintenance] WHERE TenantId = @TenantId AND (@Search IS NULL OR AssetNumber LIKE @Search OR AssetName LIKE @Search OR ResponsiblePerson LIKE @Search OR AssetDescription LIKE @Search) ORDER BY {ORDER_BY} OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY",
+
+    "AssetMaintenance_DeleteById": "DELETE FROM [dbo].[AssetMaintenance] WHERE Id = @Id AND TenantId = @TenantId",
+
     "GetTemplates": "SELECT Id, TemplateName FROM [dbo].[Template] WHERE IsActive = 1 AND TenantId = @TenantId AND ActionType='Submission' ORDER BY TemplateName",
 
     "Asset_LookupAssetStatuses": "SELECT Id, [Name] FROM [dbo].[AssetStatus] WHERE TenantId = @TenantId OR TenantId IS NULL ORDER BY [Name]",

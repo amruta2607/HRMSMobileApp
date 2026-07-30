@@ -307,6 +307,9 @@ namespace MobileWebApi.Constants
             public const string FailedToRecordLocation = "Failed to record location for employee {EmployeeId}";
             public const string ProcessingLocationBatch = "Processing location batch for employee {EmployeeId}, tenant {TenantId}, record count {RecordCount}";
             public const string FailedToRecordLocationBatch = "Failed to record location batch for employee {EmployeeId}";
+            public const string PunchLocationRecorded = "Recorded {Direction} punch location tracking record {RecordId} for employee {EmployeeId}, tenant {TenantId}.";
+            public const string PunchLocationSkipped = "Skipped {Direction} punch location tracking for employee {EmployeeId}, tenant {TenantId}: {Reason}.";
+            public const string FailedToRecordPunchLocation = "Failed to record {Direction} punch location tracking for employee {EmployeeId}, tenant {TenantId}.";
         }
 
         public static class LocationTrackingIssue
@@ -475,6 +478,29 @@ namespace MobileWebApi.Constants
             public const string HandoverDeleted = "Asset handover deleted. HandoverId={HandoverId}, Number={HandoverNumber}, AssetId={AssetId}, DeletedByUserId={UserId}, TenantId={TenantId}, IpAddress={IpAddress}, DeletedAtUtc={Timestamp}.";
             public const string ErrorDeletingHandover = "Error deleting asset handover {HandoverId} for organisation {OrganisationId}.";
             public const string DeleteForbidden = "User {UserId} attempted to delete asset handover {HandoverId} without Admin/SuperAdmin role.";
+        }
+
+        // Asset maintenance logs
+        public static class AssetMaintenance
+        {
+            public const string Creating = "Creating asset maintenance for asset {AssetId} by user {UserId} in organisation {OrganisationId}.";
+            public const string Created = "Asset maintenance created. MaintenanceId={MaintenanceId}, AssetId={AssetId}, CreatedByUserId={UserId}, TenantId={TenantId}, CreatedAtUtc={Timestamp}.";
+            public const string ErrorCreating = "Error creating asset maintenance for organisation {OrganisationId}.";
+            public const string ErrorFetching = "Error fetching asset maintenance {MaintenanceId} for organisation {OrganisationId}.";
+            public const string ErrorFetchingList = "Error fetching asset maintenance list for organisation {OrganisationId}.";
+            public const string Deleting = "Deleting asset maintenance {MaintenanceId} by user {UserId} in organisation {OrganisationId}.";
+            public const string Deleted = "Asset maintenance deleted. MaintenanceId={MaintenanceId}, AssetId={AssetId}, DeletedByUserId={UserId}, TenantId={TenantId}, IpAddress={IpAddress}, DeletedAtUtc={Timestamp}.";
+            public const string ErrorDeleting = "Error deleting asset maintenance {MaintenanceId} for organisation {OrganisationId}.";
+            public const string DeleteForbidden = "User {UserId} attempted to delete asset maintenance {MaintenanceId} without Admin/SuperAdmin role.";
+            public const string Updating = "Updating asset maintenance {MaintenanceId} for asset {AssetId} by user {UserId} in organisation {OrganisationId}.";
+            public const string Updated = "Asset maintenance updated. MaintenanceId={MaintenanceId}, AssetId={AssetId}, UpdatedByUserId={UserId}, TenantId={TenantId}, UpdatedAtUtc={Timestamp}.";
+            public const string ErrorUpdating = "Error updating asset maintenance {MaintenanceId} for organisation {OrganisationId}.";
+            public const string FetchingByAsset = "Fetching asset maintenance history for asset {AssetId} in organisation {OrganisationId}.";
+            public const string FetchedByAsset = "Fetched {Count} asset maintenance records for asset {AssetId} in organisation {TenantId}.";
+            public const string ErrorFetchingByAsset = "Error fetching asset maintenance history for asset {AssetId} in organisation {OrganisationId}.";
+            public const string ValidationFailed = "Asset maintenance validation failed for user {UserId} in organisation {OrganisationId}: {Reason}.";
+            public const string AttachmentsUploaded = "Uploaded {Count} asset maintenance attachment(s) for tenant {TenantId} by user {UserId}.";
+            public const string AttachmentUploadFailed = "Failed to upload asset maintenance attachment '{FileName}' for tenant {TenantId}.";
         }
 
         // Scanner logs

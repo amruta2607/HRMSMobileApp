@@ -18,6 +18,8 @@ namespace MobileWebApi.Services
         private readonly ITenantWeekOffRepository _tenantWeekOffRepository;
         private readonly ITenantConfigurationRepository _tenantConfigurationRepository;
         private readonly IPunchTrackingRepository _punchTrackingRepository;
+        private readonly ILocationTrackingRepository _locationTrackingRepository;
+        private readonly IMobileTenantConfigurationRepository _mobileTenantConfigurationRepository;
         private readonly ILogger<AttendanceService> _logger;
 
         public AttendanceService(
@@ -30,6 +32,8 @@ namespace MobileWebApi.Services
             ITenantWeekOffRepository tenantWeekOffRepository,
             ITenantConfigurationRepository tenantConfigurationRepository,
             IPunchTrackingRepository punchTrackingRepository,
+            ILocationTrackingRepository locationTrackingRepository,
+            IMobileTenantConfigurationRepository mobileTenantConfigurationRepository,
             ILogger<AttendanceService> logger)
         {
             _repo = repo;
@@ -41,12 +45,16 @@ namespace MobileWebApi.Services
             _tenantWeekOffRepository = tenantWeekOffRepository;
             _tenantConfigurationRepository = tenantConfigurationRepository;
             _punchTrackingRepository = punchTrackingRepository;
+            _locationTrackingRepository = locationTrackingRepository;
+            _mobileTenantConfigurationRepository = mobileTenantConfigurationRepository;
             _logger = logger;
         }
 
         private const string MobileSource = "Mobile";
         private const string DirectionIn = "IN";
         private const string DirectionOut = "OUT";
+        private const string PunchInLocationFrom = "PunchIn";
+        private const string PunchOutLocationFrom = "PunchOut";
 
         /// <summary>
         /// Resolves EmployeeId from UserId by joining Users and Employee tables
@@ -176,6 +184,16 @@ namespace MobileWebApi.Services
 					_logger.LogInformation(
 						LogMessages.Attendance.PunchInSuccessful,
 						employeeId.Value);
+
+					await RecordPunchLocationTrackingAsync(
+						req.userId,
+						employeeId.Value,
+						tenantId,
+						req.latitude,
+						req.longitude,
+						punchIn,
+						DirectionIn,
+						PunchInLocationFrom);
 
 					return AttendanceMessages.PunchInSuccessful;
 				}
@@ -318,6 +336,16 @@ namespace MobileWebApi.Services
 				_logger.LogInformation(
 					LogMessages.Attendance.PunchOutSuccessful,
 					employeeId.Value);
+
+				await RecordPunchLocationTrackingAsync(
+					req.userId,
+					employeeId.Value,
+					tenantId,
+					req.latitude,
+					req.longitude,
+					punchOut,
+					DirectionOut,
+					PunchOutLocationFrom);
 
 				return AttendanceMessages.PunchOutSuccessful;
 			}
@@ -597,6 +625,107 @@ namespace MobileWebApi.Services
             return enabled;
         }
 
+        /// <summary>
+        /// Inserts a single <c>LocationTracking</c> record for a successful punch boundary
+        /// (Start Location on punch-in, End Location on punch-out).
+        /// This is purely additive to the existing punch workflow: it runs only after the punch
+        /// has already succeeded and any failure or ineligibility is logged and swallowed so it can
+        /// never affect the punch result. A record is written only when tenant/employee location
+        /// tracking is enabled (reusing the same <see cref="LocationTrackingSettingsHelper.ShouldTrackLocation"/>
+        /// rules as live tracking) and valid latitude/longitude are supplied by the punch request.
+        /// </summary>
+        private async Task RecordPunchLocationTrackingAsync(
+            int userId,
+            int employeeId,
+            int tenantId,
+            double? latitude,
+            double? longitude,
+            DateTime punchDateTime,
+            string direction,
+            string locationFrom)
+        {
+            try
+            {
+                if (tenantId <= 0)
+                {
+                    return;
+                }
+
+                // Only insert when valid coordinates are provided (mirrors live-tracking validation).
+                if (!latitude.HasValue || !longitude.HasValue
+                    || latitude.Value < -90 || latitude.Value > 90
+                    || longitude.Value < -180 || longitude.Value > 180)
+                {
+                    _logger.LogInformation(
+                        LogMessages.LocationTracking.PunchLocationSkipped,
+                        direction,
+                        employeeId,
+                        tenantId,
+                        "missing or invalid coordinates");
+                    return;
+                }
+
+                var mobileTenantConfig = await _mobileTenantConfigurationRepository.GetByTenantIdAsync(tenantId);
+                var employee = await _employeeRepository.GetEmployeebyUserIdAsync(userId);
+
+                // Reuse the shared eligibility rules used by the live location-tracking pipeline so a
+                // punch boundary record is only written when live tracking would also be active.
+                var shouldTrack = LocationTrackingSettingsHelper.ShouldTrackLocation(
+                    mobileTenantConfig?.IsAttendanceEnabled ?? false,
+                    mobileTenantConfig?.EnableLocationTracking ?? false,
+                    mobileTenantConfig?.EnableEmployeeLevelLocationTracking ?? false,
+                    employee?.EnableLocationTracking ?? false);
+
+                if (!shouldTrack)
+                {
+                    _logger.LogInformation(
+                        LogMessages.LocationTracking.PunchLocationSkipped,
+                        direction,
+                        employeeId,
+                        tenantId,
+                        "location tracking disabled or employee not eligible");
+                    return;
+                }
+
+                var recordId = await _locationTrackingRepository.InsertAsync(
+                    employeeId,
+                    tenantId,
+                    Math.Round(Convert.ToDecimal(latitude.Value), 6, MidpointRounding.AwayFromZero),
+                    Math.Round(Convert.ToDecimal(longitude.Value), 6, MidpointRounding.AwayFromZero),
+                    punchDateTime,
+                    locationFrom,
+                    userId);
+
+                if (recordId > 0)
+                {
+                    _logger.LogInformation(
+                        LogMessages.LocationTracking.PunchLocationRecorded,
+                        direction,
+                        recordId,
+                        employeeId,
+                        tenantId);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        LogMessages.LocationTracking.FailedToRecordPunchLocation,
+                        direction,
+                        employeeId,
+                        tenantId);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Never let location tracking break the punch operation — the punch already succeeded.
+                _logger.LogWarning(
+                    ex,
+                    LogMessages.LocationTracking.FailedToRecordPunchLocation,
+                    direction,
+                    employeeId,
+                    tenantId);
+            }
+        }
+
         private PunchTracking BuildInTracking(
             int tenantId,
             int employeeId,
@@ -713,6 +842,16 @@ namespace MobileWebApi.Services
 
                 if (punchId > 0)
                 {
+                    await RecordPunchLocationTrackingAsync(
+                        userId,
+                        employeeId,
+                        tenantId,
+                        req.latitude,
+                        req.longitude,
+                        punchIn,
+                        DirectionIn,
+                        PunchInLocationFrom);
+
                     _logger.LogInformation(LogMessages.Attendance.PunchInSuccessful, employeeId);
                     return AttendanceMessages.PunchInSuccessful;
                 }
@@ -733,6 +872,16 @@ namespace MobileWebApi.Services
                 imageUrl);
 
             await _repo.InsertPunchTrackingAsync(trackingOnly);
+
+            await RecordPunchLocationTrackingAsync(
+                userId,
+                employeeId,
+                tenantId,
+                req.latitude,
+                req.longitude,
+                punchIn,
+                DirectionIn,
+                PunchInLocationFrom);
 
             _logger.LogInformation(LogMessages.Attendance.PunchInSuccessful, employeeId);
             return AttendanceMessages.PunchInSuccessful;
@@ -820,6 +969,16 @@ namespace MobileWebApi.Services
                 punch.Id,
                 savedPunch?.PunchOut,
                 savedPunch?.Duration);
+
+            await RecordPunchLocationTrackingAsync(
+                userId,
+                employeeId,
+                tenantId,
+                req.latitude,
+                req.longitude,
+                punchOut,
+                DirectionOut,
+                PunchOutLocationFrom);
 
             _logger.LogInformation(LogMessages.Attendance.PunchOutSuccessful, employeeId);
             return AttendanceMessages.PunchOutSuccessful;
