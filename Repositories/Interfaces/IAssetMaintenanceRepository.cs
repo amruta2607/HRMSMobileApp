@@ -38,5 +38,17 @@ namespace MobileWebApi.Repositories.Interfaces
         /// Deletes an asset maintenance record for the authenticated user's organisation.
         /// </summary>
         Task<AssetOperationResponse> DeleteAsync(int id, string? ipAddress);
+
+        /// <summary>
+        /// Returns lookup data (assets and responsible persons) required by the Asset Maintenance module,
+        /// scoped to the current tenant.
+        /// </summary>
+        Task<AssetMaintenanceLookupResponse> GetAssetMaintenanceLookupsAsync();
+
+        /// <summary>
+        /// Returns the complete AssetHistory timeline for the specified asset,
+        /// scoped to the current tenant, ordered by ActionDate descending.
+        /// </summary>
+        Task<AssetTimelineListResponse> GetAssetTimelineAsync(int assetId);
     }
 }

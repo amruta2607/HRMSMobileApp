@@ -501,6 +501,12 @@ namespace MobileWebApi.Constants
             public const string ValidationFailed = "Asset maintenance validation failed for user {UserId} in organisation {OrganisationId}: {Reason}.";
             public const string AttachmentsUploaded = "Uploaded {Count} asset maintenance attachment(s) for tenant {TenantId} by user {UserId}.";
             public const string AttachmentUploadFailed = "Failed to upload asset maintenance attachment '{FileName}' for tenant {TenantId}.";
+            public const string FetchingLookups = "Fetching asset maintenance lookups for user {UserId} in organisation {OrganisationId}.";
+            public const string LookupsFetched = "Fetched asset maintenance lookups for organisation {OrganisationId}: assets={AssetCount}, responsiblePersons={ResponsiblePersonCount}.";
+            public const string ErrorFetchingLookups = "Error fetching asset maintenance lookups for organisation {OrganisationId}.";
+            public const string FetchingTimeline = "Fetching asset timeline for asset {AssetId} by user {UserId} in organisation {OrganisationId}.";
+            public const string TimelineFetched = "Fetched {Count} asset timeline records for asset {AssetId} in organisation {TenantId}.";
+            public const string ErrorFetchingTimeline = "Error fetching asset timeline for asset {AssetId} in organisation {OrganisationId}.";
         }
 
         // Scanner logs

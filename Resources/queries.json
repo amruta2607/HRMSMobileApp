@@ -417,6 +417,12 @@
 
     "AssetMaintenance_DeleteById": "DELETE FROM [dbo].[AssetMaintenance] WHERE Id = @Id AND TenantId = @TenantId",
 
+    "AssetMaintenance_LookupAssets": "SELECT a.Id, a.Number AS AssetNumber, a.AssetName, ISNULL(a.AssetCode, '') AS AssetCode, ISNULL(a.AssetTagNumber, '') AS AssetTagNumber FROM [dbo].[Asset] a LEFT JOIN [dbo].[AssetStatus] s ON s.Id = a.AssetStatusId WHERE a.TenantId = @TenantId AND NOT (LOWER(ISNULL(s.[Name], '')) LIKE '%disposed%' OR LOWER(ISNULL(s.[Name], '')) LIKE '%lost%' OR LOWER(ISNULL(s.[Name], '')) LIKE '%retired%' OR LOWER(ISNULL(s.[Name], '')) LIKE '%scrapped%' OR LOWER(ISNULL(s.[Name], '')) LIKE '%scrap%') ORDER BY a.AssetName",
+
+    "AssetMaintenance_LookupResponsiblePersons": "SELECT Id, EmployeeNumber AS EmployeeCode, Name AS EmployeeName FROM [dbo].[Employee] WHERE TenantId = @TenantId AND IsEmployeeActive = 1 ORDER BY Name",
+
+    "AssetMaintenance_GetTimeline": "SELECT * FROM [dbo].[AssetHistory] WHERE AssetId = @AssetId AND TenantId = @TenantId ORDER BY ActionDate DESC",
+
     "GetTemplates": "SELECT Id, TemplateName FROM [dbo].[Template] WHERE IsActive = 1 AND TenantId = @TenantId AND ActionType='Submission' ORDER BY TemplateName",
 
     "Asset_LookupAssetStatuses": "SELECT Id, [Name] FROM [dbo].[AssetStatus] WHERE TenantId = @TenantId OR TenantId IS NULL ORDER BY [Name]",

@@ -4,6 +4,7 @@ using MobileWebApi.Constants;
 using MobileWebApi.Helper;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models.Requests;
+using MobileWebApi.Models.Responses;
 using MobileWebApi.Repositories.Interfaces;
 using MobileWebApi.Services;
 
@@ -30,6 +31,96 @@ namespace MobileWebApi.Controllers
             _assetMaintenanceService = assetMaintenanceService
                 ?? throw new ArgumentNullException(nameof(assetMaintenanceService));
             _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        }
+
+        /// <summary>
+        /// Returns lookup data (assets and responsible persons) required by the Asset Maintenance module.
+        /// </summary>
+        /// <response code="200">Lookups fetched successfully.</response>
+        /// <response code="401">Caller is not authenticated or tenant access is denied.</response>
+        /// <response code="500">Unexpected server error.</response>
+        [HttpGet("/api/assetmaintenance/lookups")]
+        [ProducesResponseType(typeof(AssetMaintenanceLookupResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetLookups()
+        {
+            try
+            {
+                var tenantId = CurrentOrganisationId;
+                var userId = CurrentUserId;
+
+                Logger.LogInformation(LogMessages.AssetMaintenance.FetchingLookups, userId, tenantId);
+
+                var result = await _assetMaintenanceService.GetAssetMaintenanceLookupsAsync();
+                return Ok(result);
+            }
+            catch (TenantAccessException)
+            {
+                return TenantAccessDenied();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(
+                    ExceptionCodes.AssetMaintenance.GetLookups,
+                    nameof(GetLookups),
+                    ex,
+                    CurrentUserId);
+
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    success = false,
+                    message = GeneralMessages.UnexpectedError
+                });
+            }
+        }
+
+        /// <summary>
+        /// Returns the complete AssetHistory timeline for the specified asset,
+        /// ordered by ActionDate descending (latest activity first).
+        /// </summary>
+        /// <param name="assetId">The asset identifier.</param>
+        /// <response code="200">Timeline fetched successfully (may be an empty list).</response>
+        /// <response code="401">Caller is not authenticated or tenant access is denied.</response>
+        /// <response code="500">Unexpected server error.</response>
+        [HttpGet("/api/asset/{assetId:int}/timeline")]
+        [ProducesResponseType(typeof(AssetTimelineListResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetTimeline(int assetId)
+        {
+            try
+            {
+                var tenantId = CurrentOrganisationId;
+                var userId = CurrentUserId;
+
+                Logger.LogInformation(
+                    LogMessages.AssetMaintenance.FetchingTimeline,
+                    assetId,
+                    userId,
+                    tenantId);
+
+                var result = await _assetMaintenanceService.GetAssetTimelineAsync(assetId);
+                return Ok(result);
+            }
+            catch (TenantAccessException)
+            {
+                return TenantAccessDenied();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(
+                    ExceptionCodes.AssetMaintenance.GetTimeline,
+                    nameof(GetTimeline),
+                    ex,
+                    CurrentUserId);
+
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    success = false,
+                    message = GeneralMessages.UnexpectedError
+                });
+            }
         }
 
         /// <summary>

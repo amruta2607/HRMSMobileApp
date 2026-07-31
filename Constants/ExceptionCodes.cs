@@ -404,6 +404,8 @@ namespace MobileWebApi.Constants
             public const string Update = "ASSET-017";
             public const string GetByAsset = "ASSET-018";
             public const string AttachmentUpload = "ASSET-019";
+            public const string GetLookups = "ASSET-020";
+            public const string GetTimeline = "ASSET-021";
         }
 
         // Scanner (ScannerRepository)

@@ -306,6 +306,93 @@ namespace MobileWebApi.Repositories
         }
 
         /// <inheritdoc />
+        public async Task<AssetMaintenanceLookupResponse> GetAssetMaintenanceLookupsAsync()
+        {
+            try
+            {
+                var tenantId = _tenantContext.GetRequiredOrganisationId();
+                var userId = _tenantContext.UserId;
+
+                _logger.LogInformation(
+                    LogMessages.AssetMaintenance.FetchingLookups,
+                    userId,
+                    tenantId);
+
+                using var connection = _context.CreateConnection();
+
+                var assets = (await connection.QueryAsync<AssetMaintenanceLookupAssetDto>(
+                    _queries.Get("AssetMaintenance_LookupAssets"),
+                    new { TenantId = tenantId })).ToList();
+
+                var responsiblePersons = (await connection.QueryAsync<AssetMaintenanceLookupEmployeeDto>(
+                    _queries.Get("AssetMaintenance_LookupResponsiblePersons"),
+                    new { TenantId = tenantId })).ToList();
+
+                _logger.LogInformation(
+                    LogMessages.AssetMaintenance.LookupsFetched,
+                    tenantId,
+                    assets.Count,
+                    responsiblePersons.Count);
+
+                return new AssetMaintenanceLookupResponse
+                {
+                    Success = true,
+                    Message = AssetMessages.MaintenanceLookupsFetchedSuccessfully,
+                    Data = new AssetMaintenanceLookupData
+                    {
+                        Assets = assets,
+                        ResponsiblePersons = responsiblePersons
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(
+                    ExceptionCodes.AssetMaintenance.GetLookups,
+                    nameof(GetAssetMaintenanceLookupsAsync),
+                    ex,
+                    _tenantContext.UserId);
+                throw;
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<AssetTimelineListResponse> GetAssetTimelineAsync(int assetId)
+        {
+            try
+            {
+                var tenantId = _tenantContext.GetRequiredOrganisationId();
+
+                using var connection = _context.CreateConnection();
+                var items = (await connection.QueryAsync<AssetTimelineResponse>(
+                    _queries.Get("AssetMaintenance_GetTimeline"),
+                    new { AssetId = assetId, TenantId = tenantId })).ToList();
+
+                _logger.LogInformation(
+                    LogMessages.AssetMaintenance.TimelineFetched,
+                    items.Count,
+                    assetId,
+                    tenantId);
+
+                return new AssetTimelineListResponse
+                {
+                    Success = true,
+                    Message = AssetMessages.TimelineFetchedSuccessfully,
+                    Data = items
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(
+                    ExceptionCodes.AssetMaintenance.GetTimeline,
+                    nameof(GetAssetTimelineAsync),
+                    ex,
+                    _tenantContext.UserId);
+                throw;
+            }
+        }
+
+        /// <inheritdoc />
         public async Task<AssetOperationResponse> DeleteAsync(int id, string? ipAddress)
         {
             var tenantId = _tenantContext.GetRequiredOrganisationId();

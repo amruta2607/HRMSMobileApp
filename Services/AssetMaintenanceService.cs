@@ -114,6 +114,29 @@ namespace MobileWebApi.Services
             return _repository.DeleteAsync(id, ipAddress);
         }
 
+        /// <inheritdoc />
+        public Task<AssetMaintenanceLookupResponse> GetAssetMaintenanceLookupsAsync()
+        {
+            _logger.LogInformation(
+                LogMessages.AssetMaintenance.FetchingLookups,
+                _tenantContext.UserId,
+                _tenantContext.OrganisationId);
+
+            return _repository.GetAssetMaintenanceLookupsAsync();
+        }
+
+        /// <inheritdoc />
+        public Task<AssetTimelineListResponse> GetAssetTimelineAsync(int assetId)
+        {
+            _logger.LogInformation(
+                LogMessages.AssetMaintenance.FetchingTimeline,
+                assetId,
+                _tenantContext.UserId,
+                _tenantContext.OrganisationId);
+
+            return _repository.GetAssetTimelineAsync(assetId);
+        }
+
         /// <summary>
         /// Validates and uploads the supplied files using the existing upload service and returns
         /// the resulting attachment metadata. Returns <c>null</c> when no files are supplied so the

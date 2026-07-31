@@ -54,5 +54,7 @@ namespace MobileWebApi.Constants
         public const string MaintenanceDeleteForbidden = "You are not authorized to delete this asset maintenance record.";
         public const string InvalidAsset = "The selected asset is invalid.";
         public const string AttachmentUploadFailed = "Failed to upload one or more attachments. No changes were saved.";
+        public const string MaintenanceLookupsFetchedSuccessfully = "Asset maintenance lookups fetched successfully.";
+        public const string TimelineFetchedSuccessfully = "Asset timeline fetched successfully.";
     }
 }
