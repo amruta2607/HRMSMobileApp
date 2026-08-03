@@ -1,8 +1,12 @@
 /**
  * Battery Optimization Service
- * 
+ *
  * Handles Android battery optimization settings to ensure reliable
  * punch in/out functionality and attendance system operation.
+ *
+ * Behaviour is driven by dashboard config:
+ *   enableBatteryOptimizationCheck
+ *   batteryOptimizationMode: 0=Warning Only, 1=Strict, 2=Lenient
  */
 
 import 'dart:io';
@@ -10,15 +14,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../Theme/app_colors.dart';
+import '../../constants/location_config.dart';
 
 class BatteryOptimizationService {
   static const MethodChannel _channel = MethodChannel('battery_optimization');
 
-  /**
-   * Check if battery optimization is disabled for this app
-   */
   static Future<bool> isBatteryOptimizationDisabled() async {
-    if (!Platform.isAndroid) return true; // Only applicable on Android
+    if (!Platform.isAndroid) return true;
     try {
       final bool isDisabled =
           await _channel.invokeMethod('isBatteryOptimizationDisabled');
@@ -29,9 +31,6 @@ class BatteryOptimizationService {
     }
   }
 
-  /**
-   * Request to disable battery optimization for this app
-   */
   static Future<void> requestDisableBatteryOptimization() async {
     if (!Platform.isAndroid) return;
     try {
@@ -41,32 +40,42 @@ class BatteryOptimizationService {
     }
   }
 
-  /**
-   * Show mandatory battery optimization dialog for punch functionality
-   */
+  /// Dashboard-driven check before punch.
   static Future<bool> showMandatoryBatteryOptimizationDialog(
       BuildContext context) async {
     if (!Platform.isAndroid) return true;
-    final bool isDisabled = await isBatteryOptimizationDisabled();
 
-    if (isDisabled) {
-      return true; // Already disabled, allow proceeding
+    if (!LocationConfig.ENABLE_BATTERY_OPTIMIZATION_CHECK) {
+      return true;
     }
 
-    // Show dialog and wait for user to complete the process
+    final mode = LocationConfig.BATTERY_OPTIMIZATION_MODE;
+    // Lenient: do not interrupt punch flow.
+    if (mode == 2) return true;
+
+    final bool isDisabled = await isBatteryOptimizationDisabled();
+    if (isDisabled) return true;
+
+    // Warning Only (0): non-blocking reminder.
+    if (mode == 0) {
+      await showBatteryOptimizationDialog(context);
+      return true;
+    }
+
+    // Strict (1): must complete settings before punch.
     final bool? completed = await showDialog<bool>(
       context: context,
-      barrierDismissible: false, // Cannot dismiss by tapping outside
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return PopScope(
-          canPop: false, // Cannot use back button to dismiss
+          canPop: false,
           child: AlertDialog(
-            icon: Icon(
+            icon: const Icon(
               Icons.battery_alert,
               color: Colors.orange,
               size: 40,
             ),
-            title: Text(
+            title: const Text(
               'Battery Settings Required',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
@@ -78,7 +87,7 @@ class BatteryOptimizationService {
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-              Text(
+                const Text(
                   'Please disable battery optimization for this app to ensure reliable punch in/out functionality.',
                   style: TextStyle(
                     fontWeight: FontWeight.w500,
@@ -87,9 +96,9 @@ class BatteryOptimizationService {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 Container(
-                  padding: EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.blue.shade50,
                     borderRadius: BorderRadius.circular(8),
@@ -97,8 +106,8 @@ class BatteryOptimizationService {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, color: Colors.blue, size: 18),
-                      SizedBox(width: 8),
+                      const Icon(Icons.info_outline, color: Colors.blue, size: 18),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'This setting is required for attendance system.',
@@ -114,7 +123,7 @@ class BatteryOptimizationService {
                 ),
               ],
             ),
-            actionsPadding: EdgeInsets.all(16),
+            actionsPadding: const EdgeInsets.all(16),
             actions: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -126,13 +135,13 @@ class BatteryOptimizationService {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryBlue,
                       foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    icon: Icon(Icons.settings, size: 18),
-                    label: Text(
+                    icon: const Icon(Icons.settings, size: 18),
+                    label: const Text(
                       'Open Settings',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
@@ -140,7 +149,7 @@ class BatteryOptimizationService {
                       ),
                     ),
                   ),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
                   OutlinedButton.icon(
                     onPressed: () async {
                       final bool isNowDisabled =
@@ -149,7 +158,7 @@ class BatteryOptimizationService {
                         Navigator.of(context).pop(true);
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
+                          const SnackBar(
                             content: Text(
                                 'Please disable battery optimization to continue.'),
                             backgroundColor: Colors.orange,
@@ -160,14 +169,14 @@ class BatteryOptimizationService {
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.primaryBlue,
-                      side: BorderSide(color: AppColors.primaryBlue),
-                      padding: EdgeInsets.symmetric(vertical: 12),
+                      side: const BorderSide(color: AppColors.primaryBlue),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    icon: Icon(Icons.check, size: 18),
-                    label: Text(
+                    icon: const Icon(Icons.check, size: 18),
+                    label: const Text(
                       'Done',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
@@ -186,35 +195,31 @@ class BatteryOptimizationService {
     return completed ?? false;
   }
 
-  /**
-   * Show battery optimization dialog (non-mandatory version)
-   */
   static Future<void> showBatteryOptimizationDialog(
       BuildContext context) async {
     if (!Platform.isAndroid) return;
-    final bool isDisabled = await isBatteryOptimizationDisabled();
+    if (!LocationConfig.ENABLE_BATTERY_OPTIMIZATION_CHECK) return;
 
-    if (isDisabled) {
-      return; // Already disabled, no need to show dialog
-    }
+    final bool isDisabled = await isBatteryOptimizationDisabled();
+    if (isDisabled) return;
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          icon: Icon(
+          icon: const Icon(
             Icons.battery_alert,
             color: Colors.orange,
             size: 40,
           ),
-          title: Text(
+          title: const Text(
             'Optimize Attendance',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 18,
             ),
           ),
-          content: Text(
+          content: const Text(
             'Disable battery optimization for better attendance tracking reliability.',
             style: TextStyle(
               fontWeight: FontWeight.w500,
@@ -225,7 +230,7 @@ class BatteryOptimizationService {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text(
+              child: const Text(
                 'LATER',
                 style: TextStyle(
                   color: Colors.grey,
@@ -242,7 +247,7 @@ class BatteryOptimizationService {
                 backgroundColor: AppColors.primaryBlue,
                 foregroundColor: Colors.white,
               ),
-              child: Text(
+              child: const Text(
                 'OPTIMIZE',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,

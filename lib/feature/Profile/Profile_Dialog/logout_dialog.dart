@@ -1,91 +1,23 @@
-// import 'dart:io';
-// import 'package:flutter/cupertino.dart';
-// import 'package:flutter/material.dart';
-//
-// import '../../../core/Utils/services/LogIn_out/auth_service.dart';
-// import '../../../core/Utils/services/token_storage.dart';
-// import '../../Login/login_screen.dart';
-//
-// class LogoutDialog {
-//   static void show(BuildContext context) {
-//     if (Platform.isIOS) {
-//       showCupertinoDialog(
-//         context: context,
-//         builder: (_) => CupertinoAlertDialog(
-//           title: const Text("Logout"),
-//           content: const Text("Are you sure you want to logout?"),
-//           actions: [
-//             CupertinoDialogAction(
-//               child: const Text("Cancel"),
-//               onPressed: () => Navigator.pop(context),
-//             ),
-//             CupertinoDialogAction(
-//               isDestructiveAction: true,
-//               child: const Text("Logout"),
-//               onPressed: () async {
-//                 Navigator.pop(context);
-//                 await _performLogout(context);
-//               },
-//             ),
-//           ],
-//         ),
-//       );
-//     } else {
-//       showDialog(
-//         context: context,
-//         builder: (_) => AlertDialog(
-//           title: const Text("Logout"),
-//           content: const Text("Are you sure you want to logout?"),
-//           actions: [
-//             TextButton(
-//               style: TextButton.styleFrom(
-//                 foregroundColor: Colors.red,
-//               ),
-//               child: const Text("Cancel"),
-//               onPressed: () => Navigator.pop(context),
-//             ),
-//             TextButton(
-//               style: TextButton.styleFrom(
-//                 foregroundColor: Colors.red,
-//                 textStyle: const TextStyle(fontWeight: FontWeight.bold),
-//               ),
-//               child: const Text("Logout"),
-//               onPressed: () async {
-//                 Navigator.pop(context);
-//                 await _performLogout(context);
-//               },
-//             ),
-//           ],
-//         ),
-//       );
-//     }
-//   }
-//
-//   static Future<void> _performLogout(BuildContext context) async {
-//     await AuthService.logout();
-//
-//     await TokenStorage.logout();
-//
-//     Navigator.pushAndRemoveUntil(
-//       context,
-//       MaterialPageRoute(builder: (_) => const LoginScreen()),
-//           (route) => false,
-//     );
-//   }
-// }
-
-
-
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/Utils/services/LogIn_out/auth_service.dart';
 import '../../../core/Utils/services/token_storage.dart';
+import '../../../core/Utils/services/Attendance service/attendance_service.dart';
+import '../../../core/Background_location _tracking/services/location_service.dart'
+    as bg_tracking;
+import '../../../core/Background_location _tracking/services/gps_monitor_service.dart';
 import '../../Login/login_screen.dart';
 
 class LogoutDialog {
   static void show(BuildContext context) {
+    // Must punch out before logout while still clocked in.
+    if (AttendanceService.isClockedIn) {
+      _showPunchOutRequired(context);
+      return;
+    }
+
     if (Platform.isIOS) {
       showCupertinoDialog(
         context: context,
@@ -166,16 +98,68 @@ class LogoutDialog {
     }
   }
 
+  static void _showPunchOutRequired(BuildContext context) {
+    const message =
+        'You are still punched in. Please Punch-Out first, then log out.';
+
+    if (Platform.isIOS) {
+      showCupertinoDialog(
+        context: context,
+        builder: (_) => CupertinoAlertDialog(
+          title: const Text('Punch-Out required'),
+          content: const Text(message),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Punch-Out required'),
+          content: const Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   static Future<void> _performLogout(BuildContext context) async {
+    // Safety: never logout while still clocked in.
+    if (AttendanceService.isClockedIn) {
+      if (context.mounted) _showPunchOutRequired(context);
+      return;
+    }
+
+    try {
+      await GpsMonitorService.instance.stopMonitoring();
+    } catch (_) {}
+    try {
+      await bg_tracking.LocationService.instance.stopTracking();
+    } catch (_) {}
+
     await AuthService.logout();
     await TokenStorage.logout();
+
+    AttendanceService.isClockedInNotifier.value = false;
+    AttendanceService.punchInTimeNotifier.value = null;
+    AttendanceService.isPunchedOutForTodayNotifier.value = false;
 
     if (!context.mounted) return;
 
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (route) => false,
+      (route) => false,
     );
   }
 }

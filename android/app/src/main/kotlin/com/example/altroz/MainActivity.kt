@@ -13,6 +13,7 @@ import androidx.annotation.RequiresApi
 
 class MainActivity: FlutterActivity() {
     private val BATTERY_CHANNEL = "battery_optimization"
+    private val DEVICE_STATE_CHANNEL = "device_state"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         destroyBackgroundEngines()
@@ -104,6 +105,22 @@ class MainActivity: FlutterActivity() {
                     result.notImplemented()
                 }
             }
+        }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DEVICE_STATE_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "isAirplaneModeOn" -> result.success(isAirplaneModeOn())
+                    else -> result.notImplemented()
+                }
+            }
+    }
+
+    private fun isAirplaneModeOn(): Boolean {
+        return try {
+            Settings.Global.getInt(contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0) != 0
+        } catch (e: Exception) {
+            false
         }
     }
 

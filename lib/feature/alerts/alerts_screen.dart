@@ -84,9 +84,15 @@ class _AlertsScreenState extends State<AlertsScreen> {
 
   bool _isTask(AlertModel a) =>
       a.title.contains("Leave Request") ||
-          a.title.contains("Payroll Submitted") ||a.title.contains("Reimbursement Request") ||
-          a.title.contains("Resignation Request") || a.title.contains("Cancel Leave Request") || a.title.contains("Cancel Payroll Request") || a.title.contains("Overtime Request");
-
+          a.title.contains("Payroll Submitted") ||
+          a.title.contains("Reimbursement Request") ||
+          a.title.contains("Resignation Request") ||
+          a.title.contains("Cancel Leave Request") ||
+          a.title.contains("Cancel Payroll Request") ||
+          a.title.contains("Overtime Request") ||
+          a.title.contains("Regularization Request") ||
+          a.title.contains("Requisition Request")
+  ;
   Future<void> _handleAction(AlertModel alert, bool isApprove) async {
     setState(() => _isLoading = true);
 

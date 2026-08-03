@@ -92,7 +92,9 @@ class _AttendanceBodyState extends State<AttendanceBody> {
     if (AttendanceService.isClockedIn && AttendanceService.punchInTime != null) {
       final now = DateTime.now();
       _workedDuration = now.difference(AttendanceService.punchInTime!);
+      if (_workedDuration.isNegative) _workedDuration = Duration.zero;
       _startTimer();
+      if (mounted) setState(() {});
     } else {
       _workedDuration = Duration.zero;
       if (mounted) setState(() {});
@@ -203,21 +205,11 @@ class _AttendanceBodyState extends State<AttendanceBody> {
   void _handleClockTap(BuildContext context) async {
     if (_isLoading) return;
 
-    if (AttendanceService.isPunchedOutForToday) {
-      showDialog(
-        context: context,
-        builder: (_) => const AlreadyPunchedDialog(
-          title: 'Already Punched Out',
-          message: 'You have already completed your attendance for today. No further actions allowed.',
-        ),
-      );
-      return;
-    }
     print("_handleClockTap");
     if (!AttendanceService.isClockedIn) {
       // MANDATORY: Check battery optimization BEFORE opening punch in selfie dialog
       final batteryOptimizationCompleted =
-          await BatteryOptimizationService.showMandatoryBatteryOptimizationDialog(context);
+      await BatteryOptimizationService.showMandatoryBatteryOptimizationDialog(context);
       if (!batteryOptimizationCompleted) {
         _showError('Battery optimization settings are required for background location tracking.');
         return;
@@ -239,7 +231,7 @@ class _AttendanceBodyState extends State<AttendanceBody> {
 
     // MANDATORY: Check battery optimization before allowing punch in
     final batteryOptimizationCompleted =
-        await BatteryOptimizationService.showMandatoryBatteryOptimizationDialog(context);
+    await BatteryOptimizationService.showMandatoryBatteryOptimizationDialog(context);
     if (!batteryOptimizationCompleted) {
       setState(() => _isLoading = false);
       _showError('Battery optimization settings are required for background location tracking.');
@@ -277,18 +269,21 @@ class _AttendanceBodyState extends State<AttendanceBody> {
     );
 
     if (!result.success) {
-      if (result.message?.toLowerCase().contains('already') == true) {
+      final msg = result.message ?? 'Clock-in failed';
+      final lower = msg.toLowerCase();
+      if (lower.contains('already punch') || lower.contains('already marked')) {
         showDialog(
           context: context,
           builder: (_) => AlreadyPunchedDialog(
             title: 'Action Already Done',
-            message: result.message ?? 'You have already performed this action.',
+            message: msg,
           ),
         );
       } else {
-        _showError(result.message ?? 'Clock-in failed');
+        _showError(msg);
       }
     } else {
+      _updateTimerFromService();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         BatteryOptimizationService.showBatteryOptimizationDialog(context);
       });
@@ -331,17 +326,21 @@ class _AttendanceBodyState extends State<AttendanceBody> {
       image: image,
     );
     if (!result.success) {
-      if (result.message?.toLowerCase().contains('already') == true) {
+      final msg = result.message ?? 'Clock-out failed';
+      final lower = msg.toLowerCase();
+      if (lower.contains('already punch') || lower.contains('already marked')) {
         showDialog(
           context: context,
           builder: (_) => AlreadyPunchedDialog(
             title: 'Action Already Done',
-            message: result.message ?? 'You have already performed this action.',
+            message: msg,
           ),
         );
       } else {
-        _showError(result.message ?? 'Clock-out failed');
+        _showError(msg);
       }
+    } else {
+      _updateTimerFromService();
     }
     setState(() => _isLoading = false);
   }

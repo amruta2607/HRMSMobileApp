@@ -10,6 +10,10 @@ class LocationCard extends StatelessWidget {
   final VoidCallback? onDelete;
   final bool isSelected;
   final VoidCallback? onSelectionChanged;
+  /// True when this point is within duplicateLocationRadius of the previous point.
+  final bool isDuplicate;
+  /// Distance in meters from previous point (null if first / unknown).
+  final double? distanceFromPreviousMeters;
 
   const LocationCard({
     Key? key,
@@ -20,6 +24,8 @@ class LocationCard extends StatelessWidget {
     this.onDelete,
     this.isSelected = false,
     this.onSelectionChanged,
+    this.isDuplicate = false,
+    this.distanceFromPreviousMeters,
   }) : super(key: key);
 
   @override
@@ -32,15 +38,20 @@ class LocationCard extends StatelessWidget {
     final Color statusColor = isSynced
         ? Colors.green
         : (location.errorMessage != null ? Colors.red : Colors.orange);
-    final Color borderColor = isSynced
-        ? Colors.green.shade200
-        : (location.errorMessage != null
-            ? Colors.red.shade200
-            : Colors.orange.shade200);
+    final Color borderColor = isSelected
+        ? Colors.blue
+        : (isDuplicate
+            ? Colors.deepOrange.shade200
+            : (isSynced
+                ? Colors.green.shade200
+                : (location.errorMessage != null
+                    ? Colors.red.shade200
+                    : Colors.orange.shade200)));
 
     // Selection mode visual enhancements
-    final Color cardColor =
-        isSelected ? Colors.blue.withOpacity(0.1) : Colors.white;
+    final Color cardColor = isSelected
+        ? Colors.blue.withOpacity(0.1)
+        : (isDuplicate ? Colors.deepOrange.withOpacity(0.06) : Colors.white);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -49,8 +60,8 @@ class LocationCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: isSelected ? Colors.blue : borderColor,
-          width: isSelected ? 2 : 1,
+          color: borderColor,
+          width: isSelected || isDuplicate ? 2 : 1,
         ),
       ),
       child: InkWell(
@@ -114,6 +125,36 @@ class LocationCard extends StatelessWidget {
                   // Actions row
                   Row(
                     children: [
+                      if (isDuplicate)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.deepOrange.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                  color: Colors.deepOrange.withOpacity(0.5)),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.copy_all,
+                                    size: 14, color: Colors.deepOrange),
+                                SizedBox(width: 4),
+                                Text(
+                                  'DUPLICATE',
+                                  style: TextStyle(
+                                    color: Colors.deepOrange,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       // Sync status indicator
                       _buildSyncStatus(context, statusColor),
 
@@ -142,11 +183,32 @@ class LocationCard extends StatelessWidget {
                   ),
                 ],
               ),
+              if (isDuplicate || distanceFromPreviousMeters != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  isDuplicate
+                      ? 'Near previous point'
+                          '${distanceFromPreviousMeters != null ? " (${distanceFromPreviousMeters!.toStringAsFixed(1)}m ≤ duplicate radius)" : ""}'
+                          ' — would be skipped by filter'
+                      : 'Distance from previous: '
+                          '${distanceFromPreviousMeters!.toStringAsFixed(1)}m (unique)',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDuplicate ? Colors.deepOrange : Colors.grey[700],
+                    fontWeight:
+                        isDuplicate ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+              ],
               const Divider(height: 16),
               // Coordinates section
               Row(
                 children: [
-                  const Icon(Icons.location_on, color: Colors.blue, size: 18),
+                  Icon(
+                    isDuplicate ? Icons.content_copy : Icons.location_on,
+                    color: isDuplicate ? Colors.deepOrange : Colors.blue,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(

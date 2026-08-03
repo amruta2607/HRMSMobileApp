@@ -33,11 +33,19 @@ class LocationData {
   }
 
   Map<String, dynamic> toApiJson({int? userId}) {
+    final ts = timestamp;
+    final stamp =
+        '${ts.year.toString().padLeft(4, '0')}-'
+        '${ts.month.toString().padLeft(2, '0')}-'
+        '${ts.day.toString().padLeft(2, '0')}T'
+        '${ts.hour.toString().padLeft(2, '0')}:'
+        '${ts.minute.toString().padLeft(2, '0')}:'
+        '${ts.second.toString().padLeft(2, '0')}';
     return {
-      'user_id': userId ?? 111,
+      'user_id': userId ?? 0,
       'latitude': latitude,
       'longitude': longitude,
-      'timestamp': timestamp.toIso8601String(),
+      'timestamp': stamp,
       'location_from': locationFrom,
     };
   }

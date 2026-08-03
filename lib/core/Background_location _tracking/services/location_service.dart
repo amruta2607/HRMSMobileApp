@@ -1,10 +1,10 @@
 /**
  * Location Service for Background Location Tracking
- * 
+ *
  * This service handles comprehensive location tracking for attendance monitoring.
  * It integrates with background geolocation, manages location persistence,
  * and handles automatic punch out scenarios.
- * 
+ *
  * Key Features:
  * - Background location tracking with foreground service
  * - Automatic punch out on GPS/location service disable
@@ -37,11 +37,14 @@ import '../../Utils/Urls/urls.dart';
 import '../../constants/punch_out_reasons.dart';
 import '../../constants/log_levels.dart';
 import '../../constants/location_config.dart';
+import '../../Utils/services/Attendance service/attendance_service.dart';
 import '../models/location_model.dart';
 import 'api_service.dart';
 import 'database_helper.dart';
 import 'location_issue_tracker.dart';
+import 'location_config_service.dart';
 import 'offline_manager.dart';
+import 'device_state_service.dart';
 
 
 class LocationService {
@@ -49,6 +52,12 @@ class LocationService {
   static LocationService? _instance;
   static LocationService get instance => _instance ??= LocationService._();
   LocationService._();
+
+  static const String _keySessionActive = 'attendance_session_active';
+  static const String _keyPendingTerminatePunchOut =
+      'pending_terminate_punch_out';
+  static const String _keyPendingTerminateReason = 'pending_terminate_reason';
+  static const String _keyPendingTerminateAt = 'pending_terminate_at';
 
   // =================== CORE SERVICES ===================
   final ApiService _apiService = ApiService();
@@ -78,11 +87,30 @@ class LocationService {
   bool _hasUserPunchedOut = false;
 
   // =================== CONFIGURATION ===================
-  static const int API_CALL_INTERVAL = LocationConfig.API_CALL_INTERVAL_MS;
-  static const int LOCATION_STALENESS_THRESHOLD =
+  static int get API_CALL_INTERVAL => LocationConfig.API_CALL_INTERVAL_MS;
+  static int get LOCATION_STALENESS_THRESHOLD =>
       LocationConfig.LOCATION_STALENESS_THRESHOLD_MS;
   static const int LOCATION_CACHE_VALIDITY =
       LocationConfig.LOCATION_CACHE_VALIDITY_MS;
+
+  /// Called by LocationConfigService when a fresh config is fetched from server.
+  /// Re-applies updated interval/accuracy settings to BackgroundGeolocation.
+  void onConfigUpdated() {
+    LogConfig.logBackground(
+        '[LocationService] Config updated — reapplying geolocation settings.');
+    try {
+      bg.BackgroundGeolocation.setConfig(bg.Config(
+        distanceFilter: LocationConfig.DISTANCE_FILTER_METERS,
+        locationUpdateInterval: LocationConfig.LOCATION_UPDATE_INTERVAL_MS,
+        fastestLocationUpdateInterval:
+            LocationConfig.FAST_LOCATION_UPDATE_INTERVAL_MS,
+        heartbeatInterval: LocationConfig.HEARTBEAT_INTERVAL_SECONDS,
+      ));
+    } catch (e) {
+      LogConfig.logError(
+          '[LocationService] Error reapplying geolocation settings', e);
+    }
+  }
 
   // =================== CONNECTIVITY DETECTION ===================
 
@@ -156,6 +184,9 @@ class LocationService {
       // Check user punch out status
       final prefs = await SharedPreferences.getInstance();
       _hasUserPunchedOut = prefs.getBool('user_punched_out') ?? false;
+
+      // Phone was powered off / app terminated while punched in — finish punch-out.
+      await processPendingTerminatePunchOut();
 
       if (_hasUserPunchedOut) {
         return;
@@ -236,6 +267,12 @@ class LocationService {
       return;
     }
 
+    if (!LocationConfig.IS_LOCATION_TRACKING_ENABLED) {
+      LogConfig.logWarning(
+          'Location tracking disabled by dashboard config — not starting');
+      return;
+    }
+
     try {
       final state = await bg.BackgroundGeolocation.state;
       await _cacheUserDataForHeadless();
@@ -278,6 +315,11 @@ class LocationService {
       _isTrackingEnabled = false;
       _hasUserPunchedOut = true;
 
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('user_punched_out', true);
+      await prefs.setBool(_keySessionActive, false);
+      await prefs.remove(_keyPendingTerminatePunchOut);
+
       await bg.BackgroundGeolocation.stop();
 
       _locationHistory.clear();
@@ -298,6 +340,10 @@ class LocationService {
       _hasUserPunchedOut = false;
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('user_punched_out', false);
+      await prefs.setBool(_keySessionActive, true);
+      await prefs.remove(_keyPendingTerminatePunchOut);
+      await prefs.remove(_keyPendingTerminateReason);
+      await prefs.remove(_keyPendingTerminateAt);
     } catch (e) {
       LogConfig.logError('Error resetting punch out status', e);
     }
@@ -714,57 +760,25 @@ class LocationService {
   Future<void> _performAutoPunchOut({required String reason}) async {
     try {
       final dateTime = _getCurrentDateTime();
-      final userId = await TokenStorage.getUserId();
-      final branchId = await TokenStorage.getBranchId() ?? 0;
-      final organizationId = await TokenStorage.getOrganisationId() ?? 0;
-      final token = await TokenStorage.getToken();
-
-      if (userId == null) {
-        LogConfig.logError('User credentials not available for punch out');
-        return;
-      }
-
       final location = await _getBestAvailableLocation();
+      final reasonText = PunchOutReasons.getReasonDescription(reason);
 
       LogConfig.logPunchOut(
-          'Performing auto punch out at: ${dateTime['datetime']}, Reason: ${PunchOutReasons.getReasonDescription(reason)}');
+          'Performing auto punch out at: ${dateTime['datetime']}, Reason: $reasonText');
 
-      final request =
-          http.MultipartRequest('POST', Uri.parse(BaseUrls.punchOut));
+      final result = await AttendanceService.submitAutoPunchOut(
+        punchOutReason: reasonText,
+        punchTime: DateTime.tryParse(dateTime['datetime']!),
+        latitude: location['latitude'],
+        longitude: location['longitude'],
+      );
 
-      if (token != null && token.isNotEmpty) {
-        request.headers['Authorization'] = 'Bearer $token';
-      }
-
-      request.fields.addAll({
-        'userId': userId.toString(),
-        'employee': userId.toString(),
-        'organization_id': organizationId.toString(),
-        'organization': organizationId.toString(),
-        'branch': branchId.toString(),
-        'branchId': branchId.toString(),
-        'punch_out_time': dateTime['datetime']!,
-        'longitude': location['longitude']!.toString(),
-        'latitude': location['latitude']!.toString(),
-        'attendance_date': dateTime['date']!,
-        'auto_punch_out': 'true',
-        'punch_out_reason': reason,
-        'timestamp': dateTime['timestamp']!,
-      });
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-      final responseData = jsonDecode(response.body);
-
-      if ((response.statusCode == 200 || response.statusCode == 201) &&
-          (responseData['success'] == true || response.body.toLowerCase().contains('successful') || response.body.toLowerCase().contains('already'))) {
-        LogConfig.logSuccess(
-            'Auto punch out successful: ${responseData['message'] ?? response.statusCode}');
+      if (result.success) {
+        LogConfig.logSuccess('Auto punch out successful: ${result.message}');
         await _saveAutoPunchOutEvent(reason, dateTime);
-
         await stopTracking();
       } else {
-        LogConfig.logError('Auto punch out failed: ${responseData['message'] ?? response.statusCode}');
+        LogConfig.logError('Auto punch out failed: ${result.message}');
         await _savePunchOutAttempt(
           reason: reason,
           latitude: location['latitude']!,
@@ -840,8 +854,6 @@ class LocationService {
           prefs.getStringList('failed_punch_out_attempts') ?? [];
 
       final userId = await TokenStorage.getUserId();
-      final branchId = await TokenStorage.getBranchId() ?? 0;
-      final organizationId = await TokenStorage.getOrganisationId() ?? 0;
 
       if (userId == null) {
         LogConfig.logError(
@@ -851,16 +863,12 @@ class LocationService {
 
       final attemptData = jsonEncode({
         'userId': userId.toString(),
-        'employee': userId.toString(),
-        'organization_id': organizationId.toString(),
-        'organization': organizationId.toString(),
-        'branch': branchId.toString(),
-        'branchId': branchId.toString(),
         'punch_out_time': punchOutTime,
         'longitude': longitude.toString(),
         'latitude': latitude.toString(),
         'attendance_date': attendanceDate,
-        'auto_punch_out': 'true',
+        'Manual': 'false',
+        'PunchOutReason': PunchOutReasons.getReasonDescription(reason),
         'punch_out_reason': reason,
         'timestamp': timestamp,
         'retry_count': 0,
@@ -995,6 +1003,13 @@ class LocationService {
     }
 
     if (!_hasUserPunchedOut) {
+      if (!LocationConfig.AUTO_PUNCH_OUT_ON_GPS_OFF &&
+          !LocationConfig.AUTO_PUNCH_OUT_ON_LOCATION_OFF) {
+        LogConfig.logInfo(
+            'Provider change ignored — dashboard auto punch-out disabled');
+        return;
+      }
+
       final reason = await _determinePunchOutReason(
         isGpsEnabled: event.gps,
         isLocationEnabled: event.enabled,
@@ -1019,6 +1034,30 @@ class LocationService {
       _apiService.sendAllPendingLocations();
       _retryFailedPunchOutAttempts();
       _sendLocationsToApi();
+      processPendingTerminatePunchOut();
+    } else {
+      // May be airplane mode — check native flag (Android).
+      _handlePossibleAirplaneModePunchOut();
+    }
+  }
+
+  Future<void> _handlePossibleAirplaneModePunchOut() async {
+    try {
+      if (_hasUserPunchedOut) return;
+      if (!LocationConfig.AUTO_PUNCH_OUT_ON_AIRPLANE_MODE) return;
+
+      final airplane = await DeviceStateService.isAirplaneModeOn();
+      if (!airplane) {
+        LogConfig.logNetwork(
+            'Connectivity lost but airplane mode off — skip airplane punch-out');
+        return;
+      }
+
+      LogConfig.logWarning(
+          'Airplane mode ON while punched in — auto punch-out');
+      await _performAutoPunchOut(reason: PunchOutReasons.AIRPLANE_MODE_ENABLED);
+    } catch (e) {
+      LogConfig.logError('Error handling airplane-mode punch-out', e);
     }
   }
 
@@ -1123,7 +1162,6 @@ class LocationService {
           '🔄 Retrying ${failedAttempts.length} failed punch out attempts');
 
       List<String> stillFailedAttempts = [];
-      final token = await TokenStorage.getToken() ?? prefs.getString('cached_token');
 
       for (String attemptStr in failedAttempts) {
         try {
@@ -1138,25 +1176,25 @@ class LocationService {
             continue;
           }
 
-          final request =
-              http.MultipartRequest('POST', Uri.parse(BaseUrls.punchOut));
-          if (token != null && token.isNotEmpty) {
-            request.headers['Authorization'] = 'Bearer $token';
-          }
-          request.fields.addAll(
-              attemptData.map((key, value) => MapEntry(key, value.toString())));
+          final reason = (attemptData['PunchOutReason'] ??
+                  attemptData['punch_out_reason'] ??
+                  PunchOutReasons.UNKNOWN_REASON)
+              .toString();
 
-          final streamedResponse = await request.send();
-          final response = await http.Response.fromStream(streamedResponse);
-          final responseData = jsonDecode(response.body);
+          final result = await AttendanceService.submitAutoPunchOut(
+            punchOutReason: PunchOutReasons.getReasonDescription(reason),
+            punchTime:
+                DateTime.tryParse(attemptData['punch_out_time']?.toString() ?? ''),
+            latitude:
+                double.tryParse(attemptData['latitude']?.toString() ?? ''),
+            longitude:
+                double.tryParse(attemptData['longitude']?.toString() ?? ''),
+          );
 
-          if ((response.statusCode == 200 || response.statusCode == 201) &&
-              (responseData['success'] == true || response.body.toLowerCase().contains('successful') || response.body.toLowerCase().contains('already'))) {
-            LogConfig.logSuccess(
-                'Retry punch out successful: ${attemptData['punch_out_reason']}');
+          if (result.success) {
+            LogConfig.logSuccess('Retry punch out successful: $reason');
           } else {
-            LogConfig.logError(
-                'Retry punch out failed: ${responseData['message']}');
+            LogConfig.logError('Retry punch out failed: ${result.message}');
             stillFailedAttempts.add(jsonEncode(attemptData));
           }
         } catch (e) {
@@ -1232,8 +1270,17 @@ class LocationService {
       case bg.Event.PROVIDERCHANGE:
         await _handleHeadlessProviderChange(event, cachedUserData);
         break;
-      case 'connectivitychange':
+      case bg.Event.CONNECTIVITYCHANGE:
         await _handleHeadlessConnectivityChange(event);
+        break;
+      case bg.Event.TERMINATE:
+        await _handleHeadlessTerminate();
+        break;
+      case bg.Event.BOOT:
+        await _handleHeadlessBoot();
+        break;
+      case bg.Event.POWERSAVECHANGE:
+        await _handleHeadlessPowerSaveChange(event);
         break;
     }
   }
@@ -1346,6 +1393,7 @@ class LocationService {
 
         await apiService.retryFailedRequests();
         await _retryFailedPunchOutAttempts();
+        await processPendingTerminatePunchOut();
 
         final unsentLocations = await dbHelper.getUnsentLocations();
         if (unsentLocations.isNotEmpty) {
@@ -1356,9 +1404,127 @@ class LocationService {
             await dbHelper.markLocationsAsSynced(sentIds);
           }
         }
+      } else {
+        LogConfig.logHeadless('Network lost — checking airplane mode');
+        await _handleHeadlessAirplanePunchOut();
       }
     } catch (e) {
       LogConfig.logError('[Headless] Error handling connectivity change', e);
+    }
+  }
+
+  static Future<void> _handleHeadlessAirplanePunchOut() async {
+    try {
+      if (!LocationConfig.AUTO_PUNCH_OUT_ON_AIRPLANE_MODE) return;
+
+      final prefs = await SharedPreferences.getInstance();
+      final sessionActive = prefs.getBool(_keySessionActive) ?? false;
+      final punchedOut = prefs.getBool('user_punched_out') ?? false;
+      if (!sessionActive || punchedOut) return;
+
+      final airplane = await DeviceStateService.isAirplaneModeOn();
+      if (!airplane) return;
+
+      LogConfig.logHeadless('Airplane mode ON — auto punch-out');
+      await _performHeadlessAutoPunchOut(
+        reason: PunchOutReasons.AIRPLANE_MODE_ENABLED,
+      );
+    } catch (e) {
+      LogConfig.logError('[Headless] Airplane punch-out error', e);
+    }
+  }
+
+  /// App / process terminating (swipe kill or phone powering off).
+  static Future<void> _handleHeadlessTerminate() async {
+    try {
+      if (!LocationConfig.AUTO_PUNCH_OUT_ON_APP_KILLED) {
+        LogConfig.logHeadless(
+            'Terminate ignored — app-killed auto out disabled');
+        return;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      final sessionActive = prefs.getBool(_keySessionActive) ?? false;
+      final punchedOut = prefs.getBool('user_punched_out') ?? false;
+      if (!sessionActive || punchedOut) return;
+
+      final now = DateTime.now().toIso8601String();
+      await prefs.setBool(_keyPendingTerminatePunchOut, true);
+      await prefs.setString(
+          _keyPendingTerminateReason, PunchOutReasons.PHONE_POWERED_OFF);
+      await prefs.setString(_keyPendingTerminateAt, now);
+
+      LogConfig.logHeadless(
+          'Terminate while punched in — queued PHONE_POWERED_OFF punch-out');
+
+      await _performHeadlessAutoPunchOut(
+        reason: PunchOutReasons.PHONE_POWERED_OFF,
+      );
+    } catch (e) {
+      LogConfig.logError('[Headless] Error on terminate', e);
+    }
+  }
+
+  /// Device rebooted — complete any pending power-off punch-out.
+  static Future<void> _handleHeadlessBoot() async {
+    try {
+      LogConfig.logHeadless(
+          'Boot event — processing pending terminate punch-out');
+      await processPendingTerminatePunchOut();
+    } catch (e) {
+      LogConfig.logError('[Headless] Error on boot', e);
+    }
+  }
+
+  static Future<void> _handleHeadlessPowerSaveChange(
+      bg.HeadlessEvent event) async {
+    try {
+      if (!LocationConfig.AUTO_PUNCH_OUT_ON_POWER_SAVING) return;
+      final enabled = event.event == true;
+      if (!enabled) return;
+
+      final prefs = await SharedPreferences.getInstance();
+      final sessionActive = prefs.getBool(_keySessionActive) ?? false;
+      final punchedOut = prefs.getBool('user_punched_out') ?? false;
+      if (!sessionActive || punchedOut) return;
+
+      LogConfig.logHeadless('Power saving ON — auto punch-out');
+      await _performHeadlessAutoPunchOut(
+        reason: PunchOutReasons.GPS_DISABLED_POWER_SAVING,
+      );
+    } catch (e) {
+      LogConfig.logError('[Headless] Power-save punch-out error', e);
+    }
+  }
+
+  /// Public: send queued punch-out after phone reboot / app restart.
+  static Future<void> processPendingTerminatePunchOut() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final pending = prefs.getBool(_keyPendingTerminatePunchOut) ?? false;
+      if (!pending) return;
+
+      final sessionActive = prefs.getBool(_keySessionActive) ?? false;
+      final punchedOut = prefs.getBool('user_punched_out') ?? false;
+      if (punchedOut || !sessionActive) {
+        await prefs.remove(_keyPendingTerminatePunchOut);
+        await prefs.remove(_keyPendingTerminateReason);
+        await prefs.remove(_keyPendingTerminateAt);
+        return;
+      }
+
+      final reason = prefs.getString(_keyPendingTerminateReason) ??
+          PunchOutReasons.PHONE_POWERED_OFF;
+
+      LogConfig.logPunchOut('Processing pending terminate punch-out: $reason');
+
+      await _performHeadlessAutoPunchOut(reason: reason);
+
+      await prefs.remove(_keyPendingTerminatePunchOut);
+      await prefs.remove(_keyPendingTerminateReason);
+      await prefs.remove(_keyPendingTerminateAt);
+    } catch (e) {
+      LogConfig.logError('Error processing pending terminate punch-out', e);
     }
   }
 
@@ -1370,26 +1536,7 @@ class LocationService {
     Map<String, dynamic>? cachedUserData,
   }) async {
     try {
-      int? userId, branchId, organizationId;
-      String? token;
       final prefs = await SharedPreferences.getInstance();
-
-      if (cachedUserData != null) {
-        userId = cachedUserData['user_id'];
-        branchId = cachedUserData['branch_id'] ?? 0;
-        organizationId = cachedUserData['organization_id'] ?? 0;
-      } else {
-        userId = await TokenStorage.getUserId();
-        branchId = await TokenStorage.getBranchId() ?? 0;
-        organizationId = await TokenStorage.getOrganisationId() ?? 0;
-      }
-      token = await TokenStorage.getToken() ?? prefs.getString('cached_token');
-
-      if (userId == null) {
-        LogConfig.logError('[Headless] User data not available');
-        return;
-      }
-
       final now = DateTime.now();
       final dateFormat = DateFormat('yyyy-MM-dd');
       final timeFormat = DateFormat('HH:mm:ss');
@@ -1408,40 +1555,25 @@ class LocationService {
         LogConfig.logError('[Headless] Error getting cached location', e);
       }
 
-      final request =
-          http.MultipartRequest('POST', Uri.parse(BaseUrls.punchOut));
-      if (token != null && token.isNotEmpty) {
-        request.headers['Authorization'] = 'Bearer $token';
-      }
+      final result = await AttendanceService.submitAutoPunchOut(
+        punchOutReason: PunchOutReasons.getReasonDescription(reason),
+        punchTime: now,
+        latitude: latitude,
+        longitude: longitude,
+      );
 
-      request.fields.addAll({
-        'userId': userId.toString(),
-        'employee': userId.toString(),
-        'organization_id': organizationId.toString(),
-        'organization': organizationId.toString(),
-        'branch': branchId.toString(),
-        'branchId': branchId.toString(),
-        'punch_out_time': '$currentDate $currentTime',
-        'longitude': longitude.toString(),
-        'latitude': latitude.toString(),
-        'attendance_date': currentDate,
-        'auto_punch_out': 'true',
-        'punch_out_reason': reason,
-        'headless_mode': 'true',
-        'timestamp': now.toIso8601String(),
-      });
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-      final responseData = jsonDecode(response.body);
-
-      if ((response.statusCode == 200 || response.statusCode == 201) &&
-          (responseData['success'] == true || response.body.toLowerCase().contains('successful') || response.body.toLowerCase().contains('already'))) {
+      if (result.success) {
         LogConfig.logSuccess('[Headless] Auto punch out successful');
         await _saveHeadlessAutoPunchOutEvent(reason);
+        final prefs2 = await SharedPreferences.getInstance();
+        await prefs2.setBool(_keySessionActive, false);
+        await prefs2.setBool('user_punched_out', true);
+        await prefs2.remove(_keyPendingTerminatePunchOut);
+        await prefs2.remove(_keyPendingTerminateReason);
+        await prefs2.remove(_keyPendingTerminateAt);
       } else {
         LogConfig.logError(
-            '[Headless] Auto punch out failed: ${responseData['message'] ?? response.statusCode}');
+            '[Headless] Auto punch out failed: ${result.message}');
         await _savePunchOutAttempt(
           reason: reason,
           latitude: latitude,

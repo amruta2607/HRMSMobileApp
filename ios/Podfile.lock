@@ -3,6 +3,12 @@ PODS:
     - Flutter
   - audio_session (0.0.1):
     - Flutter
+  - background_fetch (1.7.0):
+    - Flutter
+    - TSBackgroundFetch (~> 4.1.0)
+  - CocoaLumberjack (3.8.5):
+    - CocoaLumberjack/Core (= 3.8.5)
+  - CocoaLumberjack/Core (3.8.5)
   - connectivity_plus (0.0.1):
     - Flutter
   - DKImagePickerController/Core (4.3.9):
@@ -40,9 +46,9 @@ PODS:
     - DKImagePickerController/PhotoGallery
     - Flutter
   - Flutter (1.0.0)
-  - flutter_background_geolocation (5.2.1):
+  - flutter_background_geolocation (4.18.3):
+    - CocoaLumberjack (~> 3.8.5)
     - Flutter
-    - TSLocationManager (~> 4.1.0)
   - flutter_file_dialog (0.0.1):
     - Flutter
   - flutter_pdfview (1.0.2):
@@ -83,8 +89,6 @@ PODS:
   - SwiftyGif (5.4.5)
   - TOCropViewController (3.1.2)
   - TSBackgroundFetch (4.1.1)
-  - TSLocationManager (4.1.10):
-    - TSBackgroundFetch (~> 4.1.0)
   - url_launcher_ios (0.0.1):
     - Flutter
   - video_player_avfoundation (0.0.1):
@@ -99,6 +103,7 @@ PODS:
 DEPENDENCIES:
   - app_settings (from `.symlinks/plugins/app_settings/ios`)
   - audio_session (from `.symlinks/plugins/audio_session/ios`)
+  - background_fetch (from `.symlinks/plugins/background_fetch/ios`)
   - connectivity_plus (from `.symlinks/plugins/connectivity_plus/ios`)
   - file_picker (from `.symlinks/plugins/file_picker/ios`)
   - Flutter (from `Flutter`)
@@ -124,19 +129,21 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
+    - CocoaLumberjack
     - DKImagePickerController
     - DKPhotoGallery
     - SDWebImage
     - SwiftyGif
     - TOCropViewController
     - TSBackgroundFetch
-    - TSLocationManager
 
 EXTERNAL SOURCES:
   app_settings:
     :path: ".symlinks/plugins/app_settings/ios"
   audio_session:
     :path: ".symlinks/plugins/audio_session/ios"
+  background_fetch:
+    :path: ".symlinks/plugins/background_fetch/ios"
   connectivity_plus:
     :path: ".symlinks/plugins/connectivity_plus/ios"
   file_picker:
@@ -185,12 +192,14 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   app_settings: 5127ae0678de1dcc19f2293271c51d37c89428b2
   audio_session: 9bb7f6c970f21241b19f5a3658097ae459681ba0
+  background_fetch: b273c4b6911fc2e309790b46b5658b7edc40b73b
+  CocoaLumberjack: 6a459bc897d6d80bd1b8c78482ec7ad05dffc3f0
   connectivity_plus: cb623214f4e1f6ef8fe7403d580fdad517d2f7dd
   DKImagePickerController: 946cec48c7873164274ecc4624d19e3da4c1ef3c
   DKPhotoGallery: b3834fecb755ee09a593d7c9e389d8b5d6deed60
   file_picker: a0560bc09d61de87f12d246fc47d2119e6ef37be
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  flutter_background_geolocation: 812bb3ed9fea84c81e684688f63418481d1a7757
+  flutter_background_geolocation: 81f17ef8f561dba232729c46275de1dbdfa89e06
   flutter_file_dialog: ca8d7fbd1772d4f0c2777b4ab20a7787ef4e7dd8
   flutter_pdfview: 32bf27bda6fd85b9dd2c09628a824df5081246cf
   geocoding_ios: 33776c9ebb98d037b5e025bb0e7537f6dd19646e
@@ -209,12 +218,11 @@ SPEC CHECKSUMS:
   SwiftyGif: 706c60cf65fa2bc5ee0313beece843c8eb8194d4
   TOCropViewController: a916930c465b5d9445a74d95e0c0da931771b4df
   TSBackgroundFetch: 18918b6449a1e3f01eb0f5b44d6d79ce6160a5a5
-  TSLocationManager: f05045b578deedcd2144a5fda03dce1188360adb
   url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
   video_player_avfoundation: dd410b52df6d2466a42d28550e33e4146928280a
   wakelock_plus: e29112ab3ef0b318e58cfa5c32326458be66b556
   webview_flutter_wkwebview: 8ebf4fded22593026f7dbff1fbff31ea98573c8d
 
-PODFILE CHECKSUM: 71145864b7668ffdb32c322171ff47b87427628e
+PODFILE CHECKSUM: 6c3a2c1ff9b44d7bac33e25783813740b09fb7ce
 
 COCOAPODS: 1.16.2

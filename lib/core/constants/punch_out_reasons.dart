@@ -109,6 +109,11 @@ class PunchOutReasons {
   /// API Call: Handled by recovery mechanism
   static const String FORCED_PUNCH_OUT = 'FORCED_PUNCH_OUT';
 
+  /// Phone powered off / device shut down while user was punched in
+  /// When: Device power-off or reboot after an open attendance session
+  /// API Call: Cached on terminate; sent on next boot / app start
+  static const String PHONE_POWERED_OFF = 'PHONE_POWERED_OFF';
+
   /// User logout from the application
   /// When: User logs out from the app
   /// API Call: Normal punch out flow with immediate API call
@@ -152,13 +157,17 @@ class PunchOutReasons {
         return 'Manual punch out by user';
       case FORCED_PUNCH_OUT:
         return 'Forced punch out due to app termination';
+      case PHONE_POWERED_OFF:
+        return 'Phone powered off / device shut down';
       case USER_LOGOUT:
         return 'User logged out from the app';
       case GPS_DISABLED_BY_USER:
         return 'GPS disabled by user';
       case UNKNOWN_REASON:
-      default:
         return 'Unknown reason';
+      default:
+        // Keep custom / already-readable reasons (gap detector, cached retries).
+        return reason.isNotEmpty ? reason : 'Unknown reason';
     }
   }
 
@@ -266,6 +275,7 @@ class PunchOutReasons {
       NO_NETWORK_CONNECTIVITY,
       SERVER_UNREACHABLE,
       FORCED_PUNCH_OUT,
+      PHONE_POWERED_OFF,
       USER_LOGOUT,
       GPS_DISABLED_BY_USER,
       UNKNOWN_REASON,

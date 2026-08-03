@@ -54,8 +54,6 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
   void _onAttendanceUpdate() {
     if (mounted) {
       _updateTimerFromService();
-      // Also refresh home data when state changes
-      Provider.of<HomeController>(context, listen: false).fetchHomeData();
     }
   }
 
@@ -71,7 +69,9 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
     if (AttendanceService.isClockedIn && AttendanceService.punchInTime != null) {
       final now = DateTime.now();
       _workedDuration = now.difference(AttendanceService.punchInTime!);
+      if (_workedDuration.isNegative) _workedDuration = Duration.zero;
       _startTimer();
+      if (mounted) setState(() {});
     } else {
       _workedDuration = Duration.zero;
       if (mounted) setState(() {});
@@ -121,17 +121,6 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
 
   void _handleClockTap(BuildContext context) async {
     if (_isLoading) return;
-
-    if (AttendanceService.isPunchedOutForToday) {
-      showDialog(
-        context: context,
-        builder: (_) => const AlreadyPunchedDialog(
-          title: 'Already Punched Out',
-          message: 'You have already completed your attendance for today. No further actions allowed.',
-        ),
-      );
-      return;
-    }
 
     if (!AttendanceService.isClockedIn) {
       // MANDATORY: Check battery optimization BEFORE opening punch in selfie dialog
@@ -196,18 +185,21 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
     );
 
     if (!result.success) {
-      if (result.message?.toLowerCase().contains('already') == true) {
+      final msg = result.message ?? 'Clock-in failed / Range Issue';
+      final lower = msg.toLowerCase();
+      if (lower.contains('already punch') || lower.contains('already marked')) {
         showDialog(
           context: context,
           builder: (_) => AlreadyPunchedDialog(
             title: 'Action Already Done',
-            message: result.message ?? 'You have already performed this action.',
+            message: msg,
           ),
         );
       } else {
-        _showError(result.message ?? 'Clock-in failed / Range Issue');
+        _showError(msg);
       }
     } else {
+      _updateTimerFromService();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         BatteryOptimizationService.showBatteryOptimizationDialog(context);
       });
@@ -249,17 +241,21 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
     );
 
     if (!result.success) {
-      if (result.message?.toLowerCase().contains('already') == true) {
+      final msg = result.message ?? 'Clock-out failed';
+      final lower = msg.toLowerCase();
+      if (lower.contains('already punch') || lower.contains('already marked')) {
         showDialog(
           context: context,
           builder: (_) => AlreadyPunchedDialog(
             title: 'Action Already Done',
-            message: result.message ?? 'You have already performed this action.',
+            message: msg,
           ),
         );
       } else {
-        _showError(result.message ?? 'Clock-out failed');
+        _showError(msg);
       }
+    } else {
+      _updateTimerFromService();
     }
     setState(() => _isLoading = false);
   }
@@ -372,6 +368,7 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
 
                     final status = controller.attendanceStatus;
                     final bool clockedIn = AttendanceService.isClockedIn;
+                    final bool hasPunch = status?.punchIn != null;
 
                     return Container(
                       padding: EdgeInsets.symmetric(horizontal: 16 * scale, vertical: 14 * scale),
@@ -382,10 +379,10 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
                             width: 45 * scale,
                             height: 45 * scale,
                             decoration: BoxDecoration(
-                              color: clockedIn || status?.isMarked == true ? AppColors.homeStatusIconBg : Colors.red.withOpacity(0.3),
+                              color: clockedIn || hasPunch ? AppColors.homeStatusIconBg : Colors.red.withOpacity(0.3),
                               borderRadius: BorderRadius.circular(16 * scale),
                             ),
-                            child: clockedIn || status?.isMarked == true
+                            child: clockedIn || hasPunch
                                 ? Center(child: Image.asset('img/presentd.png', width: 24 * scale, height: 24 * scale))
                                 : Icon(Icons.error_outline, size: 20 * scale, color: AppColors.textGrey),
                           ),
@@ -396,12 +393,14 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
                               children: [
                                 Text('Current Status', style: TextStyle(fontFamily: 'Inter', fontSize: 13 * scale, color: AppColors.textGrey)),
                                 Text(
-                                  clockedIn ? _format(_workedDuration) : (status?.isMarked == true ? '${status!.status} • On Time' : 'Not marked yet'),
+                                  clockedIn
+                                      ? _format(_workedDuration)
+                                      : (hasPunch ? status!.status : 'Not marked yet'),
                                   style: TextStyle(
                                     fontFamily: 'Inter',
                                     fontSize: 15 * scale,
                                     fontWeight: FontWeight.w500,
-                                    color: clockedIn || status?.isMarked == true ? AppColors.homeStatusTextGreen : AppColors.textGrey,
+                                    color: clockedIn || hasPunch ? AppColors.homeStatusTextGreen : AppColors.textGrey,
                                   ),
                                 ),
                                 SizedBox(height: 4 * scale),

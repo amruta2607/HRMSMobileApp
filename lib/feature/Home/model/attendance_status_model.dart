@@ -21,8 +21,7 @@ class AttendanceStatusResponse {
 }
 
 class AttendanceStatusData {
-  final bool isMarked;
-  final bool isAlreadyMarked;
+  // isMarked / isAlreadyMarked removed — not used for punch flow.
   final String status;
   final DateTime? punchIn;
   final DateTime? punchOut;
@@ -30,8 +29,6 @@ class AttendanceStatusData {
   final DateTime date;
 
   AttendanceStatusData({
-    required this.isMarked,
-    required this.isAlreadyMarked,
     required this.status,
     this.punchIn,
     this.punchOut,
@@ -41,8 +38,6 @@ class AttendanceStatusData {
 
   factory AttendanceStatusData.fromJson(Map<String, dynamic> json) {
     return AttendanceStatusData(
-      isMarked: json['isMarked'] ?? false,
-      isAlreadyMarked: json['isAlreadyMarked'] ?? false,
       status: json['status'] ?? 'Unknown',
       punchIn: json['punchIn'] != null
           ? DateTime.parse(json['punchIn'])

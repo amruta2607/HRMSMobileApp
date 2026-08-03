@@ -1,6 +1,6 @@
 class BaseUrls {
 
-   static const String base = "http://103.123.74.160:81"; //development
+   static const String base = "http://20.44.57.126:82"; //development
 
 
     //  static const String base = "http://103.123.74.159:5005"; //production
@@ -87,6 +87,10 @@ static const String leaveHistory = "$base/api/Leave/history";
 
   // Tenant
   static const String companyLogo = "$base/api/Tenant/GetCompanyLogo";
+
+  // LOCATION TRACKING CONFIGURATION
+  static const String locationTrackingConfig =
+      "$base/api/mobile/locationtrackingconfiguration";
 
 
 }

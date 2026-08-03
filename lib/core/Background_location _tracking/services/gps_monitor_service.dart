@@ -20,8 +20,10 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import '../../constants/punch_out_reasons.dart';
 import '../../constants/log_levels.dart';
-import '../../Utils/services/token_storage.dart';
+import '../../constants/location_config.dart';
 import '../../Utils/Urls/urls.dart';
+import '../../Utils/services/token_storage.dart';
+import '../../Utils/services/Attendance service/attendance_service.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 class GpsMonitorService {
@@ -49,23 +51,21 @@ class GpsMonitorService {
    * Call this when user punches in
    */
   Future<void> startMonitoring() async {
-    if (_isMonitoring) return;
-
+    // Re-arm even if previously started (multi punch-in same day).
+    _gpsCheckTimer?.cancel();
     _isMonitoring = true;
     _isUserPunchedIn = true;
 
     LogConfig.logInfo('🔍 Starting GPS monitoring for automatic punch out');
 
-    // Check GPS status every 5 minutes - aligned with location update interval
-    _gpsCheckTimer = Timer.periodic(Duration(minutes: 5), (timer) {
+    _lastGpsState = await Geolocator.isLocationServiceEnabled();
+    await _loadLastPosition();
+
+    // Immediate check + frequent polls (was 5 min — too slow to notice GPS off).
+    await _checkGpsStatus();
+    _gpsCheckTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
       _checkGpsStatus();
     });
-
-    // Get initial GPS state
-    _lastGpsState = await Geolocator.isLocationServiceEnabled();
-
-    // Load any existing cached position
-    await _loadLastPosition();
   }
 
   /**
@@ -134,8 +134,12 @@ class GpsMonitorService {
 
       // GPS was turned off
       if (_lastGpsState && !currentGpsState) {
-        LogConfig.logWarning('🚨 GPS turned off while user is punched in!');
-        await _handleGpsDisabled();
+        if (!LocationConfig.AUTO_PUNCH_OUT_ON_GPS_OFF) {
+          LogConfig.logInfo('GPS off ignored — dashboard auto punch-out disabled');
+        } else {
+          LogConfig.logWarning('🚨 GPS turned off while user is punched in!');
+          await _handleGpsDisabled();
+        }
       }
 
       _lastGpsState = currentGpsState;
@@ -242,56 +246,33 @@ class GpsMonitorService {
    */
   Future<bool> _executePunchOut(Map<String, dynamic> punchOutData) async {
     try {
-      final fetchedUserId = await TokenStorage.getUserId();
-      final branchId = await TokenStorage.getBranchId() ?? 0;
-      final organizationId = await TokenStorage.getOrganisationId() ?? 0;
-      final token = await TokenStorage.getToken();
-
-      if (fetchedUserId == null) {
-        LogConfig.logError('❌ User credentials not available for punch out');
-        return false;
-      }
-
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse(BaseUrls.punchOut),
+      final reason = PunchOutReasons.getReasonDescription(
+        punchOutData['reason']?.toString() ??
+            PunchOutReasons.GPS_DISABLED_BY_USER,
       );
+      final lat = double.tryParse('${punchOutData['latitude']}') ?? 0.0;
+      final lng = double.tryParse('${punchOutData['longitude']}') ?? 0.0;
+      DateTime? when;
+      try {
+        final raw = punchOutData['punch_out_time']?.toString();
+        if (raw != null && raw.isNotEmpty) {
+          when = DateTime.tryParse(raw);
+        }
+      } catch (_) {}
 
-      if (token != null && token.isNotEmpty) {
-        request.headers['Authorization'] = 'Bearer $token';
-      }
-
-      request.fields.addAll({
-        'userId': fetchedUserId.toString(),
-        'employee': fetchedUserId.toString(),
-        'organization_id': organizationId.toString(),
-        'organization': organizationId.toString(),
-        'branch': branchId.toString(),
-        'branchId': branchId.toString(),
-        'punch_out_time': punchOutData['punch_out_time'] ?? '',
-        'attendance_date': punchOutData['attendance_date'] ?? '',
-        'longitude': punchOutData['longitude'] ?? '0.0',
-        'latitude': punchOutData['latitude'] ?? '0.0',
-        'punch_out_reason': punchOutData['reason'] ?? PunchOutReasons.GPS_DISABLED_BY_USER,
-        'auto_punch_out': punchOutData['auto_punch_out'] ?? 'true',
-        'cached_punch_out': 'true',
-      });
-
-      LogConfig.logApi('🌐 Executing automatic punch out API call from cache');
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-      final responseData = jsonDecode(response.body);
-
-      if ((response.statusCode == 200 || response.statusCode == 201) &&
-          (responseData['success'] == true || response.body.toLowerCase().contains('successful') || response.body.toLowerCase().contains('already'))) {
+      LogConfig.logApi('🌐 GPS auto punch-out via AttendanceService: $reason');
+      final result = await AttendanceService.submitAutoPunchOut(
+        punchOutReason: reason,
+        punchTime: when,
+        latitude: lat,
+        longitude: lng,
+      );
+      if (result.success) {
         LogConfig.logSuccess('✅ Automatic punch out API call successful');
         return true;
-      } else {
-        LogConfig.logError(
-            '❌ Punch out API failed: ${responseData['message'] ?? response.statusCode}');
-        return false;
       }
+      LogConfig.logError('❌ Punch out API failed: ${result.message}');
+      return false;
     } catch (e) {
       LogConfig.logError('Error executing punch out from cache: $e', e);
       return false;

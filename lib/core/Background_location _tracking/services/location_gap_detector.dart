@@ -21,6 +21,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/location_config.dart';
 import '../../constants/log_levels.dart';
 import '../../Utils/services/token_storage.dart';
+import '../../Utils/services/Attendance service/attendance_service.dart';
 import '../../Utils/Urls/urls.dart';
 import '../models/location_model.dart';
 import 'database_helper.dart';
@@ -63,6 +64,12 @@ class LocationGapDetector {
    * Start gap detection when user punches in
    */
   Future<void> startGapDetection(DateTime punchInTime) async {
+    if (!LocationConfig.ENABLE_LOCATION_GAP_VALIDATION) {
+      LogConfig.logInfo('Gap validation disabled by dashboard config');
+      _isGapDetectionActive = false;
+      return;
+    }
+
     _isGapDetectionActive = true;
     _punchInTime = punchInTime;
     _lastGapDetected = null;
@@ -233,27 +240,9 @@ class LocationGapDetector {
    */
   Future<void> _triggerAutoPunchOut(LocationGapResult gapResult) async {
     try {
-      // Get user credentials
-      final userId = await TokenStorage.getUserId();
-      final branchId = await TokenStorage.getBranchId() ?? 0;
-      final organizationId = await TokenStorage.getOrganisationId() ?? 0;
-      final token = await TokenStorage.getToken();
-
-      if (userId == null) {
-        LogConfig.logError(
-            'Cannot perform auto punch-out - user credentials not available');
-        return;
-      }
-
-      // Format punch-out time (use gap start time)
       final punchOutTime = gapResult.autoPunchOutTime!;
-      final dateFormat = DateFormat('yyyy-MM-dd');
-      final timeFormat = DateFormat('HH:mm:ss');
-      final attendanceDate = dateFormat.format(punchOutTime);
-      final punchOutTimeStr =
-          '${attendanceDate}T${timeFormat.format(punchOutTime)}';
+      final reason = gapResult.reason ?? 'Location gap detected';
 
-      // Get last known location (use cached or default)
       double latitude = 0.0, longitude = 0.0;
       try {
         final prefs = await SharedPreferences.getInstance();
@@ -268,75 +257,36 @@ class LocationGapDetector {
             'Could not get cached location for auto punch-out');
       }
 
-      LogConfig.logPunchOut('🚨 Triggering auto punch-out at $punchOutTimeStr');
+      LogConfig.logPunchOut(
+          '🚨 Triggering auto punch-out at ${punchOutTime.toIso8601String()}');
 
-      // Create punch-out request
-      final request =
-          http.MultipartRequest('POST', Uri.parse(BaseUrls.punchOut));
+      final result = await AttendanceService.submitAutoPunchOut(
+        punchOutReason: reason,
+        punchTime: punchOutTime,
+        latitude: latitude,
+        longitude: longitude,
+      );
 
-      if (token != null && token.isNotEmpty) {
-        request.headers['Authorization'] = 'Bearer $token';
-      }
-
-      request.fields.addAll({
-        'userId': userId.toString(),
-        'employee': userId.toString(),
-        'organization_id': organizationId.toString(),
-        'organization': organizationId.toString(),
-        'branch': branchId.toString(),
-        'branchId': branchId.toString(),
-        'punch_out_time': punchOutTimeStr,
-        'longitude': longitude.toString(),
-        'latitude': latitude.toString(),
-        'attendance_date': attendanceDate,
-        'auto_punch_out': 'true',
-        'punch_out_reason': gapResult.reason ?? 'Location gap detected',
-        'gap_duration_minutes': gapResult.gapDurationMinutes.toString(),
-        'gap_detected_auto_punch': 'true',
-        'timestamp': punchOutTime.toIso8601String(),
-      });
-
-      // Send request
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-      final responseData = jsonDecode(response.body);
-
-      if ((response.statusCode == 200 || response.statusCode == 201) &&
-          (responseData['success'] == true || response.body.toLowerCase().contains('successful') || response.body.toLowerCase().contains('already'))) {
+      if (result.success) {
         LogConfig.logSuccess('✅ Auto punch-out successful due to location gap');
-
-        // Stop gap detection
         await stopGapDetection();
-
-        // Mark user as punched out
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('user_punched_out', true);
       } else {
-        LogConfig.logError(
-            '❌ Auto punch-out failed: ${responseData['message'] ?? response.statusCode}');
-
-        // Save failed attempt for retry
-        await _savePunchOutAttempt(gapResult, userId, branchId, organizationId);
+        LogConfig.logError('❌ Auto punch-out failed: ${result.message}');
+        await _savePunchOutAttempt(gapResult, 0);
       }
     } catch (e) {
       LogConfig.logError('Error triggering auto punch-out', e);
-
-      // Save failed attempt for retry
-      final userId = await TokenStorage.getUserId();
-      final branchId = await TokenStorage.getBranchId() ?? 0;
-      final organizationId = await TokenStorage.getOrganisationId() ?? 0;
-
-      if (userId != null) {
-        await _savePunchOutAttempt(gapResult, userId, branchId, organizationId);
-      }
+      await _savePunchOutAttempt(gapResult, 0);
     }
   }
 
   /**
    * Save failed punch-out attempt for retry
    */
-  Future<void> _savePunchOutAttempt(LocationGapResult gapResult, int userId,
-      int branchId, int organizationId) async {
+  Future<void> _savePunchOutAttempt(
+      LocationGapResult gapResult, int userId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final existingAttempts =
@@ -362,21 +312,17 @@ class LocationGapDetector {
         // Use default coordinates
       }
 
+      final reason = gapResult.reason ?? 'Location gap detected';
       final attemptData = jsonEncode({
         'userId': userId.toString(),
-        'employee': userId.toString(),
-        'organization_id': organizationId.toString(),
-        'organization': organizationId.toString(),
-        'branch': branchId.toString(),
-        'branchId': branchId.toString(),
         'punch_out_time': punchOutTimeStr,
         'longitude': longitude.toString(),
         'latitude': latitude.toString(),
         'attendance_date': attendanceDate,
-        'auto_punch_out': 'true',
-        'punch_out_reason': gapResult.reason ?? 'Location gap detected',
+        'Manual': 'false',
+        'PunchOutReason': reason,
+        'punch_out_reason': reason,
         'gap_duration_minutes': gapResult.gapDurationMinutes.toString(),
-        'gap_detected_auto_punch': 'true',
         'timestamp': punchOutTime.toIso8601String(),
         'retry_count': 0,
       });

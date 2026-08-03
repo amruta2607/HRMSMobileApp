@@ -15,6 +15,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -249,15 +250,25 @@ class LocationIssueTracker {
         }
       }
 
-      // Prepare API payload matching backend schema
+      // Prepare API payload matching swagger /apipunch/location-tracking/add-issue
+      final now = DateTime.now();
+      final stamp =
+          '${now.year.toString().padLeft(4, '0')}-'
+          '${now.month.toString().padLeft(2, '0')}-'
+          '${now.day.toString().padLeft(2, '0')}T'
+          '${now.hour.toString().padLeft(2, '0')}:'
+          '${now.minute.toString().padLeft(2, '0')}:'
+          '${now.second.toString().padLeft(2, '0')}';
       final payload = {
         'user_id': userId,
         'issue_type': issueType,
         'issue_description': details,
-        'timestamp': DateTime.now().toIso8601String(),
+        'timestamp': stamp,
         'last_known_latitude': latitude,
         'last_known_longitude': longitude,
-        'device_id': null,
+        'device_id': Platform.isAndroid
+            ? 'android'
+            : (Platform.isIOS ? 'ios' : 'unknown'),
       };
 
       final token = await TokenStorage.getToken();

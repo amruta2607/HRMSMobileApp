@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,6 +15,9 @@ import '../Time_Location/location_service.dart';
 import '../token_storage.dart';
 import '../authenticated_http.dart';
 import '../../../Background_location _tracking/services/location_service.dart' as bg_tracking;
+import '../../../Background_location _tracking/services/location_config_service.dart';
+import '../../../Background_location _tracking/services/gps_monitor_service.dart';
+import '../../../constants/location_config.dart';
 
 class AttendanceService {
   // Global State Notifiers for real-time synchronization
@@ -51,6 +53,8 @@ class AttendanceService {
     required bool isPunchIn,
     required DateTime punchTime,
     File? image,
+    bool isManual = true,
+    String punchOutReason = 'Normal Punch Out',
   }) async {
     final token = await TokenStorage.getToken();
     if (token == null) return (success: false, message: 'Token Missing');
@@ -58,38 +62,86 @@ class AttendanceService {
     final userId = await _getUserId();
     if (userId == null) return (success: false, message: 'User ID Missing');
 
-    late final position;
+    late final Position position;
     try {
       position = await LocationService.getLatLng();
     } catch (e) {
       return (success: false, message: 'Location error: $e');
     }
 
+    // Android emulator default (Googleplex).
+    final isEmulatorDefaultLocation =
+        (position.latitude - 37.421998).abs() < 0.002 &&
+            (position.longitude + 122.084).abs() < 0.002;
+    if (isEmulatorDefaultLocation) {
+      return (
+        success: false,
+        message:
+            'Invalid location (emulator default USA). Set office location in emulator, then retry.',
+      );
+    }
+
+    // Sync status for UI. Allow another punch-in after punch-out.
+    await LocationConfigService.fetchConfig();
+    final todayStatus = await getTodayStatus();
+    print('📋 TODAY STATUS before punch => '
+        'punchIn=${todayStatus?.punchIn}, punchOut=${todayStatus?.punchOut}, '
+        'status=${todayStatus?.status}, '
+        'duplicateSessionCheck=${LocationConfig.DUPLICATE_SESSION_CHECK} '
+        '(fresh config)');
+
+    // Open session only: already in, no out yet.
+    if (isPunchIn &&
+        todayStatus?.punchIn != null &&
+        todayStatus?.punchOut == null &&
+        isClockedIn) {
+      return (
+        success: false,
+        message: 'Already punched in. Use Punch-Out first.',
+      );
+    }
+
     final url = isPunchIn ? BaseUrls.punchIn : BaseUrls.punchOut;
 
-    print("punchTime----------------------------");
-    print(punchTime);
-
-    // Format date as yyyy-MM-dd
     final dateStr = "${punchTime.year.toString().padLeft(4, '0')}-"
         "${punchTime.month.toString().padLeft(2, '0')}-"
         "${punchTime.day.toString().padLeft(2, '0')}";
-
-    // Format time as UTC ISO8601 (without microseconds)
     final timeStr = DateFormat("yyyy-MM-dd'T'HH:mm:ss").format(punchTime);
-    print("Check date and time ____________________________");
-    print(dateStr);
-    print(timeStr);
+
+    print('punchTime => $punchTime | date=$dateStr time=$timeStr');
+
+    // Geofence only when server config disallows punch from anywhere.
+    try {
+      final geoConfig = await getGeofencingDetails();
+      final fromAnywhere = LocationConfig.ENABLE_FROM_ANYWHERE;
+      print('📍 GEOFENCE => enabled=${geoConfig?.isEnabled}, fromAnywhere=$fromAnywhere');
+      if (!fromAnywhere && geoConfig != null && geoConfig.isEnabled) {
+        final within = isWithinRadius(
+          currentLat: position.latitude,
+          currentLng: position.longitude,
+          branchLat: geoConfig.latitude,
+          branchLng: geoConfig.longitude,
+          radius: geoConfig.radius,
+        );
+        if (!within) {
+          return (
+            success: false,
+            message: 'You are not in the office range. Radius: ${geoConfig.radius}m',
+          );
+        }
+      }
+    } catch (e) {
+      print('Geofencing lookup failed: $e');
+    }
 
     try {
       final request = http.MultipartRequest('POST', Uri.parse(url));
-
       request.headers.addAll({
         'accept': '*/*',
         'Authorization': 'Bearer $token',
       });
 
-      // Add form fields
+      // Exact swagger fields only (extra fields / real image binary break this API).
       request.fields['userId'] = userId.toString();
       request.fields['attendance_date'] = dateStr;
       request.fields['longitude'] = position.longitude.toString();
@@ -99,27 +151,19 @@ class AttendanceService {
         request.fields['punch_in_time'] = timeStr;
       } else {
         request.fields['punch_out_time'] = timeStr;
+        request.fields['Manual'] = isManual.toString();
+        request.fields['PunchOutReason'] = punchOutReason;
       }
 
-      // Add image file
-      if (image != null) {
-        final mimeType = image.path.toLowerCase().endsWith('.png')
-            ? 'image/png'
-            : 'image/jpeg';
-        final ext = image.path.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            'image',
-            await image.readAsBytes(),
-            filename: 'photo.$ext',
-            contentType: MediaType.parse(mimeType),
-          ),
-        );
-      }
+      // Server returns 400 "Error while processing punch in" when a real image
+      // binary is uploaded. Swagger/curl succeeds with an empty image field.
+      request.files.add(
+        http.MultipartFile.fromBytes('image', const <int>[], filename: ''),
+      );
 
-      // print('📤 PUNCH REQUEST URL => $url');
-      // print('📤 PUNCH FIELDS => ${request.fields}');
-      // print('📤 PUNCH FILES => ${request.files.map((f) => '${f.field}: ${f.filename} (${f.length} bytes)').toList()}');
+      print('📤 PUNCH REQUEST URL => $url');
+      print('📤 PUNCH FIELDS => ${request.fields}');
+      print('📤 PUNCH FILES => empty image field (server rejects real binaries)');
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
@@ -131,43 +175,75 @@ class AttendanceService {
         return (success: false, message: 'Session expired');
       }
 
-      final decoded = jsonDecode(response.body);
-      final bool success = decoded['success'] == true;
-      final String message = decoded['message']?.toString() ?? '';
+      Map<String, dynamic> decoded = {};
+      try {
+        final body = jsonDecode(response.body);
+        if (body is Map<String, dynamic>) decoded = body;
+      } catch (_) {}
+
+      final String message = decoded['message']?.toString() ??
+          decoded['title']?.toString() ??
+          (response.body.isNotEmpty ? response.body : 'Punch failed');
       final msgLower = message.toLowerCase();
 
-      // If already done or successfully done
-      if (success || msgLower.contains('already') || msgLower.contains('successful')) {
+      // API often returns only {message: "Punch In/Out Successful"} (no success:true).
+      final bool ok = decoded['success'] == true ||
+          msgLower.contains('successful') ||
+          (response.statusCode == 200 && msgLower.contains('success'));
+
+      if (ok) {
         if (isPunchIn) {
-          isClockedInNotifier.value = true;
+          // Persist open session so refresh/status sync cannot drop the timer.
           punchInTimeNotifier.value = punchTime;
+          isClockedInNotifier.value = true;
           isPunchedOutForTodayNotifier.value = false;
           try {
-            bg_tracking.LocationService.instance.startTracking();
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.remove('auto_punched_out');
+            await prefs.remove('auto_punched_out_date');
+            await prefs.setString(
+              'local_open_punch_in',
+              punchTime.toIso8601String(),
+            );
+          } catch (_) {}
+          try {
+            // Required so GPS-off auto punch-out can run again after prior punch-out.
+            await bg_tracking.LocationService.instance.resetPunchOutStatus();
+            await bg_tracking.LocationService.instance.startTracking();
+            await GpsMonitorService.instance.startMonitoring();
           } catch (e) {
-            print('Error starting background tracking: $e');
+            print('Error starting background tracking/GPS monitor: $e');
           }
         } else {
-          isClockedInNotifier.value = false;
-          punchInTimeNotifier.value = null;
-          isPunchedOutForTodayNotifier.value = true;
-          try {
-            bg_tracking.LocationService.instance.stopTracking();
-          } catch (e) {
-            print('Error stopping background tracking: $e');
-          }
+          // Punch-out ends the open session — always allow another punch-in.
+          await _clearLocalOpenSession();
         }
-
-        if (msgLower.contains('already')) {
-          return (success: false, message: message); // Return false but with message
+        // Refresh lists only; do not re-sync status in a way that clears timer.
+        if (!isPunchIn) {
+          triggerRefresh();
         }
         return (success: true, message: message);
       }
 
-      return (success: false, message: message);
+      // Server already punched out (auto/GPS) — sync app to clocked-out.
+      if (!isPunchIn && msgLower.contains('already')) {
+        await _clearLocalOpenSession();
+        triggerRefresh();
+        return (success: true, message: 'Already punched out. Status synced.');
+      }
+
+      // Keep UI clocked out if server rejects re-punch after a completed session.
+      if (isPunchIn && msgLower.contains('already')) {
+        await getTodayStatus();
+        return (success: false, message: message);
+      }
+
+      return (
+        success: false,
+        message: message.isNotEmpty ? message : 'Punch failed (${response.statusCode})',
+      );
     } catch (e) {
       if (e is http.ClientException || e.toString().contains('SocketException')) {
-        // For offline mode, save without image (image can't be serialized to prefs)
         final model = Attendance_in_out_Model(
           userId: userId,
           attendanceDate: punchTime,
@@ -179,13 +255,21 @@ class AttendanceService {
         final body = isPunchIn ? model.toPunchInJson() : model.toPunchOutJson();
         await _savePendingPunch(body, isPunchIn);
         if (isPunchIn) {
+          punchInTimeNotifier.value = punchTime;
+          isClockedInNotifier.value = true;
+          isPunchedOutForTodayNotifier.value = false;
           try {
-            bg_tracking.LocationService.instance.startTracking();
-          } catch (e) {}
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString(
+              'local_open_punch_in',
+              punchTime.toIso8601String(),
+            );
+            await bg_tracking.LocationService.instance.resetPunchOutStatus();
+            await bg_tracking.LocationService.instance.startTracking();
+            await GpsMonitorService.instance.startMonitoring();
+          } catch (_) {}
         } else {
-          try {
-            bg_tracking.LocationService.instance.stopTracking();
-          } catch (e) {}
+          await _clearLocalOpenSession();
         }
         return (success: true, message: 'Offline: Punch saved for later sync');
       }
@@ -367,6 +451,20 @@ class AttendanceService {
       final userId = await _getUserId();
       if (userId == null) return null;
 
+      // Restore local open session before server sync (multi punch-in).
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final localOpen = prefs.getString('local_open_punch_in');
+        if (localOpen != null && localOpen.isNotEmpty) {
+          final localIn = DateTime.tryParse(localOpen);
+          if (localIn != null) {
+            punchInTimeNotifier.value = localIn;
+            isClockedInNotifier.value = true;
+            isPunchedOutForTodayNotifier.value = false;
+          }
+        }
+      } catch (_) {}
+
       final response = await getAttendanceStatus(userId: userId, date: DateTime.now());
       if (response != null && response.success) {
         final data = response.data;
@@ -376,22 +474,41 @@ class AttendanceService {
             punchInTimeNotifier.value = data.punchIn;
             isPunchedOutForTodayNotifier.value = false;
             try {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString(
+                'local_open_punch_in',
+                data.punchIn!.toIso8601String(),
+              );
+            } catch (_) {}
+            try {
               bg_tracking.LocationService.instance.startTracking();
             } catch (e) {}
           } else if (data.punchIn != null && data.punchOut != null) {
-            isClockedInNotifier.value = false;
-            punchInTimeNotifier.value = null;
-            isPunchedOutForTodayNotifier.value = true;
-            try {
-              bg_tracking.LocationService.instance.stopTracking();
-            } catch (e) {}
+            final localIn = punchInTimeNotifier.value;
+            // Keep only a NEW local session started after server's last punch-out.
+            final keepLocal = isClockedInNotifier.value &&
+                localIn != null &&
+                localIn.isAfter(data.punchOut!);
+
+            if (keepLocal) {
+              print('📋 Keeping local open session punchIn=$localIn '
+                  '(server punchOut=${data.punchOut})');
+            } else {
+              // Server already closed this session (manual/auto punch-out).
+              print('📋 Clearing local session — server punchOut=${data.punchOut} '
+                  'localIn=$localIn');
+              await _clearLocalOpenSession();
+            }
           } else {
-            isClockedInNotifier.value = false;
-            punchInTimeNotifier.value = null;
-            isPunchedOutForTodayNotifier.value = false;
-            try {
-              bg_tracking.LocationService.instance.stopTracking();
-            } catch (e) {}
+            // No server attendance — keep local open session if present.
+            if (!(isClockedInNotifier.value && punchInTimeNotifier.value != null)) {
+              isClockedInNotifier.value = false;
+              punchInTimeNotifier.value = null;
+              isPunchedOutForTodayNotifier.value = false;
+              try {
+                bg_tracking.LocationService.instance.stopTracking();
+              } catch (e) {}
+            }
           }
         }
         return response.data;
@@ -489,5 +606,134 @@ class AttendanceService {
   }) {
     final distanceInMeters = Geolocator.distanceBetween(currentLat, currentLng, branchLat, branchLng);
     return distanceInMeters <= radius;
+  }
+
+  static Future<void> _clearLocalOpenSession() async {
+    isClockedInNotifier.value = false;
+    punchInTimeNotifier.value = null;
+    isPunchedOutForTodayNotifier.value = false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('auto_punched_out');
+      await prefs.remove('auto_punched_out_date');
+      await prefs.remove('local_open_punch_in');
+    } catch (_) {}
+    try {
+      await GpsMonitorService.instance.stopMonitoring();
+    } catch (_) {}
+    try {
+      bg_tracking.LocationService.instance.stopTracking();
+    } catch (_) {}
+  }
+
+  /// Auto punch-out (GPS off / gap / headless). Always `Manual=false`.
+  /// Pass last-known lat/lng — live GPS is often unavailable.
+  static Future<({bool success, String? message})> submitAutoPunchOut({
+    required String punchOutReason,
+    DateTime? punchTime,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final token = await TokenStorage.getToken();
+    if (token == null) return (success: false, message: 'Token Missing');
+
+    final userId = await _getUserId();
+    if (userId == null) return (success: false, message: 'User ID Missing');
+
+    final when = punchTime ?? DateTime.now();
+    final dateStr = "${when.year.toString().padLeft(4, '0')}-"
+        "${when.month.toString().padLeft(2, '0')}-"
+        "${when.day.toString().padLeft(2, '0')}";
+    final timeStr = DateFormat("yyyy-MM-dd'T'HH:mm:ss").format(when);
+
+    double lat = latitude ?? 0.0;
+    double lng = longitude ?? 0.0;
+    if (latitude == null || longitude == null) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final cached = prefs.getString('last_known_location');
+        if (cached != null) {
+          final m = jsonDecode(cached);
+          lat = (m['latitude'] as num?)?.toDouble() ?? lat;
+          lng = (m['longitude'] as num?)?.toDouble() ?? lng;
+        }
+      } catch (_) {}
+    }
+
+    try {
+      final request = http.MultipartRequest('POST', Uri.parse(BaseUrls.punchOut));
+      request.headers.addAll({
+        'accept': '*/*',
+        'Authorization': 'Bearer $token',
+      });
+
+      // Proven curl shape: Manual=false + PunchOutReason → timeline manual:false.
+      request.fields['userId'] = userId.toString();
+      request.fields['attendance_date'] = dateStr;
+      request.fields['punch_out_time'] = timeStr;
+      request.fields['longitude'] = lng.toString();
+      request.fields['latitude'] = lat.toString();
+      request.fields['Manual'] = 'false';
+      request.fields['PunchOutReason'] = punchOutReason;
+      request.files.add(
+        http.MultipartFile.fromBytes('image', const <int>[], filename: ''),
+      );
+
+      print('📤 AUTO PUNCH-OUT URL => ${BaseUrls.punchOut}');
+      print('📤 AUTO PUNCH-OUT FIELDS => ${request.fields}');
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      print('📥 AUTO PUNCH-OUT => ${response.statusCode} ${response.body}');
+
+      Map<String, dynamic> decoded = {};
+      try {
+        final body = jsonDecode(response.body);
+        if (body is Map<String, dynamic>) decoded = body;
+      } catch (_) {}
+
+      final message = decoded['message']?.toString() ??
+          (response.body.isNotEmpty ? response.body : 'Auto punch-out failed');
+      final msgLower = message.toLowerCase();
+      final ok = decoded['success'] == true ||
+          msgLower.contains('successful') ||
+          msgLower.contains('already') ||
+          (response.statusCode == 200 && msgLower.contains('success'));
+
+      if (ok) {
+        await syncAutoPunchedOut();
+        try {
+          await bg_tracking.LocationService.instance.stopTracking();
+        } catch (_) {}
+        return (success: true, message: message);
+      }
+      return (success: false, message: message);
+    } catch (e) {
+      return (success: false, message: e.toString());
+    }
+  }
+
+  /// Called by GPS auto punch-out so UI/timer sync immediately.
+  static Future<void> syncAutoPunchedOut() async {
+    isClockedInNotifier.value = false;
+    punchInTimeNotifier.value = null;
+    isPunchedOutForTodayNotifier.value = false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('local_open_punch_in');
+      final today =
+          '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}';
+      await prefs.setBool('auto_punched_out', true);
+      await prefs.setString('auto_punched_out_date', today);
+      await prefs.setBool('user_punched_out', true);
+      await prefs.setBool('attendance_session_active', false);
+      await prefs.remove('pending_terminate_punch_out');
+      await prefs.remove('pending_terminate_reason');
+      await prefs.remove('pending_terminate_at');
+    } catch (_) {}
+    try {
+      await GpsMonitorService.instance.stopMonitoring();
+    } catch (_) {}
+    triggerRefresh();
   }
 }

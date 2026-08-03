@@ -17,6 +17,7 @@ import 'core/Background_location _tracking/providers/location_provider.dart';
 import 'core/Background_location _tracking/services/location_service.dart';
 import 'core/Background_location _tracking/services/gps_monitor_service.dart';
 import 'core/Background_location _tracking/services/location_gap_detector.dart';
+import 'core/Background_location _tracking/services/location_config_service.dart';
 
 // Register headless task handler
 @pragma('vm:entry-point')
@@ -84,6 +85,18 @@ Future<void> _initializeBackgroundServices() async {
     await LocationService.instance.initialize();
     await GpsMonitorService.instance.initialize();
     await LocationGapDetector.instance.initialize();
+
+    // Initialize location configuration from server API.
+    // This fetches /api/mobile/locationtrackingconfiguration and caches the
+    // result so that all LocationConfig values are server-driven.
+    await LocationConfigService.initialize();
+
+    // Wire up callback so LocationService re-applies settings whenever
+    // a fresh config is fetched in the background.
+    LocationConfigService.setOnConfigFetchedCallback(() {
+      LocationService.instance.onConfigUpdated();
+    });
+
     print('🚀 Background location services initialized asynchronously in background.');
   } catch (e) {
     print('Error initializing background tracking services: $e');

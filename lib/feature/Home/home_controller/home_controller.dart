@@ -113,7 +113,9 @@ class HomeController extends ChangeNotifier {
           a.title.contains("Resignation Request") ||
           a.title.contains("Cancel Leave Request") ||
           a.title.contains("Cancel Payroll Request") ||
-          a.title.contains("Overtime Request");
+          a.title.contains("Overtime Request") ||
+          a.title.contains("Regularization Request")||
+          a.title.contains("Requisition Request");
 
   // Keep old method for backwards compatibility
   Future<void> fetchAttendanceStatus() async {

@@ -26,9 +26,9 @@ import '../../Utils/services/token_storage.dart';
 import '../models/location_model.dart';
 
 class ApiService {
-  static const int _requestTimeout = LocationConfig.IMMEDIATE_API_TIMEOUT_SECONDS;
-  static const int _batchRequestTimeout = LocationConfig.BATCH_API_TIMEOUT_SECONDS;
-  static const int _maxBatchSize = LocationConfig.MAX_BATCH_SIZE;
+  static int get _requestTimeout => LocationConfig.IMMEDIATE_API_TIMEOUT_SECONDS;
+  static int get _batchRequestTimeout => LocationConfig.BATCH_API_TIMEOUT_SECONDS;
+  static int get _maxBatchSize => LocationConfig.MAX_BATCH_SIZE;
 
   // Request state management
   bool _isCallInProgress = false;
@@ -45,6 +45,11 @@ class ApiService {
    * @returns Future<bool> - Success status
    */
   Future<bool> sendLocationData(LocationData locationData) async {
+    if (!LocationConfig.IS_LOCATION_TRACKING_ENABLED) {
+      LogConfig.logWarning('Location tracking disabled by config — skip send');
+      return false;
+    }
+
     if (_isCallInProgress) {
       LogConfig.logWarning(
           'Another API call in progress, queuing this request');
@@ -77,6 +82,13 @@ class ApiService {
         await _markLocationAsSynced(locationData);
         return true;
       } else {
+        // If location tracking is disabled by admin, stop retrying entirely
+        final body = response.body.toLowerCase();
+        if (body.contains('location tracking is disabled') || body.contains('tracking is disabled')) {
+          LogConfig.logWarning('🚫 Location tracking disabled by admin — skipping retries & clearing queue');
+          await _clearFailedRequests();
+          return false;
+        }
         LogConfig.logError(
             'API request failed with status: ${response.statusCode}');
         await _saveFailedRequest(locationData);
@@ -98,6 +110,11 @@ class ApiService {
    */
   Future<bool> sendBatchLocationData(List<LocationData> locations) async {
     if (locations.isEmpty) return true;
+
+    if (!LocationConfig.IS_LOCATION_TRACKING_ENABLED) {
+      LogConfig.logWarning('Location tracking disabled by config — skip batch');
+      return false;
+    }
 
     if (_isCallInProgress) {
       LogConfig.logWarning(
@@ -140,6 +157,13 @@ class ApiService {
           await _markLocationsAsSynced(locationsToSend);
           return true;
         } else {
+          // If location tracking is disabled by admin, stop retrying entirely
+          final body = response.body.toLowerCase();
+          if (body.contains('location tracking is disabled') || body.contains('tracking is disabled')) {
+            LogConfig.logWarning('🚫 Location tracking disabled by admin — skipping retries & clearing queue');
+            await _clearFailedRequests();
+            return false;
+          }
           LogConfig.logWarning(
               'Batch API request failed with status: ${response.statusCode}. Falling back to individual sends');
           return await _sendLocationsIndividually(locationsToSend);
