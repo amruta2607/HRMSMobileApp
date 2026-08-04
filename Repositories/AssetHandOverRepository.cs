@@ -470,6 +470,42 @@ namespace MobileWebApi.Repositories
             }
         }
 
+        /// <inheritdoc />
+        public async Task<AssetTimelineListResponse> GetAssetHandOverTimelineAsync(int assetId)
+        {
+            try
+            {
+                var tenantId = _tenantContext.GetRequiredOrganisationId();
+
+                using var connection = _context.CreateConnection();
+                var items = (await connection.QueryAsync<AssetTimelineResponse>(
+                    _queries.Get("AssetHandOver_GetTimeline"),
+                    new { AssetId = assetId, TenantId = tenantId })).ToList();
+
+                _logger.LogInformation(
+                    LogMessages.AssetHandOver.TimelineFetched,
+                    items.Count,
+                    assetId,
+                    tenantId);
+
+                return new AssetTimelineListResponse
+                {
+                    Success = true,
+                    Message = AssetMessages.TimelineFetchedSuccessfully,
+                    Data = items
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(
+                    ExceptionCodes.AssetHandOver.GetTimeline,
+                    nameof(GetAssetHandOverTimelineAsync),
+                    ex,
+                    _tenantContext.UserId);
+                throw;
+            }
+        }
+
         private static bool IsSafeSqlIdentifier(string? value)
         {
             if (string.IsNullOrWhiteSpace(value))

@@ -647,6 +647,42 @@ namespace MobileWebApi.Repositories
             }
         }
 
+        /// <inheritdoc />
+        public async Task<AssetTimelineListResponse> GetAssetTimelineAsync(int assetId)
+        {
+            try
+            {
+                var tenantId = _tenantContext.GetRequiredOrganisationId();
+
+                using var connection = _context.CreateConnection();
+                var items = (await connection.QueryAsync<AssetTimelineResponse>(
+                    _queries.Get("Asset_GetTimeline"),
+                    new { AssetId = assetId, TenantId = tenantId })).ToList();
+
+                _logger.LogInformation(
+                    LogMessages.Asset.TimelineFetched,
+                    items.Count,
+                    assetId,
+                    tenantId);
+
+                return new AssetTimelineListResponse
+                {
+                    Success = true,
+                    Message = AssetMessages.TimelineFetchedSuccessfully,
+                    Data = items
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(
+                    ExceptionCodes.Asset.GetTimeline,
+                    nameof(GetAssetTimelineAsync),
+                    ex,
+                    _tenantContext.UserId);
+                throw;
+            }
+        }
+
         private static async Task DeleteOptionalDependentTablesAsync(
             IDbConnection connection,
             IDbTransaction transaction,

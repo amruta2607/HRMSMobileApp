@@ -357,7 +357,7 @@ namespace MobileWebApi.Repositories
         }
 
         /// <inheritdoc />
-        public async Task<AssetTimelineListResponse> GetAssetTimelineAsync(int assetId)
+        public async Task<AssetTimelineListResponse> GetAssetMaintenanceTimelineAsync(int assetId)
         {
             try
             {
@@ -385,7 +385,7 @@ namespace MobileWebApi.Repositories
             {
                 _logger.LogException(
                     ExceptionCodes.AssetMaintenance.GetTimeline,
-                    nameof(GetAssetTimelineAsync),
+                    nameof(GetAssetMaintenanceTimelineAsync),
                     ex,
                     _tenantContext.UserId);
                 throw;

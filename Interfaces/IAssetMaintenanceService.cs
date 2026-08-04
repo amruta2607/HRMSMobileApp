@@ -39,8 +39,9 @@ namespace MobileWebApi.Interfaces
         Task<AssetMaintenanceLookupResponse> GetAssetMaintenanceLookupsAsync();
 
         /// <summary>
-        /// Returns the complete AssetHistory timeline for the specified asset for the current tenant.
+        /// Returns AssetHistory rows for the specified asset where SourceTable = 'AssetMaintenance'
+        /// for the current tenant.
         /// </summary>
-        Task<AssetTimelineListResponse> GetAssetTimelineAsync(int assetId);
+        Task<AssetTimelineListResponse> GetAssetMaintenanceTimelineAsync(int assetId);
     }
 }

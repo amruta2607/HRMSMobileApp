@@ -421,7 +421,11 @@
 
     "AssetMaintenance_LookupResponsiblePersons": "SELECT Id, EmployeeNumber AS EmployeeCode, Name AS EmployeeName FROM [dbo].[Employee] WHERE TenantId = @TenantId AND IsEmployeeActive = 1 ORDER BY Name",
 
-    "AssetMaintenance_GetTimeline": "SELECT * FROM [dbo].[AssetHistory] WHERE AssetId = @AssetId AND TenantId = @TenantId ORDER BY ActionDate DESC",
+    "Asset_GetTimeline": "SELECT * FROM [dbo].[AssetHistory] WHERE TenantId = @TenantId AND AssetId = @AssetId AND SourceTable = 'Asset' ORDER BY ActionDate DESC",
+
+    "AssetHandOver_GetTimeline": "SELECT * FROM [dbo].[AssetHistory] WHERE TenantId = @TenantId AND AssetId = @AssetId AND SourceTable = 'AssetHandOver' ORDER BY ActionDate DESC",
+
+    "AssetMaintenance_GetTimeline": "SELECT * FROM [dbo].[AssetHistory] WHERE TenantId = @TenantId AND AssetId = @AssetId AND SourceTable = 'AssetMaintenance' ORDER BY ActionDate DESC",
 
     "GetTemplates": "SELECT Id, TemplateName FROM [dbo].[Template] WHERE IsActive = 1 AND TenantId = @TenantId AND ActionType='Submission' ORDER BY TemplateName",
 

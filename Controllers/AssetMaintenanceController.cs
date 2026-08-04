@@ -76,14 +76,14 @@ namespace MobileWebApi.Controllers
         }
 
         /// <summary>
-        /// Returns the complete AssetHistory timeline for the specified asset,
+        /// Returns AssetHistory rows for the specified asset where SourceTable = 'AssetMaintenance',
         /// ordered by ActionDate descending (latest activity first).
         /// </summary>
         /// <param name="assetId">The asset identifier.</param>
         /// <response code="200">Timeline fetched successfully (may be an empty list).</response>
         /// <response code="401">Caller is not authenticated or tenant access is denied.</response>
         /// <response code="500">Unexpected server error.</response>
-        [HttpGet("/api/asset/{assetId:int}/timeline")]
+        [HttpGet("/api/assetmaintenance/{assetId:int}/timeline")]
         [ProducesResponseType(typeof(AssetTimelineListResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -100,7 +100,7 @@ namespace MobileWebApi.Controllers
                     userId,
                     tenantId);
 
-                var result = await _assetMaintenanceService.GetAssetTimelineAsync(assetId);
+                var result = await _assetMaintenanceService.GetAssetMaintenanceTimelineAsync(assetId);
                 return Ok(result);
             }
             catch (TenantAccessException)

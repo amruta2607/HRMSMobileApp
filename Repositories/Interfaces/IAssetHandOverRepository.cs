@@ -32,5 +32,11 @@ namespace MobileWebApi.Repositories.Interfaces
         /// Deletes an asset handover record for the authenticated user's organisation.
         /// </summary>
         Task<AssetOperationResponse> DeleteAssetHandoverAsync(int handoverId, string? ipAddress);
+
+        /// <summary>
+        /// Returns AssetHistory rows for the specified asset where SourceTable = 'AssetHandOver',
+        /// scoped to the current tenant, ordered by ActionDate descending.
+        /// </summary>
+        Task<AssetTimelineListResponse> GetAssetHandOverTimelineAsync(int assetId);
     }
 }

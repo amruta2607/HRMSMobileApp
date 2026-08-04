@@ -381,6 +381,7 @@ namespace MobileWebApi.Constants
             public const string GetLookups = "ASSET-008";
             public const string Delete = "ASSET-010";
             public const string GetQrCode = "ASSET-012";
+            public const string GetTimeline = "ASSET-022";
         }
 
 
@@ -392,6 +393,7 @@ namespace MobileWebApi.Constants
             public const string Update = "ASSET-007";
             public const string GetLookups = "ASSET-009";
             public const string Delete = "ASSET-011";
+            public const string GetTimeline = "ASSET-023";
         }
 
         // Asset maintenance (AssetMaintenanceRepository / AssetMaintenanceService)

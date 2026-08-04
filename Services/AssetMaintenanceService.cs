@@ -126,7 +126,7 @@ namespace MobileWebApi.Services
         }
 
         /// <inheritdoc />
-        public Task<AssetTimelineListResponse> GetAssetTimelineAsync(int assetId)
+        public Task<AssetTimelineListResponse> GetAssetMaintenanceTimelineAsync(int assetId)
         {
             _logger.LogInformation(
                 LogMessages.AssetMaintenance.FetchingTimeline,
@@ -134,7 +134,7 @@ namespace MobileWebApi.Services
                 _tenantContext.UserId,
                 _tenantContext.OrganisationId);
 
-            return _repository.GetAssetTimelineAsync(assetId);
+            return _repository.GetAssetMaintenanceTimelineAsync(assetId);
         }
 
         /// <summary>

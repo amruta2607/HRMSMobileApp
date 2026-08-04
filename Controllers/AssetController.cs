@@ -200,6 +200,54 @@ namespace MobileWebApi.Controllers
         }
 
         /// <summary>
+        /// Returns AssetHistory rows for the specified asset where SourceTable = 'Asset',
+        /// ordered by ActionDate descending (latest activity first).
+        /// </summary>
+        /// <param name="assetId">The asset identifier.</param>
+        /// <response code="200">Timeline fetched successfully (may be an empty list).</response>
+        /// <response code="401">Caller is not authenticated or tenant access is denied.</response>
+        /// <response code="500">Unexpected server error.</response>
+        [HttpGet("{assetId:int}/timeline")]
+        [ProducesResponseType(typeof(AssetTimelineListResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetTimeline(int assetId)
+        {
+            try
+            {
+                var tenantId = CurrentOrganisationId;
+                var userId = CurrentUserId;
+
+                Logger.LogInformation(
+                    LogMessages.Asset.FetchingTimeline,
+                    assetId,
+                    userId,
+                    tenantId);
+
+                var result = await _assetRepository.GetAssetTimelineAsync(assetId);
+                return Ok(result);
+            }
+            catch (TenantAccessException)
+            {
+                return TenantAccessDenied();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(
+                    ExceptionCodes.Asset.GetTimeline,
+                    nameof(GetTimeline),
+                    ex,
+                    CurrentUserId);
+
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    success = false,
+                    message = GeneralMessages.UnexpectedError
+                });
+            }
+        }
+
+        /// <summary>
         /// Returns the QR code for the specified asset.
         /// Returns the QRCodePath value as stored on the Asset record.
         /// </summary>
