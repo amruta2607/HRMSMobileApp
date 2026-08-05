@@ -500,6 +500,10 @@ namespace MobileWebApi.Constants
         public const string InvalidDisputeDate = "Invalid dispute date. Please provide a valid date (e.g., 2026-03-03).";
         public const string DisputeDateCannotBeFuture = "Dispute date cannot be a future date.";
         public const string DescriptionRequired = "Description is required.";
+        public const string EmployeeIdRequired = "EmployeeId is required.";
+        public const string DisputeCategoryIdRequired = "DisputeCategoryId is required.";
+        public const string InvalidRequestedPunchTimes = "RequestedPunchInTime must be less than or equal to RequestedPunchOutTime.";
+        public const string InvalidPunchId = "PunchId is invalid or does not belong to the employee.";
         public const string EmployeeNotFound = "Employee not found.";
         public const string OnlyOneDisputePerDay = "Only one dispute can be submitted per day. A dispute for this date already exists.";
         public const string DisputeSubmittedSuccessfully = "Dispute submitted successfully.";

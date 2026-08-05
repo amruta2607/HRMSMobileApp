@@ -14,8 +14,8 @@ namespace MobileWebApi.Repositories
         private readonly QueryProvider _queryProvider;
 
         public DisputeRepository(
-            DapperContext context, 
-            ILogger<DisputeRepository> logger, 
+            DapperContext context,
+            ILogger<DisputeRepository> logger,
             QueryProvider queryProvider)
         {
             _context = context;
@@ -92,12 +92,16 @@ namespace MobileWebApi.Repositories
                 return await conn.ExecuteScalarAsync<int>(query,
                     new
                     {
-                        EmployeeId = dispute.EmployeeId,
-                        DisputeCategoryId = dispute.DisputeCategoryId,
+                        dispute.EmployeeId,
+                        dispute.DisputeCategoryId,
                         DisputeDate = dispute.DisputeDate.Date,
-                        Description = dispute.Description,
-                        Status = dispute.Status,
-                        CreatedOn = dispute.CreatedOn
+                        dispute.Description,
+                        dispute.Status,
+                        dispute.CreatedOn,
+                        dispute.TenantId,
+                        dispute.PunchId,
+                        dispute.RequestedPunchInTime,
+                        dispute.RequestedPunchOutTime
                     });
             }
             catch (Exception ex)
@@ -110,4 +114,3 @@ namespace MobileWebApi.Repositories
         }
     }
 }
-

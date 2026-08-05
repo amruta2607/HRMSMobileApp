@@ -154,6 +154,7 @@ builder.Services.AddSwaggerGen(c =>
 	c.OperationFilter<AttendanceDateTimeOperationFilter>();
 	c.OperationFilter<LoginRequestOperationFilter>();
 	c.SchemaFilter<AttendanceDateTimeSchemaFilter>();
+	c.SchemaFilter<DisputeSubmitRequestSchemaFilter>();
 	c.SchemaFilter<LoginRequestSchemaFilter>();
 	c.SchemaFilter<AssetRequestSchemaFilter>();
 });

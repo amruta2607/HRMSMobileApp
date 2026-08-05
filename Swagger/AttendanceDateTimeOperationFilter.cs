@@ -33,8 +33,10 @@ namespace MobileWebApi.Swagger
 			var route = context.ApiDescription.RelativePath ?? string.Empty;
 
 			return controller.Contains("Attendance", StringComparison.OrdinalIgnoreCase) ||
+			       controller.Contains("Dispute", StringComparison.OrdinalIgnoreCase) ||
 			       route.Contains("attendance", StringComparison.OrdinalIgnoreCase) ||
-			       route.Contains("punch", StringComparison.OrdinalIgnoreCase);
+			       route.Contains("punch", StringComparison.OrdinalIgnoreCase) ||
+			       route.Contains("dispute", StringComparison.OrdinalIgnoreCase);
 		}
 
 		private static void ApplyParameterExamples(OpenApiOperation operation)
@@ -85,6 +87,10 @@ namespace MobileWebApi.Swagger
 					continue;
 
 				if (HasBinaryProperty(mediaType.Schema))
+					continue;
+
+				// Keep complete schema-level examples (e.g. DisputeSubmitRequest) intact.
+				if (mediaType.Schema.Example != null)
 					continue;
 
 				var exampleObject = new Microsoft.OpenApi.Any.OpenApiObject();
@@ -148,7 +154,13 @@ namespace MobileWebApi.Swagger
 			       name.Equals("CalendarDate", StringComparison.OrdinalIgnoreCase) ||
 			       name.Equals("FromDate", StringComparison.OrdinalIgnoreCase) ||
 			       name.Equals("ToDate", StringComparison.OrdinalIgnoreCase) ||
-			       name.Equals("date", StringComparison.OrdinalIgnoreCase);
+			       name.Equals("date", StringComparison.OrdinalIgnoreCase) ||
+			       name.Equals("disputeDate", StringComparison.OrdinalIgnoreCase) ||
+			       name.Equals("DisputeDate", StringComparison.OrdinalIgnoreCase) ||
+			       name.Equals("requestedPunchInTime", StringComparison.OrdinalIgnoreCase) ||
+			       name.Equals("RequestedPunchInTime", StringComparison.OrdinalIgnoreCase) ||
+			       name.Equals("requestedPunchOutTime", StringComparison.OrdinalIgnoreCase) ||
+			       name.Equals("RequestedPunchOutTime", StringComparison.OrdinalIgnoreCase);
 		}
 	}
 }

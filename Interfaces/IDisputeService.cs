@@ -5,7 +5,10 @@ namespace MobileWebApi.Interfaces
     public interface IDisputeService
     {
         Task<DisputeCategoryResponse> GetDisputeCategoriesAsync();
-        Task<DisputeSubmitResponse> SubmitDisputeAsync(DisputeSubmitRequest request);
+
+        /// <summary>
+        /// Submits a dispute for the authenticated tenant.
+        /// </summary>
+        Task<DisputeSubmitResponse> SubmitDisputeAsync(DisputeSubmitRequest request, int tenantId);
     }
 }
-

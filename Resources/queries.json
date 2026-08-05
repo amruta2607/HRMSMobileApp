@@ -263,9 +263,9 @@
 
     "GetDisputeCategories": "SELECT Id, CategoryName, IsActive, CreatedOn FROM DisputeCategory WHERE IsActive = 1 ORDER BY CategoryName",
 
-    "GetExistingDispute": "SELECT Id, EmployeeId, DisputeCategoryId, DisputeDate, Description, Status, CreatedOn FROM EmployeeDispute WHERE EmployeeId = @EmployeeId AND DisputeDate = @DisputeDate",
+    "GetExistingDispute": "SELECT Id, EmployeeId, DisputeCategoryId, DisputeDate, Description, Status, CreatedOn, TenantId, PunchId, RequestedPunchInTime, RequestedPunchOutTime FROM EmployeeDispute WHERE EmployeeId = @EmployeeId AND DisputeDate = @DisputeDate",
 
-    "InsertDispute": "INSERT INTO EmployeeDispute (EmployeeId, DisputeCategoryId, DisputeDate, Description, Status, CreatedOn) VALUES (@EmployeeId, @DisputeCategoryId, @DisputeDate, @Description, @Status, @CreatedOn); SELECT CAST(SCOPE_IDENTITY() AS INT)",
+    "InsertDispute": "INSERT INTO EmployeeDispute (EmployeeId, DisputeCategoryId, DisputeDate, Description, Status, CreatedOn, TenantId, PunchId, RequestedPunchInTime, RequestedPunchOutTime) VALUES (@EmployeeId, @DisputeCategoryId, @DisputeDate, @Description, @Status, @CreatedOn, @TenantId, @PunchId, @RequestedPunchInTime, @RequestedPunchOutTime); SELECT CAST(SCOPE_IDENTITY() AS INT)",
 
     "GetTenantDayOffsByTenantId": "SELECT DayOffId FROM TenantConfiguredDayOffDays tdd INNER JOIN TenantConfiguration tc ON tc.TenantConfigurationId = tdd.TenantConfigurationId WHERE tc.TenantId = @TenantId",
     "GetTenantConfigurationIdByTenantId": "SELECT TOP 1 TenantConfigurationId FROM TenantConfiguration WHERE TenantId = @TenantId",

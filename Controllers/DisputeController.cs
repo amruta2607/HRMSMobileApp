@@ -72,6 +72,17 @@ namespace MobileWebApi.Controllers
                 });
             }
 
+            // Validate DisputeCategoryId
+            if (request.DisputeCategoryId <= 0)
+            {
+                return BadRequest(new DisputeSubmitResponse
+                {
+                    Success = false,
+                    Message = DisputeMessages.DisputeCategoryIdRequired,
+                    Data = null
+                });
+            }
+
             // Validate that user can only submit disputes for themselves (unless HR/TenantAdmin)
             if (!HasElevatedAccess)
             {
@@ -85,7 +96,7 @@ namespace MobileWebApi.Controllers
 
             Logger.LogInformation(LogMessages.Dispute.SubmittingDispute, request.UserId);
             
-            var result = await _disputeService.SubmitDisputeAsync(request);
+            var result = await _disputeService.SubmitDisputeAsync(request, CurrentOrganisationId);
             
             if (result.Success)
             {

@@ -8,19 +8,24 @@ namespace MobileWebApi.Services
 	{
 		private readonly IDisputeRepository _repository;
 		private readonly IEmployeeRepository _employeeRepository;
+		private readonly IAttendanceRepository _attendanceRepository;
 		private readonly ILogger<DisputeService> _logger;
 
 		public DisputeService(
 			IDisputeRepository repository,
 			IEmployeeRepository employeeRepository,
+			IAttendanceRepository attendanceRepository,
 			ILogger<DisputeService> logger)
 		{
 			_repository = repository;
 			_employeeRepository = employeeRepository;
+			_attendanceRepository = attendanceRepository;
 			_logger = logger;
 		}
 
+		/// <summary>
 		/// Resolve EmployeeId from UserId
+		/// </summary>
 		private async Task<int?> ResolveEmployeeIdFromUserIdAsync(int userId)
 		{
 			try
@@ -80,135 +85,133 @@ namespace MobileWebApi.Services
 			}
 		}
 
-		public async Task<DisputeSubmitResponse> SubmitDisputeAsync(DisputeSubmitRequest request)
+		/// <inheritdoc />
+		public async Task<DisputeSubmitResponse> SubmitDisputeAsync(DisputeSubmitRequest request, int tenantId)
 		{
 			try
 			{
-				// Resolve EmployeeId
-				var employeeId = await ResolveEmployeeIdFromUserIdAsync(request.UserId);
-
-				if (!employeeId.HasValue)
+				if (request.DisputeCategoryId <= 0)
 				{
-					return new DisputeSubmitResponse
-					{
-						Success = false,
-						Message = DisputeMessages.EmployeeNotFoundForGivenUser,
-						Data = null
-					};
+					return Fail(DisputeMessages.DisputeCategoryIdRequired);
 				}
 
-				_logger.LogInformation(LogMessages.Dispute.SubmittingDispute, employeeId.Value);
+				if (string.IsNullOrWhiteSpace(request.Description))
+				{
+					return Fail(DisputeMessages.DescriptionRequired);
+				}
 
 				// SQL Server DateTime valid range
 				DateTime minSqlDate = new DateTime(1753, 1, 1);
 				DateTime maxSqlDate = new DateTime(9999, 12, 31);
 
-				// Validate Dispute Date
 				if (request.DisputeDate == default ||
 					request.DisputeDate < minSqlDate ||
 					request.DisputeDate > maxSqlDate)
 				{
-					return new DisputeSubmitResponse
-					{
-						Success = false,
-						Message = DisputeMessages.InvalidDisputeDate,
-						Data = null
-					};
+					return Fail(DisputeMessages.InvalidDisputeDate);
 				}
 
-				// Prevent future disputes
 				if (request.DisputeDate.Date > DateTime.Today)
 				{
-					return new DisputeSubmitResponse
-					{
-						Success = false,
-						Message = DisputeMessages.DisputeDateCannotBeFuture,
-						Data = null
-					};
+					return Fail(DisputeMessages.DisputeDateCannotBeFuture);
 				}
 
-				// Description validation
-				if (string.IsNullOrWhiteSpace(request.Description))
+				if (request.RequestedPunchInTime.HasValue &&
+					request.RequestedPunchOutTime.HasValue &&
+					request.RequestedPunchInTime.Value > request.RequestedPunchOutTime.Value)
 				{
-					return new DisputeSubmitResponse
-					{
-						Success = false,
-						Message = DisputeMessages.DescriptionRequired,
-						Data = null
-					};
+					return Fail(DisputeMessages.InvalidRequestedPunchTimes);
 				}
 
-				// Validate employee exists
-				var employee = await _repository.GetEmployeeByIdAsync(employeeId.Value);
+				// Resolve EmployeeId from UserId (authoritative for the authenticated user)
+				var resolvedEmployeeId = await ResolveEmployeeIdFromUserIdAsync(request.UserId);
+				if (!resolvedEmployeeId.HasValue)
+				{
+					return Fail(DisputeMessages.EmployeeNotFoundForGivenUser);
+				}
 
+				// Prefer request.EmployeeId when provided; otherwise use resolved value (backward compatible)
+				var employeeId = request.EmployeeId > 0 ? request.EmployeeId : resolvedEmployeeId.Value;
+				if (employeeId <= 0)
+				{
+					return Fail(DisputeMessages.EmployeeIdRequired);
+				}
+
+				// Non-elevated callers cannot submit for a different employee
+				if (request.EmployeeId > 0 && request.EmployeeId != resolvedEmployeeId.Value)
+				{
+					return Fail(DisputeMessages.EmployeeNotFound);
+				}
+
+				_logger.LogInformation(LogMessages.Dispute.SubmittingDispute, employeeId);
+
+				var employee = await _repository.GetEmployeeByIdAsync(employeeId);
 				if (employee == null)
 				{
-					return new DisputeSubmitResponse
-					{
-						Success = false,
-						Message = DisputeMessages.EmployeeNotFound,
-						Data = null
-					};
+					return Fail(DisputeMessages.EmployeeNotFound);
 				}
 
-				// Prevent multiple disputes for same date
-				var existingDispute = await _repository.GetExistingDisputeAsync(
-					employeeId.Value,
-					request.DisputeDate);
+				if (employee.OrganisationId != tenantId)
+				{
+					return Fail(DisputeMessages.EmployeeNotFound);
+				}
 
+				if (request.PunchId.HasValue && request.PunchId.Value > 0)
+				{
+					var punch = await _attendanceRepository.GetPunchByIdAsync(request.PunchId.Value, tenantId);
+					if (punch == null || punch.EmployeeId != employeeId)
+					{
+						return Fail(DisputeMessages.InvalidPunchId);
+					}
+				}
+
+				var existingDispute = await _repository.GetExistingDisputeAsync(employeeId, request.DisputeDate);
 				if (existingDispute != null)
 				{
-					return new DisputeSubmitResponse
-					{
-						Success = false,
-						Message = DisputeMessages.OnlyOneDisputePerDay,
-						Data = null
-					};
+					return Fail(DisputeMessages.OnlyOneDisputePerDay);
 				}
 
-				// Create dispute entity
 				var dispute = new EmployeeDispute
 				{
-					EmployeeId = employeeId.Value,
+					EmployeeId = employeeId,
 					DisputeCategoryId = request.DisputeCategoryId,
 					DisputeDate = request.DisputeDate.Date,
 					Description = request.Description.Trim(),
 					Status = "Pending",
-					CreatedOn = DateTime.Now
+					CreatedOn = DateTime.UtcNow,
+					TenantId = tenantId,
+					PunchId = request.PunchId > 0 ? request.PunchId : null,
+					RequestedPunchInTime = request.RequestedPunchInTime,
+					RequestedPunchOutTime = request.RequestedPunchOutTime
 				};
 
-				// Insert dispute
 				var disputeId = await _repository.InsertDisputeAsync(dispute);
-
-				if (disputeId > 0)
+				if (disputeId <= 0)
 				{
-					dispute.Id = disputeId;
+					return Fail(DisputeMessages.FailedToSubmitDispute);
+				}
 
-					var disputeDto = new EmployeeDisputeDto
+				dispute.Id = disputeId;
+
+				_logger.LogInformation(LogMessages.Dispute.DisputeSubmittedSuccessfully, disputeId);
+
+				return new DisputeSubmitResponse
+				{
+					Success = true,
+					Message = DisputeMessages.DisputeSubmittedSuccessfully,
+					Data = new EmployeeDisputeDto
 					{
 						Id = dispute.Id,
+						EmployeeId = dispute.EmployeeId,
 						DisputeCategoryId = dispute.DisputeCategoryId,
 						DisputeDate = dispute.DisputeDate,
 						Description = dispute.Description,
 						Status = dispute.Status,
+						PunchId = dispute.PunchId,
+						RequestedPunchInTime = dispute.RequestedPunchInTime,
+						RequestedPunchOutTime = dispute.RequestedPunchOutTime,
 						CreatedOn = dispute.CreatedOn
-					};
-
-					_logger.LogInformation(LogMessages.Dispute.DisputeSubmittedSuccessfully, disputeId);
-
-					return new DisputeSubmitResponse
-					{
-						Success = true,
-						Message = DisputeMessages.DisputeSubmittedSuccessfully,
-						Data = disputeDto
-					};
-				}
-
-				return new DisputeSubmitResponse
-				{
-					Success = false,
-					Message = DisputeMessages.FailedToSubmitDispute,
-					Data = null
+					}
 				};
 			}
 			catch (Exception ex)
@@ -223,5 +226,13 @@ namespace MobileWebApi.Services
 				};
 			}
 		}
+
+		private static DisputeSubmitResponse Fail(string message) =>
+			new()
+			{
+				Success = false,
+				Message = message,
+				Data = null
+			};
 	}
 }
