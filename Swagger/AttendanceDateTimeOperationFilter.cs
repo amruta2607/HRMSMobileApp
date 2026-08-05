@@ -71,12 +71,20 @@ namespace MobileWebApi.Swagger
 			if (operation.RequestBody?.Content == null)
 				return;
 
-			foreach (var mediaType in operation.RequestBody.Content.Values)
+			foreach (var (contentType, mediaType) in operation.RequestBody.Content)
 			{
 				ApplySchemaPropertyExamples(mediaType.Schema);
 
-				// Also set media-type level example object keys when schema properties exist.
+				// Do NOT set media-type level Example for multipart/form-data.
+				// A partial Example object (e.g. only DateTime fields) causes Swagger UI to
+				// omit IFormFile / format:binary fields, so the Choose File control disappears.
+				if (contentType.Contains("multipart/form-data", StringComparison.OrdinalIgnoreCase))
+					continue;
+
 				if (mediaType.Schema?.Properties == null || mediaType.Schema.Properties.Count == 0)
+					continue;
+
+				if (HasBinaryProperty(mediaType.Schema))
 					continue;
 
 				var exampleObject = new Microsoft.OpenApi.Any.OpenApiObject();
@@ -94,6 +102,13 @@ namespace MobileWebApi.Swagger
 				if (exampleObject.Count > 0)
 					mediaType.Example = exampleObject;
 			}
+		}
+
+		private static bool HasBinaryProperty(OpenApiSchema schema)
+		{
+			return schema.Properties != null &&
+			       schema.Properties.Values.Any(p =>
+				       string.Equals(p.Format, "binary", StringComparison.OrdinalIgnoreCase));
 		}
 
 		private static void ApplySchemaPropertyExamples(OpenApiSchema? schema)

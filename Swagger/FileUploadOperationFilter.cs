@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -7,8 +8,8 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 namespace MobileWebApi.Swagger
 {
     /// <summary>
-    /// Builds multipart/form-data request bodies from individual [FromForm] parameters
-    /// so Swagger UI shows separate fields (not an empty JSON object).
+    /// Builds multipart/form-data request bodies from [FromForm] parameters
+    /// so Swagger UI shows separate fields, including IFormFile Choose File controls.
     /// </summary>
     /// <remarks>
     /// DateTime form fields include OpenAPI Example values in yyyy-MM-ddTHH:mm:ss format.
@@ -39,27 +40,13 @@ namespace MobileWebApi.Swagger
             foreach (var parameter in formParameters)
             {
                 var modelMetadata = parameter.ModelMetadata;
-                var modelType = modelMetadata?.ModelType ?? typeof(string);
+                var modelType = modelMetadata?.ModelType ?? parameter.Type ?? typeof(string);
                 var underlying = Nullable.GetUnderlyingType(modelType) ?? modelType;
 
                 // Expand complex [FromForm] models (e.g. PunchInRequest) into form fields.
-                if (modelMetadata?.Properties is { Count: > 0 } children &&
-                    underlying != typeof(IFormFile) &&
-                    underlying != typeof(IFormFile[]) &&
-                    underlying != typeof(string) &&
-                    !underlying.IsPrimitive &&
-                    underlying != typeof(decimal) &&
-                    underlying != typeof(DateTime) &&
-                    underlying != typeof(Guid))
+                if (IsComplexFormModel(underlying, modelMetadata))
                 {
-                    foreach (var child in children)
-                    {
-                        AddFormProperty(
-                            properties,
-                            encoding,
-                            child.BinderModelName ?? child.PropertyName ?? child.Name,
-                            child.ModelType);
-                    }
+                    ExpandComplexFormModel(properties, encoding, underlying, modelMetadata);
                     continue;
                 }
 
@@ -69,6 +56,9 @@ namespace MobileWebApi.Swagger
 
                 AddFormProperty(properties, encoding, name, modelType);
             }
+
+            // Safety net: if ApiExplorer omitted IFormFile children, add them via reflection.
+            EnsureFilePropertiesFromParameterTypes(properties, encoding, formParameters);
 
             if (properties.Count == 0)
                 return;
@@ -90,7 +80,85 @@ namespace MobileWebApi.Swagger
                 }
             };
 
+            // Clear media-type Example so Swagger UI renders all form fields (including files).
+            operation.RequestBody.Content["multipart/form-data"].Example = null;
             operation.Parameters?.Clear();
+        }
+
+        private static bool IsComplexFormModel(Type underlying, ModelMetadata? modelMetadata)
+        {
+            if (underlying == typeof(IFormFile) ||
+                underlying == typeof(IFormFile[]) ||
+                underlying == typeof(string) ||
+                underlying.IsPrimitive ||
+                underlying == typeof(decimal) ||
+                underlying == typeof(DateTime) ||
+                underlying == typeof(Guid) ||
+                underlying == typeof(bool))
+            {
+                return false;
+            }
+
+            return (modelMetadata?.Properties?.Count ?? 0) > 0 ||
+                   underlying.GetProperties(BindingFlags.Instance | BindingFlags.Public).Length > 0;
+        }
+
+        private static void ExpandComplexFormModel(
+            IDictionary<string, OpenApiSchema> properties,
+            IDictionary<string, OpenApiEncoding> encoding,
+            Type modelType,
+            ModelMetadata? modelMetadata)
+        {
+            if (modelMetadata?.Properties is { Count: > 0 } children)
+            {
+                foreach (var child in children)
+                {
+                    AddFormProperty(
+                        properties,
+                        encoding,
+                        child.BinderModelName ?? child.PropertyName ?? child.Name,
+                        child.ModelType);
+                }
+            }
+
+            // Reflection ensures IFormFile properties are present even when ModelMetadata omits them.
+            foreach (var property in modelType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+            {
+                if (!property.CanRead)
+                    continue;
+
+                AddFormProperty(properties, encoding, property.Name, property.PropertyType);
+            }
+        }
+
+        private static void EnsureFilePropertiesFromParameterTypes(
+            IDictionary<string, OpenApiSchema> properties,
+            IDictionary<string, OpenApiEncoding> encoding,
+            IReadOnlyList<Microsoft.AspNetCore.Mvc.ApiExplorer.ApiParameterDescription> formParameters)
+        {
+            foreach (var parameter in formParameters)
+            {
+                var type = parameter.ModelMetadata?.ModelType ?? parameter.Type;
+                if (type == null)
+                    continue;
+
+                var underlying = Nullable.GetUnderlyingType(type) ?? type;
+                if (underlying == typeof(IFormFile) || underlying == typeof(IFormFile[]))
+                {
+                    AddFormProperty(properties, encoding, parameter.Name, underlying);
+                    continue;
+                }
+
+                if (underlying.IsPrimitive || underlying == typeof(string) || underlying == typeof(DateTime))
+                    continue;
+
+                foreach (var property in underlying.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+                {
+                    var propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+                    if (propertyType == typeof(IFormFile) || propertyType == typeof(IFormFile[]))
+                        AddFormProperty(properties, encoding, property.Name, property.PropertyType);
+                }
+            }
         }
 
         private static void AddFormProperty(
@@ -110,12 +178,13 @@ namespace MobileWebApi.Swagger
                 {
                     Type = "string",
                     Format = "binary",
+                    Nullable = true,
                     Description = "Optional punch photo (JPG/PNG, max 2 MB)"
                 };
                 encoding[name] = new OpenApiEncoding
                 {
                     Style = ParameterStyle.Form,
-                    ContentType = "image/jpeg, image/png"
+                    ContentType = "application/octet-stream"
                 };
                 return;
             }

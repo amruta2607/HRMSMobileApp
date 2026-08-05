@@ -23,8 +23,6 @@ namespace MobileWebApi.Interfaces
             string? coordinateOut,
             string? linkOut,
             string? imageUrl,
-            bool manual,
-            string? punchOutReason,
             int userId = 0);
 
         /// <summary>
@@ -38,9 +36,7 @@ namespace MobileWebApi.Interfaces
             string outSource,
             string? coordinateOut,
             string? linkOut,
-            string? imageUrl,
-            bool manual,
-            string? punchOutReason);
+            string? imageUrl);
 
         Task<List<DateTime>> GetHolidayDatesAsync(int tenantId, DateTime fromDate, DateTime toDate);
         Task<List<(DateTime FromDate, DateTime ToDate)>> GetApprovedLeaveDateRangesAsync(int employeeId, DateTime fromDate, DateTime toDate);

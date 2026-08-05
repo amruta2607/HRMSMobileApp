@@ -255,9 +255,6 @@ namespace MobileWebApi.Services
 					req.latitude,
 					req.longitude);
 
-				var isManual = req.Manual ?? true;
-				var punchOutReason = ResolvePunchOutReason(req.PunchOutReason, isManual);
-
 				// Update punch out
 				await _repo.UpdatePunchOut(
 					punch.Id,
@@ -267,8 +264,6 @@ namespace MobileWebApi.Services
 					coordinateOut,
 					linkOut,
 					imageUrl,
-					isManual,
-					punchOutReason,
 					req.userId
 				);
 
@@ -375,9 +370,7 @@ namespace MobileWebApi.Services
                 MobileSource,
                 coordinateOut: null,
                 linkOut: null,
-                imageUrl: imageUrl,
-                manual: true,
-                punchOutReason: AttendanceMessages.ManualPunchOutReason
+                imageUrl: imageUrl
             );
 
             _logger.LogInformation(LogMessages.Attendance.PunchOutSuccessful, employeeId);
@@ -389,14 +382,6 @@ namespace MobileWebApi.Services
         /// Store and use the exact value without server timezone conversion.
         /// </summary>
         private static DateTime PreserveReceivedDateTime(DateTime dateTime) => dateTime;
-
-        private static string? ResolvePunchOutReason(string? punchOutReason, bool isManual)
-        {
-            if (!string.IsNullOrWhiteSpace(punchOutReason))
-                return punchOutReason.Trim();
-
-            return isManual ? AttendanceMessages.ManualPunchOutReason : null;
-        }
 
         private async Task<int> GetEmployeeTenantIdAsync(int employeeId)
         {
