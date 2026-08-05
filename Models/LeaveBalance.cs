@@ -8,8 +8,8 @@ namespace MobileWebApi.Models
         public int Id { get; set; }
         public int EmployeeId { get; set; }
         public int LeaveTypeId { get; set; }
-        public int TotalBalance { get; set; }
-        public int RemainingBalance { get; set; }
+        public decimal TotalBalance { get; set; }
+        public decimal RemainingBalance { get; set; }
         public string? Description { get; set; }
         public DateTime? InsertDate { get; set; }
         public int? InsertUserId { get; set; }
