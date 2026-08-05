@@ -27,6 +27,12 @@ namespace MobileWebApi.Controllers
         protected int CurrentOrganisationId => TenantContext.GetRequiredOrganisationId();
 
         /// <summary>
+        /// Gets the current user's assigned branch ID from the JWT token.
+        /// Returns null when the BranchId claim is missing.
+        /// </summary>
+        protected int? CurrentBranchId => TenantContext.BranchId;
+
+        /// <summary>
         /// Gets the current user's ID from the JWT token.
         /// </summary>
         protected int? CurrentUserId => TenantContext.UserId;

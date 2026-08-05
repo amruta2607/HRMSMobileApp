@@ -575,6 +575,7 @@ namespace MobileWebApi.Constants
         public static class TenantContext
         {
             public const string AttemptedToGetOrganisationIdNotAuthenticated = "Attempted to get OrganisationId but user is not authenticated or claim is missing. User: {Username}";
+            public const string AttemptedToGetBranchIdNotAuthenticated = "Attempted to get BranchId but user is not authenticated or claim is missing. User: {Username}";
             public const string TenantAccessValidationFailedNotAuthenticated = "Tenant access validation failed: User is not authenticated. Requested OrgId: {RequestedOrgId}";
             public const string TenantAccessViolationDetected = "Tenant access violation detected! User {Username} (OrgId: {UserOrgId}) attempted to access OrgId: {RequestedOrgId}";
             public const string TenantAccessValidated = "Tenant access validated for User {Username}, OrgId: {OrgId}";

@@ -1,11 +1,9 @@
 ﻿using Dapper;
-using Microsoft.EntityFrameworkCore;
 using MobileWebApi.Constants;
 using MobileWebApi.Data;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using MobileWebApi.Resources;
-using System.Data;
 
 namespace MobileWebApi.Repositories
 {
@@ -13,16 +11,16 @@ namespace MobileWebApi.Repositories
 	{
 		private readonly DapperContext _context;
 		private readonly ILogger<GeoTenantLocationRepository> _logger;
-		private readonly QueryProvider _queryProvider; private readonly IDbConnection _connection;
+		private readonly QueryProvider _queryProvider;
 
 		public GeoTenantLocationRepository(DapperContext context, ILogger<GeoTenantLocationRepository> logger, QueryProvider queryProvider)
 		{
 			_context = context ?? throw new ArgumentNullException(nameof(context));
-			_logger = (ILogger<GeoTenantLocationRepository>?)(logger ?? throw new ArgumentNullException(nameof(logger)));
-			_queryProvider = queryProvider;
+			_logger = logger ?? throw new ArgumentNullException(nameof(logger));
+			_queryProvider = queryProvider ?? throw new ArgumentNullException(nameof(queryProvider));
 		}
 
-		public async Task<GeoTenantLocationRow> GetActiveByTenantIdAsync(int organisationId)
+		public async Task<GeoTenantLocationRow?> GetActiveByTenantAndBranchAsync(int organisationId, int branchId)
 		{
 			try
 			{
@@ -31,16 +29,13 @@ namespace MobileWebApi.Repositories
 				using var connection = _context.CreateConnection();
 				return await connection.QueryFirstOrDefaultAsync<GeoTenantLocationRow>(
 					query,
-					new { TenantId = organisationId, IsActive=true }
-				);
+					new { TenantId = organisationId, BranchId = branchId });
 			}
 			catch (Exception ex)
 			{
 				_logger.LogError(ex, LogMessages.User.ErrorFetchingTenantConfigurationByOrganisationId);
 				throw;
 			}
-
-			
 		}
 	}
 }

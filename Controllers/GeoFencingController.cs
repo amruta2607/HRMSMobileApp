@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using MobileWebApi.Constants;
 using MobileWebApi.Helper;
 using MobileWebApi.Interfaces;
@@ -32,10 +31,18 @@ namespace MobileWebApi.Controllers
 		{
 			try
 			{
-				// Enforce tenant isolation using authenticated user's organisation
 				var organisationId = CurrentOrganisationId;
+				var branchId = CurrentBranchId;
 
-				var geoFence = await _geoRepo.GetActiveByTenantIdAsync(organisationId);
+				if (!branchId.HasValue)
+				{
+					return Ok(new
+					{
+						IsGeoFencingEnabled = false
+					});
+				}
+
+				var geoFence = await _geoRepo.GetActiveByTenantAndBranchAsync(organisationId, branchId.Value);
 
 				if (geoFence == null)
 				{
@@ -80,4 +87,3 @@ namespace MobileWebApi.Controllers
 		}
 	}
 }
-
