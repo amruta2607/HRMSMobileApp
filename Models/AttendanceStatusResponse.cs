@@ -31,6 +31,11 @@ namespace MobileWebApi.Models
         public string? status { get; set; }
 
         /// <summary>
+        /// Punch table primary key when a punch exists for the date
+        /// </summary>
+        public int? PunchId { get; set; }
+
+        /// <summary>
         /// Punch-in time if available
         /// </summary>
         public DateTime? punchIn { get; set; }

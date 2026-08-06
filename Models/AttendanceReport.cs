@@ -6,6 +6,12 @@ namespace MobileWebApi.Models
     public class AttendanceReport
     {
         public int Id { get; set; }
+
+        /// <summary>
+        /// Punch table primary key (same as <see cref="Id"/> when the row comes from Punch).
+        /// </summary>
+        public int? PunchId { get; set; }
+
         public string? EmployeeNumber { get; set; }
         public string? EmployeeName { get; set; }
         public DateTime CalendarDate { get; set; }

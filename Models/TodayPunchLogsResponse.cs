@@ -5,6 +5,11 @@ namespace MobileWebApi.Models
 {
     public class TodayPunchLogItem
     {
+        /// <summary>
+        /// Punch table primary key when the log row comes from Punch (null for DeviceLog-only rows).
+        /// </summary>
+        public int? PunchId { get; set; }
+
         public string? Direction { get; set; }
         public DateTime LogDateTime { get; set; }
         public string? DeviceName { get; set; }

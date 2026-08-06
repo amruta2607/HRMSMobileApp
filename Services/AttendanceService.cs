@@ -38,6 +38,18 @@ namespace MobileWebApi.Services
             _logger = logger;
         }
 
+        /// <summary>
+        /// Ensures PunchId is populated from Punch.Id when SQL only mapped Id.
+        /// </summary>
+        private static void EnsurePunchIds(IEnumerable<AttendanceReport> records)
+        {
+            foreach (var record in records)
+            {
+                if (!record.PunchId.HasValue && record.Id > 0)
+                    record.PunchId = record.Id;
+            }
+        }
+
         private const string MobileSource = "Mobile";
 
         /// <summary>
@@ -525,6 +537,7 @@ namespace MobileWebApi.Services
                 // Fetch attendance data from repository
                 var attendanceData = await _repo.GetAttendanceReportAsync(repoRequest);
                 var attendanceList = attendanceData.ToList();
+                EnsurePunchIds(attendanceList);
 
                 // Calculate totals
                 var totalWorkingHours = attendanceList
@@ -583,6 +596,7 @@ namespace MobileWebApi.Services
                 
                 var attendanceData = await _repo.GetEmployeeAttendanceReportAsync(employeeId.Value, dateFrom, dateTo);
                 var attendanceList = attendanceData.ToList();
+                EnsurePunchIds(attendanceList);
 
                 var totalWorkingHours = attendanceList
                     .Where(a => a.WorkingDuration.HasValue)
@@ -749,7 +763,9 @@ namespace MobileWebApi.Services
 
                 // Get attendance data for the month
                 var attendanceData = await _repo.GetAttendanceByCalendarAsync(employeeId.Value, month, year);
-                var attendanceDict = attendanceData.ToDictionary(a => a.CalendarDate.Date, a => a);
+                var attendanceList = attendanceData.ToList();
+                EnsurePunchIds(attendanceList);
+                var attendanceDict = attendanceList.ToDictionary(a => a.CalendarDate.Date, a => a);
 
                 var weeklyOffDays = await GetTenantWeeklyOffDaysAsync(employee.OrganisationId);
 
@@ -823,6 +839,7 @@ namespace MobileWebApi.Services
                     }
                     else if (attendanceDict.TryGetValue(currentDate, out var attendance))
                     {
+                        dayAttendance.PunchId = attendance.PunchId ?? (attendance.Id > 0 ? attendance.Id : null);
                         dayAttendance.PunchIn = attendance.PunchIn;
                         dayAttendance.PunchOut = attendance.PunchOut;
                         dayAttendance.WorkingHours = attendance.WorkingDuration;
@@ -953,7 +970,9 @@ namespace MobileWebApi.Services
 
                 // Get attendance data for the date range
                 var attendanceData = await _repo.GetEmployeeAttendanceReportAsync(employeeId.Value, fromDate, toDate);
-                var attendanceDict = attendanceData.ToDictionary(a => a.CalendarDate.Date, a => a);
+                var attendanceListForSummary = attendanceData.ToList();
+                EnsurePunchIds(attendanceListForSummary);
+                var attendanceDict = attendanceListForSummary.ToDictionary(a => a.CalendarDate.Date, a => a);
 
                 var weeklyOffDays = await GetTenantWeeklyOffDaysAsync(employee.OrganisationId);
 
@@ -986,6 +1005,7 @@ namespace MobileWebApi.Services
                     }
                     else if (attendanceDict.TryGetValue(date, out var attendance))
                     {
+                        detail.PunchId = attendance.PunchId ?? (attendance.Id > 0 ? attendance.Id : null);
                         detail.PunchIn = attendance.PunchIn;
                         detail.PunchOut = attendance.PunchOut;
                         detail.WorkingHours = attendance.WorkingDuration;
@@ -1076,6 +1096,7 @@ namespace MobileWebApi.Services
                 // Fetch attendance data from repository
                 var attendanceData = await _repo.GetAttendanceReportsByOrganisationAsync(organisationId, dateFrom, dateTo);
                 var attendanceList = attendanceData.ToList();
+                EnsurePunchIds(attendanceList);
 
                 // Calculate totals
                 var totalWorkingHours = attendanceList
@@ -1225,6 +1246,7 @@ namespace MobileWebApi.Services
 
                 if (punch != null)
                 {
+                    statusData.PunchId = punch.Id > 0 ? punch.Id : null;
                     statusData.isMarked = punch.PunchIn.HasValue;
                     statusData.inSource = punch.InSource;
                     statusData.outSource = punch.OutSource;

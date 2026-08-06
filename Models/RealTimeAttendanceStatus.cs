@@ -11,6 +11,12 @@ namespace MobileWebApi.Models
         public string? EmployeeNumber { get; set; }
         public string? DepartmentName { get; set; }
         public string? BranchName { get; set; }
+
+        /// <summary>
+        /// Punch table primary key.
+        /// </summary>
+        public int? PunchId { get; set; }
+
         public DateTime PunchDate { get; set; }
         public DateTime? PunchIn { get; set; }
         public DateTime? PunchOut { get; set; }
