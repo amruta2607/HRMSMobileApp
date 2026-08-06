@@ -452,6 +452,8 @@ namespace MobileWebApi.Constants
         // Notification messages
         public const string LeaveRequestPendingApproval = "New Leave Request Pending Approval";
         public const string LeaveRequestRequiresApproval = "A new leave request requires your approval.";
+        public const string RegularizationRequestPendingApproval = "New Regularization Request Pending Approval";
+        public const string RegularizationRequestRequiresApproval = "A new regularization request requires your approval.";
 
         // Error templates
         public const string ErrorInitiatingWorkflow = "Error initiating approval workflow: {0}";
@@ -505,9 +507,20 @@ namespace MobileWebApi.Constants
         public const string InvalidRequestedPunchTimes = "RequestedPunchInTime must be less than or equal to RequestedPunchOutTime.";
         public const string InvalidPunchId = "PunchId is invalid or does not belong to the employee.";
         public const string EmployeeNotFound = "Employee not found.";
-        public const string OnlyOneDisputePerDay = "Only one dispute can be submitted per day. A dispute for this date already exists.";
+        public const string OnlyOneDisputePerCategoryDate = "A regularization request for this dispute category already exists for the selected date.";
         public const string DisputeSubmittedSuccessfully = "Dispute submitted successfully.";
         public const string FailedToSubmitDispute = "Failed to submit dispute.";
+        public const string NoReportingManagerAssigned = "No reporting manager is assigned to this employee. Please contact the administrator.";
+        public const string ReportingManagerUserNotFound = "Reporting manager user account was not found. Please contact the administrator.";
+        public const string DisputeNotFound = "Regularization / dispute record not found.";
+        public const string DisputeAlreadyProcessed = "This regularization request has already been processed.";
+        public const string PunchRecordNotFound = "Punch record not found for the regularization request.";
+        public const string InvalidApprovedPunchTimes = "Requested punch times are invalid: punch out must be after punch in.";
+        public const string DisputeApprovedSuccessfully = "Regularization request approved successfully.";
+        public const string DisputeRejectedSuccessfully = "Regularization request rejected successfully.";
+        public const string FailedToApproveDispute = "Failed to approve regularization request.";
+        public const string FailedToRejectDispute = "Failed to reject regularization request.";
+        public const string PunchUpdatedOnApproval = "Punch record updated after regularization approval. PunchId: {0}, Duration: {1}";
     }
 
     /// <summary>
@@ -547,6 +560,8 @@ namespace MobileWebApi.Constants
         public const string ResignationRequest = "ResignationRequest";
         public const string OvertimeRequest = "OvertimeRequest";
         public const string CancelLeave = "CancelLeave";
+        public const string RegularizationRequest = "RegularizationRequest";
+        public const string RegularizationRequestLower = "regularizationrequest";
         public const string Request = "Request";
     }
 

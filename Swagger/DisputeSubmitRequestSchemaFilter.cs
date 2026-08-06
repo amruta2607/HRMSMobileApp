@@ -38,17 +38,17 @@ namespace MobileWebApi.Swagger
 
 			schema.Example = new OpenApiObject
 			{
-				["userId"] = new OpenApiInteger(1),
-				["employeeId"] = new OpenApiInteger(10),
 				["disputeCategoryId"] = new OpenApiInteger(2),
 				["disputeDate"] = new OpenApiString(DisputeDateExample),
 				["description"] = new OpenApiString("Forgot to punch in."),
-				["punchId"] = new OpenApiInteger(125),
+				["punchId"] = new OpenApiInteger(0),
 				["requestedPunchInTime"] = new OpenApiString(RequestedPunchInExample),
 				["requestedPunchOutTime"] = new OpenApiString(RequestedPunchOutExample)
 			};
 
 			schema.Description =
+				$"UserId, EmployeeId, and TenantId are taken from the authenticated JWT context and must not be sent in the body. " +
+				$"Optional integers (e.g. punchId) default to 0. " +
 				$"DateTime fields use format {FormatHint} (no milliseconds / timezone offset).";
 		}
 

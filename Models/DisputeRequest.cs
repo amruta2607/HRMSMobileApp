@@ -2,12 +2,11 @@ namespace MobileWebApi.Models
 {
     /// <summary>
     /// Request model for submitting a dispute.
-    /// System fields (Id, TenantId, CreatedOn, Status) are set by the server.
+    /// System fields (Id, EmployeeId, TenantId, UserId, CreatedOn, Status) are set by the server
+    /// from the authenticated user context — they must not be sent by the client.
     /// </summary>
     public class DisputeSubmitRequest
     {
-        public int UserId { get; set; }
-        public int EmployeeId { get; set; }
         public int DisputeCategoryId { get; set; }
 
         /// <summary>
@@ -18,7 +17,11 @@ namespace MobileWebApi.Models
         public DateTime DisputeDate { get; set; }
 
         public string Description { get; set; } = string.Empty;
-        public int? PunchId { get; set; }
+
+        /// <summary>
+        /// Optional punch reference. Defaults to 0 when not provided.
+        /// </summary>
+        public int PunchId { get; set; }
 
         /// <summary>
         /// Requested punch-in time for the disputed attendance.

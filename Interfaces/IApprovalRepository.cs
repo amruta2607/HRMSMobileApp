@@ -10,7 +10,7 @@ namespace MobileWebApi.Interfaces
         Task<int> GetEventTypeIdAsync(string eventName, int tenantId);
         Task<EventType?> GetEventTypeByIdAsync(int eventTypeId, int tenantId);
         Task<bool> IsEventTypeActiveAsync(int eventTypeId, int tenantId);
-        Task<bool> UpdateEventStatusAsync(int eventId, string state, string status, int updateUserId, int tenantId);
+        Task<bool> UpdateEventStatusAsync(int eventId, string state, string status, int updateUserId, int tenantId, string? eventData = null);
         
         // Approval Stage operations
         Task<string?> GetFirstLevelNameAsync(int eventTypeId, int tenantId);
@@ -58,6 +58,8 @@ namespace MobileWebApi.Interfaces
         public string ReimbursementDates { get; set; } = "";
         public string ResignationDates { get; set; } = "";
         public string OvertimeDates { get; set; } = "";
+        public string RegularizationDetails { get; set; } = "";
+        public string DisputeDate { get; set; } = "";
     }
 }
 

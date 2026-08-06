@@ -68,7 +68,7 @@ namespace MobileWebApi.Repositories
             }
         }
 
-        public async Task<bool> UpdateEventStatusAsync(int eventId, string state, string status, int updateUserId, int tenantId)
+        public async Task<bool> UpdateEventStatusAsync(int eventId, string state, string status, int updateUserId, int tenantId, string? eventData = null)
         {
             try
             {
@@ -81,7 +81,8 @@ namespace MobileWebApi.Repositories
                     State = state,
                     Status = status,
                     UpdateUserId = updateUserId,
-                    TenantId = tenantId
+                    TenantId = tenantId,
+                    EventData = eventData
                 });
 
                 return rowsAffected > 0;
@@ -667,6 +668,52 @@ namespace MobileWebApi.Repositories
                         {
                             var monthName = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(payroll.Month);
                             eventDetails.PayrollMonthYear = string.Format(StringConstants.PayrollMonthYearFormat, monthName, payroll.Year);
+                        }
+                    }
+                }
+
+                // Extract RegularizationDetails (aligned with Web EventRepository.ExtractEventDetails).
+                // Prefer EventData punch/date fields when present so approve/reject does not require
+                // an extra EmployeeDispute lookup; fall back to the dispute table when needed.
+                if (eventName.Contains(StringConstants.EventNameRegularizationRequest, StringComparison.OrdinalIgnoreCase))
+                {
+                    var fromEventData = Helper.NotificationTokenHelper.BuildRegularizationDetailsFromEventData(root);
+                    if (!string.IsNullOrEmpty(fromEventData))
+                    {
+                        eventDetails.RegularizationDetails = fromEventData;
+                    }
+
+                    if (root.TryGetProperty(StringConstants.JsonKeyDisputeDate, out var ddEl)
+                        || root.TryGetProperty("disputeDate", out ddEl))
+                    {
+                        var ddStr = ddEl.ValueKind == System.Text.Json.JsonValueKind.String ? ddEl.GetString() : ddEl.ToString();
+                        if (DateTime.TryParse(ddStr, System.Globalization.CultureInfo.InvariantCulture,
+                            System.Globalization.DateTimeStyles.None, out var parsedDd))
+                        {
+                            eventDetails.DisputeDate = parsedDd.ToString(StringConstants.DateFormat);
+                        }
+                    }
+
+                    if (string.IsNullOrEmpty(eventDetails.RegularizationDetails)
+                        && (TryGetId(root, StringConstants.JsonKeyDisputeId, StringConstants.JsonKeyDisputeIdAlt, out int employeeDisputeId)
+                            || TryGetId(root, StringConstants.JsonKeyEmployeeDisputeId, StringConstants.JsonKeyEmployeeDisputeIdAlt, out employeeDisputeId)))
+                    {
+                        string disputeQuery = _queryProvider.Get("GetEmployeeDisputeNotificationDetails");
+
+                        var dispute = await conn.QueryFirstOrDefaultAsync<(
+                            DateTime DisputeDate,
+                            DateTime? RequestedPunchInTime,
+                            DateTime? RequestedPunchOutTime,
+                            string? Description,
+                            int DisputeCategoryId,
+                            string? CategoryName)>(
+                            disputeQuery, new { EmployeeDisputeId = employeeDisputeId, TenantId = tenantId });
+
+                        if (dispute.DisputeDate != default)
+                        {
+                            eventDetails.RegularizationDetails = Helper.NotificationTokenHelper.BuildRegularizationDetails(
+                                dispute.DisputeDate, dispute.RequestedPunchInTime, dispute.RequestedPunchOutTime);
+                            eventDetails.DisputeDate = dispute.DisputeDate.ToString(StringConstants.DateFormat);
                         }
                     }
                 }

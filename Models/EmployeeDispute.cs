@@ -13,7 +13,7 @@ namespace MobileWebApi.Models
         public string Status { get; set; } = "Pending";
         public DateTime CreatedOn { get; set; }
         public int TenantId { get; set; }
-        public int? PunchId { get; set; }
+        public int PunchId { get; set; }
         public DateTime? RequestedPunchInTime { get; set; }
         public DateTime? RequestedPunchOutTime { get; set; }
     }

@@ -341,17 +341,21 @@ namespace MobileWebApi.Constants
         {
             // Event logs
             public const string InitiatingApprovalWorkflow = "Initiating approval workflow for LeaveRequest ID: {LeaveRequestId}";
+            public const string InitiatingRegularizationApprovalWorkflow = "Initiating approval workflow for RegularizationRequest ID: {DisputeId}";
             public const string EventTypeNotFound = "Event type '{EventName}' not found for tenant {TenantId}";
             public const string EventTypeNotActive = "Event type '{EventName}' is not active for tenant {TenantId}";
             public const string EventInsertedSuccessfully = "Event inserted successfully. EventId: {EventId}";
             public const string FailedToInsertEvent = "Failed to insert event for leave request";
+            public const string FailedToInsertRegularizationEvent = "Failed to insert event for regularization request";
             public const string ErrorInitiatingWorkflow = "Error initiating leave request approval workflow";
+            public const string ErrorInitiatingRegularizationWorkflow = "Error initiating regularization request approval workflow";
 
             // Approval Stage logs
             public const string NoApprovalLevelsConfigured = "No approval levels configured for event type {EventTypeId}";
             public const string ApprovalStageNotFound = "Approval stage not found for level '{LevelName}'";
             public const string ApprovalStageNotActive = "Approval stage {StageId} is not active";
             public const string NoApproversFound = "No approvers found for stage {StageId}";
+            public const string RoutingToReportingManager = "Assigning approval for event {EventId} to reporting manager UserId {ManagerUserId}";
             public const string InitialApprovalStageInserted = "Initial approval stage inserted. EventId: {EventId}, StageId: {StageId}, Approvers: {ApproverCount}";
             public const string ErrorInsertingApprovalStage = "Error inserting initial approval stage for event {EventId}";
 
@@ -464,6 +468,18 @@ namespace MobileWebApi.Constants
             public const string ErrorFetchingDisputeCategories = "Error fetching dispute categories";
             public const string ErrorSubmittingDispute = "Error submitting dispute for employee {EmployeeId}";
             public const string UserAttemptedSubmitDispute = "User {UserId} attempted to submit dispute for employee {EmployeeId}";
+            public const string ApprovalWorkflowInitiated = "Approval workflow initiated for dispute {DisputeId}. EventId: {EventId}";
+            public const string ApprovalWorkflowNotConfigured = "Approval workflow not configured for dispute {DisputeId}";
+            public const string NoReportingManager = "No reporting manager (SupervisorId) assigned for employee {EmployeeId}";
+            public const string RoutingApprovalToManager = "Routing dispute {DisputeId} approval to manager UserId {ManagerUserId} (EmployeeId {ManagerEmployeeId})";
+            public const string ApprovingDispute = "Approving regularization dispute {DisputeId} for tenant {TenantId}";
+            public const string RejectingDispute = "Rejecting regularization dispute {DisputeId} for tenant {TenantId}";
+            public const string ApplyingPunchCorrection = "Applying punch correction for dispute {DisputeId}, PunchId {PunchId}";
+            public const string PunchCorrectionApplied = "Punch correction applied for PunchId {PunchId}. PunchIn: {PunchIn}, PunchOut: {PunchOut}, Duration: {Duration}";
+            public const string PunchCorrectionSkipped = "Punch correction skipped for dispute {DisputeId}: {Reason}";
+            public const string DisputeStatusUpdated = "EmployeeDispute {DisputeId} status updated to {Status}";
+            public const string ErrorApprovingDispute = "Error approving regularization dispute {DisputeId}";
+            public const string ErrorRejectingDispute = "Error rejecting regularization dispute {DisputeId}";
         }
 
         // Image/File Upload related logs
@@ -569,6 +585,16 @@ namespace MobileWebApi.Constants
             public const string Msg91ApiReturnedError = "MSG91 API returned error. Status: {Status}, Response: {Response}";
             public const string ExceptionWhileSendingSmsViaMsg91 = "Exception while sending SMS via MSG91 to {MobileNumber}";
             public const string SmsResponseBody = "SMS Response: {Body}";
+
+            public const string ProviderNotConfigured = "SMS provider is not configured";
+            public const string WebSmsSettingsNotConfigured = "WebSms settings are missing or incomplete. Missing: {MissingFields}";
+            public const string WebSmsRequestPayload = "WebSms request: Url={Url}, User={User}, SenderId={SenderId}, Channel={Channel}, Route={Route}, Peid={Peid}, DltTemplateId={DltTemplateId}, Number={MobileNumber}, Text={Text}";
+            public const string WebSmsCallingApi = "Calling WebSms API: {Url}";
+            public const string WebSmsApiResponse = "WebSms API response: StatusCode={StatusCode}, Body={Body}";
+            public const string WebSmsApiHttpError = "WebSms API returned HTTP error. StatusCode={StatusCode}, Body={Body}";
+            public const string WebSmsApiBusinessError = "WebSms API returned business error. ErrorCode={ErrorCode}, ErrorMessage={ErrorMessage}, Body={Body}";
+            public const string WebSmsSentSuccessfully = "WebSms OTP sent successfully to {MobileNumber}. JobId={JobId}";
+            public const string InvalidMobileOrOtp = "Cannot send SMS: mobile number or OTP is null/empty";
         }
 
         // Tenant Context related logs

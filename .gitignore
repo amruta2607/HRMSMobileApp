@@ -1,6 +1,9 @@
 .vs/
 bin/
 obj/
+publish/
+_build_*/
+**/_build_*/
 
 # User/machine-specific publish profiles
 Properties/PublishProfiles/*.pubxml.user

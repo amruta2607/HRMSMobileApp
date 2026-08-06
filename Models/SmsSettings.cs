@@ -17,16 +17,24 @@ namespace MobileWebApi.Models
 		public string Username { get; set; } = string.Empty;
 		public string Password { get; set; } = string.Empty;
 		public string SenderId { get; set; } = string.Empty;
-		public string? Channel { get; set; } 
+		public string? Channel { get; set; }
 
-		public string Dcs { get; set; } = "0";        // Added
-		public string FlashSms { get; set; } = "0";   // Added
+		public string Dcs { get; set; } = "0";
+		public string FlashSms { get; set; } = "0";
 
 		public string Route { get; set; } = string.Empty;
 		public string Peid { get; set; } = string.Empty;
 		public string DltTemplateId { get; set; } = string.Empty;
 
+		/// <summary>
+		/// DLT-registered message text. Use {#var#} or {OTP} as the OTP placeholder.
+		/// </summary>
 		public string MessageTemplate { get; set; } = string.Empty;
+
+		/// <summary>
+		/// Country dialing code prefix applied when the mobile number is 10 digits (default: 91).
+		/// </summary>
+		public string CountryCode { get; set; } = "91";
 	}
 	public class TwilioSettings
     {

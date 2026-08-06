@@ -12,17 +12,14 @@ namespace MobileWebApi.Controllers
     public class DisputeController : TenantBaseController
     {
         private readonly IDisputeService _disputeService;
-        private readonly IEmployeeService _employeeService;
 
         public DisputeController(
             IDisputeService disputeService,
-            IEmployeeService employeeService,
             ITenantContext tenantContext,
             ILogger<DisputeController> logger)
             : base(tenantContext, logger)
         {
             _disputeService = disputeService;
-            _employeeService = employeeService;
         }
 
         /// <summary>
@@ -45,7 +42,8 @@ namespace MobileWebApi.Controllers
         }
 
         /// <summary>
-        /// Submit a dispute request
+        /// Submit a dispute request for the logged-in user.
+        /// UserId, EmployeeId, and TenantId are taken from the authenticated context — not from the body.
         /// POST: /api/disputes
         /// </summary>
         [HttpPost]
@@ -61,13 +59,13 @@ namespace MobileWebApi.Controllers
                 });
             }
 
-            // Validate UserId
-            if (request.UserId <= 0)
+            var userId = CurrentUserId;
+            if (!userId.HasValue || userId.Value <= 0)
             {
-                return BadRequest(new DisputeSubmitResponse
+                return Unauthorized(new DisputeSubmitResponse
                 {
                     Success = false,
-                    Message = "UserId is required.",
+                    Message = TenantAccessMessages.UserNotAuthenticated,
                     Data = null
                 });
             }
@@ -83,20 +81,11 @@ namespace MobileWebApi.Controllers
                 });
             }
 
-            // Validate that user can only submit disputes for themselves (unless HR/TenantAdmin)
-            if (!HasElevatedAccess)
-            {
-                if (request.UserId != CurrentUserId)
-                {
-                    Logger.LogWarning(LogMessages.Dispute.UserAttemptedSubmitDispute, 
-                        CurrentUserId, request.UserId);
-                    return UserAccessDenied();
-                }
-            }
+            var tenantId = CurrentOrganisationId;
 
-            Logger.LogInformation(LogMessages.Dispute.SubmittingDispute, request.UserId);
+            Logger.LogInformation(LogMessages.Dispute.SubmittingDispute, userId.Value);
             
-            var result = await _disputeService.SubmitDisputeAsync(request, CurrentOrganisationId);
+            var result = await _disputeService.SubmitDisputeAsync(request, userId.Value, tenantId);
             
             if (result.Success)
             {
@@ -107,4 +96,3 @@ namespace MobileWebApi.Controllers
         }
     }
 }
-

@@ -9,17 +9,20 @@ namespace MobileWebApi.Services
 		private readonly IDisputeRepository _repository;
 		private readonly IEmployeeRepository _employeeRepository;
 		private readonly IAttendanceRepository _attendanceRepository;
+		private readonly IApprovalWorkflowService _approvalWorkflowService;
 		private readonly ILogger<DisputeService> _logger;
 
 		public DisputeService(
 			IDisputeRepository repository,
 			IEmployeeRepository employeeRepository,
 			IAttendanceRepository attendanceRepository,
+			IApprovalWorkflowService approvalWorkflowService,
 			ILogger<DisputeService> logger)
 		{
 			_repository = repository;
 			_employeeRepository = employeeRepository;
 			_attendanceRepository = attendanceRepository;
+			_approvalWorkflowService = approvalWorkflowService;
 			_logger = logger;
 		}
 
@@ -86,7 +89,7 @@ namespace MobileWebApi.Services
 		}
 
 		/// <inheritdoc />
-		public async Task<DisputeSubmitResponse> SubmitDisputeAsync(DisputeSubmitRequest request, int tenantId)
+		public async Task<DisputeSubmitResponse> SubmitDisputeAsync(DisputeSubmitRequest request, int userId, int tenantId)
 		{
 			try
 			{
@@ -123,29 +126,16 @@ namespace MobileWebApi.Services
 					return Fail(DisputeMessages.InvalidRequestedPunchTimes);
 				}
 
-				// Resolve EmployeeId from UserId (authoritative for the authenticated user)
-				var resolvedEmployeeId = await ResolveEmployeeIdFromUserIdAsync(request.UserId);
-				if (!resolvedEmployeeId.HasValue)
+				// Resolve EmployeeId from authenticated UserId (never accept from client)
+				var employeeId = await ResolveEmployeeIdFromUserIdAsync(userId);
+				if (!employeeId.HasValue || employeeId.Value <= 0)
 				{
 					return Fail(DisputeMessages.EmployeeNotFoundForGivenUser);
 				}
 
-				// Prefer request.EmployeeId when provided; otherwise use resolved value (backward compatible)
-				var employeeId = request.EmployeeId > 0 ? request.EmployeeId : resolvedEmployeeId.Value;
-				if (employeeId <= 0)
-				{
-					return Fail(DisputeMessages.EmployeeIdRequired);
-				}
+				_logger.LogInformation(LogMessages.Dispute.SubmittingDispute, employeeId.Value);
 
-				// Non-elevated callers cannot submit for a different employee
-				if (request.EmployeeId > 0 && request.EmployeeId != resolvedEmployeeId.Value)
-				{
-					return Fail(DisputeMessages.EmployeeNotFound);
-				}
-
-				_logger.LogInformation(LogMessages.Dispute.SubmittingDispute, employeeId);
-
-				var employee = await _repository.GetEmployeeByIdAsync(employeeId);
+				var employee = await _repository.GetEmployeeByIdAsync(employeeId.Value);
 				if (employee == null)
 				{
 					return Fail(DisputeMessages.EmployeeNotFound);
@@ -156,31 +146,54 @@ namespace MobileWebApi.Services
 					return Fail(DisputeMessages.EmployeeNotFound);
 				}
 
-				if (request.PunchId.HasValue && request.PunchId.Value > 0)
+				// Reporting manager = Employee.SupervisorId; required for approval routing
+				if (employee.SupervisorId <= 0)
 				{
-					var punch = await _attendanceRepository.GetPunchByIdAsync(request.PunchId.Value, tenantId);
-					if (punch == null || punch.EmployeeId != employeeId)
+					_logger.LogWarning(LogMessages.Dispute.NoReportingManager, employeeId.Value);
+					return Fail(DisputeMessages.NoReportingManagerAssigned);
+				}
+
+				var manager = await _repository.GetEmployeeByIdAsync(employee.SupervisorId);
+				if (manager == null || manager.SystemUserId <= 0)
+				{
+					_logger.LogWarning(LogMessages.Dispute.NoReportingManager, employeeId.Value);
+					return Fail(DisputeMessages.ReportingManagerUserNotFound);
+				}
+
+				var managerUserId = manager.SystemUserId;
+
+				// Optional integers default to 0 when null/not provided
+				var punchId = request.PunchId;
+
+				if (punchId > 0)
+				{
+					var punch = await _attendanceRepository.GetPunchByIdAsync(punchId, tenantId);
+					if (punch == null || punch.EmployeeId != employeeId.Value)
 					{
 						return Fail(DisputeMessages.InvalidPunchId);
 					}
 				}
 
-				var existingDispute = await _repository.GetExistingDisputeAsync(employeeId, request.DisputeDate);
+				// Web UX_EmployeeDispute_Unique: EmployeeId + DisputeCategoryId + DisputeDate
+				var existingDispute = await _repository.GetExistingDisputeAsync(
+					employeeId.Value,
+					request.DisputeCategoryId,
+					request.DisputeDate);
 				if (existingDispute != null)
 				{
-					return Fail(DisputeMessages.OnlyOneDisputePerDay);
+					return Fail(DisputeMessages.OnlyOneDisputePerCategoryDate);
 				}
 
 				var dispute = new EmployeeDispute
 				{
-					EmployeeId = employeeId,
+					EmployeeId = employeeId.Value,
 					DisputeCategoryId = request.DisputeCategoryId,
 					DisputeDate = request.DisputeDate.Date,
 					Description = request.Description.Trim(),
 					Status = "Pending",
 					CreatedOn = DateTime.UtcNow,
 					TenantId = tenantId,
-					PunchId = request.PunchId > 0 ? request.PunchId : null,
+					PunchId = punchId,
 					RequestedPunchInTime = request.RequestedPunchInTime,
 					RequestedPunchOutTime = request.RequestedPunchOutTime
 				};
@@ -194,6 +207,34 @@ namespace MobileWebApi.Services
 				dispute.Id = disputeId;
 
 				_logger.LogInformation(LogMessages.Dispute.DisputeSubmittedSuccessfully, disputeId);
+				_logger.LogInformation(
+					LogMessages.Dispute.RoutingApprovalToManager,
+					disputeId,
+					managerUserId,
+					manager.Id);
+
+				// Initiate approval workflow assigned to reporting manager + Alert notifications
+				try
+				{
+					var workflowResult = await _approvalWorkflowService.InitiateRegularizationRequestApprovalAsync(
+						dispute,
+						userId,
+						tenantId,
+						managerUserId);
+
+					if (workflowResult.Success)
+					{
+						_logger.LogInformation(LogMessages.Dispute.ApprovalWorkflowInitiated, disputeId, workflowResult.EventId);
+					}
+					else
+					{
+						_logger.LogWarning(LogMessages.Dispute.ApprovalWorkflowNotConfigured, disputeId);
+					}
+				}
+				catch (Exception ex)
+				{
+					_logger.LogWarning(ex, LogMessages.Dispute.ApprovalWorkflowNotConfigured, disputeId);
+				}
 
 				return new DisputeSubmitResponse
 				{
@@ -216,7 +257,7 @@ namespace MobileWebApi.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, LogMessages.Dispute.ErrorSubmittingDispute, request.UserId);
+				_logger.LogError(ex, LogMessages.Dispute.ErrorSubmittingDispute, userId);
 
 				return new DisputeSubmitResponse
 				{
@@ -224,6 +265,36 @@ namespace MobileWebApi.Services
 					Message = GeneralMessages.SomethingWentWrongContactAdmin,
 					Data = null
 				};
+			}
+		}
+
+		/// <inheritdoc />
+		public async Task<(bool Success, string Message)> ApproveDisputeAsync(int disputeId, int tenantId, int updateUserId)
+		{
+			try
+			{
+				_logger.LogInformation(LogMessages.Dispute.ApprovingDispute, disputeId, tenantId);
+				return await _repository.ApproveDisputeAndApplyPunchCorrectionAsync(disputeId, tenantId, updateUserId);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, LogMessages.Dispute.ErrorApprovingDispute, disputeId);
+				return (false, DisputeMessages.FailedToApproveDispute);
+			}
+		}
+
+		/// <inheritdoc />
+		public async Task<(bool Success, string Message)> RejectDisputeAsync(int disputeId, int tenantId)
+		{
+			try
+			{
+				_logger.LogInformation(LogMessages.Dispute.RejectingDispute, disputeId, tenantId);
+				return await _repository.RejectDisputeAsync(disputeId, tenantId);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, LogMessages.Dispute.ErrorRejectingDispute, disputeId);
+				return (false, DisputeMessages.FailedToRejectDispute);
 			}
 		}
 

@@ -70,6 +70,10 @@ namespace MobileWebApi.Constants
             public const string DisputeGetEmployeeByIdDatabaseError = "REP053";
             public const string DisputeGetExistingDisputeDatabaseError = "REP054";
             public const string DisputeInsertDisputeDatabaseError = "REP055";
+            public const string DisputeGetByIdDatabaseError = "REP056";
+            public const string DisputeUpdateStatusDatabaseError = "REP057";
+            public const string DisputeApplyPunchCorrectionDatabaseError = "REP058";
+            public const string DisputeApproveDatabaseError = "REP059";
 
             public const string HolidayCreateHolidayDatabaseError = "REP056";
             public const string HolidayGetHolidayByIdDatabaseError = "REP057";
@@ -338,6 +342,7 @@ namespace MobileWebApi.Constants
         {
             public const string InitiateLeaveWorkflow = "WF-001";
             public const string InsertInitialStage = "WF-002";
+            public const string InitiateRegularizationWorkflow = "WF-003";
         }
 
         // Asset dashboard (AssetDashboardRepository)

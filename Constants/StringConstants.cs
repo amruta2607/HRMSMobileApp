@@ -35,13 +35,42 @@ namespace MobileWebApi.Constants
         public const string JsonKeyResignationIdAlt = "resignationId";
         public const string JsonKeyOvertimeId = "overtime_id";
         public const string JsonKeyOvertimeIdAlt = "overtimeId";
+        public const string JsonKeyEmployeeDisputeId = "employee_dispute_id";
+        public const string JsonKeyEmployeeDisputeIdAlt = "employeeDisputeId";
+        public const string JsonKeyDisputeId = "dispute_id";
+        public const string JsonKeyDisputeIdAlt = "disputeId";
+        public const string JsonKeyDisputeDate = "dispute_date";
+        public const string JsonKeyEmployeeId = "employee_id";
+        public const string JsonKeyDisputeCategoryId = "dispute_category_id";
+        public const string JsonKeyStartDate = "start_date";
+        public const string JsonKeyEndDate = "end_date";
+        public const string JsonKeyRequestedUserId = "requested_user_id";
+        public const string JsonKeyPunchId = "punch_id";
+        public const string JsonKeyRequestedPunchInTime = "requested_punch_in_time";
+        public const string JsonKeyRequestedPunchOutTime = "requested_punch_out_time";
+        public const string JsonKeyManagerUserId = "manager_user_id";
+        public const string JsonKeyApprovedUserId = "approved_user_id";
+        public const string JsonKeyApprovedBy = "approvedBy";
+        public const string JsonKeyApprovalTimestamp = "approvalTimestamp";
+        public const string JsonKeyState = "state";
         public const string JsonKeyId = "id";
         public const string JsonKeyRequestId = "request_id";
 
         #endregion
 
+        #region Date Formats
+
+        public const string DateFormat = "dd-MMM-yyyy";
+        public const string EventDataDateFormat = "yyyy-MM-dd";
+        /// <summary>Web EventData punch datetime format (e.g. 2026-06-11 18:46:00).</summary>
+        public const string EventDataDateTimeFormat = "yyyy-MM-dd HH:mm:ss";
+        public const string EventDataApprovalTimestampFormat = "o";
+
+        #endregion
+
         #region Action Types
 
+        public const string ActionTypeSubmission = "Submission";
         public const string ActionTypeManagerApproval = "ManagerApproval";
         public const string ActionTypeManagerRejection = "ManagerRejection";
 
@@ -64,6 +93,10 @@ namespace MobileWebApi.Constants
 
         public const string TokenUsername = "{Username}";
         public const string TokenEmployeeName = "[Employee_Name]";
+        public const string TokenEmployeeNameBrace = "{EmployeeName}";
+        public const string TokenEmployeeNameBracketNoUnderscore = "[EmployeeName]";
+        public const string TokenApproverName = "{ApproverName}";
+        public const string TokenApproverNameAlt = "[Approver_Name]";
         public const string TokenCompanyName = "[Company_Name]";
         public const string TokenStartDate = "[Start_Date]";
         public const string TokenStartDateAlt = "{Start_Date}";
@@ -77,6 +110,10 @@ namespace MobileWebApi.Constants
         public const string TokenReimbursementDatesAlt = "[ReimbursementDates]";
         public const string TokenResignationDates = "{ResignationDates}";
         public const string TokenResignationDatesAlt = "[ResignationDates]";
+        public const string TokenRegularizationDetails = "{RegularizationDetails}";
+        public const string TokenRegularizationDetailsAlt = "[RegularizationDetails]";
+        public const string TokenDisputeDate = "{DisputeDate}";
+        public const string TokenDisputeDateAlt = "[Dispute_Date]";
         public const string TokenPayrollMonthYear = "{PayrollMonthYear}";
         public const string TokenPayrollMonthYearAlt = "[Payroll_Month_Year]";
         public const string TokenPayrollMonth = "[Payroll_Month]";
@@ -84,12 +121,6 @@ namespace MobileWebApi.Constants
         public const string TokenPaymentDate = "[Payment_Date]";
         public const string TokenReason = "[Reason]";
         public const string TokenReasonAlt = "{Reason}";
-
-        #endregion
-
-        #region Date Formats
-
-        public const string DateFormat = "dd-MMM-yyyy";
 
         #endregion
 
@@ -127,6 +158,7 @@ namespace MobileWebApi.Constants
         public const string EventNameReimbursementRequest = "ReimbursementRequest";
         public const string EventNameResignationRequest = "ResignationRequest";
         public const string EventNamePayrollSubmission = "PayrollSubmission";
+        public const string EventNameRegularizationRequest = "RegularizationRequest";
 
         #endregion
 
