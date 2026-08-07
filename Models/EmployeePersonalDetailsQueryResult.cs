@@ -16,6 +16,7 @@ namespace MobileWebApi.Models
         public string? Phone { get; set; }
         public string? Email { get; set; }
         public string? Designation { get; set; }
+        public string? Department { get; set; }
         public string? Street { get; set; }
         public string? City { get; set; }
         public string? State { get; set; }

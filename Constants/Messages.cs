@@ -113,6 +113,7 @@ namespace MobileWebApi.Constants
         public const string ErrorDeactivatingEmployee = "Error deactivating employee: {0}";
         public const string EmployeeNotFoundForUserId = "No employee found for the specified UserId.";
         public const string EmployeeNotFoundForGivenUser = "Employee not found for the given user.";
+        public const string EmployeeOrUserNotFoundForUserId = "No employee or user found for the specified UserId.";
         public const string PhoneOrPictureRequiredForUpdate = "At least one field (Phone or Picture) must be provided for update.";
     }
 

@@ -5,6 +5,7 @@ namespace MobileWebApi.Interfaces
     public interface IEmployeeService
     {
         Task<PersonalDetailServiceResponse> GetEmployeeByIdAsync(int id);
+        Task<PersonalDetailServiceResponse> GetPersonalDetailsByUserIdAsync(int userId);
         Task<PersonalDetailServiceResponse> GetLoggedInEmployeeAsync(int userId);
         Task<PersonalDetailListResponse> GetEmployeesByBranchAsync(int branchId);
         Task<PersonalDetailListResponse> GetEmployeesByBranchExceptUserAsync(int branchId, int userId);

@@ -124,6 +124,7 @@ namespace MobileWebApi.Constants
             public const string TenantWeekOffGetConfigurationDatabaseError = "REP103";
             public const string TenantWeekOffGetWeekOffDaysDatabaseError = "REP104";
             public const string UserGetActiveWorkRolesByUserIdDatabaseError = "REP105";
+            public const string UserGetUserPersonalDetailsByUserIdDatabaseError = "REP106";
         }
 
         // Service layer (generic)
@@ -152,6 +153,7 @@ namespace MobileWebApi.Constants
             public const string UpdateEmployeePhoneAndPicture = "EMP-007";
             public const string DeleteEmployee = "EMP-008";
             public const string DeactivateEmployee = "EMP-009";
+            public const string GetPersonalDetailsByUserId = "EMP-010";
         }
 
         // Authentication module (AuthController, TokenService)

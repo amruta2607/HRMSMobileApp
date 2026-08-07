@@ -6,6 +6,7 @@ namespace MobileWebApi.Interfaces
     {
         Task<IEnumerable<User>> GetAllAsync(int tenantId);
         Task<User?> GetUserByIdAsync(int id);
+        Task<UserPersonalDetailsQueryResult?> GetUserPersonalDetailsByUserIdAsync(int userId);
         Task<User?> GetUserByUsernameOrMobileAsync(string login);
         Task<User?> GetUserByUsernameForWebLoginAsync(string username);
         Task<User?> GetUserByUsernameOrEmailAsync(string usernameOrEmail);
