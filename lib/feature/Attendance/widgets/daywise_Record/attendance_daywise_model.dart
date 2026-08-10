@@ -6,6 +6,8 @@ class AttendanceRowData {
   final String? clockOut;
   final Duration? workedDuration;
   final bool late;
+  final int? punchId;
+
 
   AttendanceRowData({
     required this.date,
@@ -13,6 +15,8 @@ class AttendanceRowData {
     this.clockOut,
     this.workedDuration,
     this.late = false,
+    this.punchId,
+
   });
 
   factory AttendanceRowData.fromJson(Map<String, dynamic> json) {
@@ -23,6 +27,8 @@ class AttendanceRowData {
       final rawOut = json['punchOut'];
       // workingHours can be int OR double from the API — always convert to int
       final minutes = (json['workingHours'] as num?)?.toInt() ?? 0;
+      final punchId = (json['punchId'] as num?)?.toInt();
+
 
       String formattedDate = '';
       try {
@@ -54,6 +60,7 @@ class AttendanceRowData {
         clockOut: formattedOut,
         workedDuration: minutes != 0 ? Duration(minutes: minutes) : null,
         late: json['status'] == 'Late',
+        punchId: punchId,
       );
     } catch (e) {
       print('AttendanceRowData.fromJson ERROR: $e  |  json=$json');
@@ -62,6 +69,7 @@ class AttendanceRowData {
     }
   }
 }
+
 
 // class AttendanceRowData {
 //   final String date;

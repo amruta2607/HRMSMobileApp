@@ -20,10 +20,8 @@ class Validator {
     String? passwordError;
 
     if (isEmail) {
-      if (fieldValue.isEmpty) {
-        fieldError = "Email required";
-      } else if (!isValidEmail(fieldValue)) {
-        fieldError = "Invalid email format";
+      if (fieldValue.trim().isEmpty) {
+        fieldError = "Username or Email required";
       }
 
       if (passwordValue.isEmpty) {

@@ -77,6 +77,7 @@ static const String leaveHistory = "$base/api/Leave/history";
   static const String approveAlert = "$base/api/Alert/approve-request";
   static const String rejectAlert = "$base/api/Alert/reject-request";
   static const String markReadAlert = "$base/api/Alert/mark-read";
+  static const String templates = "$base/api/templates";
 
 
   //menu

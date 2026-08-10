@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../../../../feature/Dispute/dispute_category.dart';
 import '../../Urls/urls.dart';
 import '../token_storage.dart';
@@ -37,6 +36,9 @@ class DisputeService {
     required DateTime disputeDate,
     required String description,
     required int categoryId,
+    int? punchId,
+    DateTime? requestedPunchInTime,
+    DateTime? requestedPunchOutTime,
   }) async {
     try {
       final token = await TokenStorage.getToken();
@@ -46,14 +48,22 @@ class DisputeService {
         throw Exception("Authentication required");
       }
 
-      final dateStr = disputeDate.toUtc().toIso8601String();
+      final dateStr = disputeDate.toIso8601String();
 
-      final body = {
+      final body = <String, dynamic>{
         "userId": userId,
         "disputeCategoryId": categoryId,
         "disputeDate": dateStr,
-        "description": description
+        "description": description,
+        "punchId": punchId ?? 0,
       };
+
+      if (requestedPunchInTime != null) {
+        body["requestedPunchInTime"] = requestedPunchInTime.toIso8601String();
+      }
+      if (requestedPunchOutTime != null) {
+        body["requestedPunchOutTime"] = requestedPunchOutTime.toIso8601String();
+      }
 
       print("DISPUTE BODY: ${jsonEncode(body)}");
 
@@ -85,3 +95,4 @@ class DisputeService {
     }
   }
 }
+

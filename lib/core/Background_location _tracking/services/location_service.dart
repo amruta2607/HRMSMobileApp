@@ -933,6 +933,7 @@ class LocationService {
     );
 
     _addLocation(locationData);
+    _sendLocationsToApi();
   }
 
   /**

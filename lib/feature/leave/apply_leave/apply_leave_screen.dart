@@ -109,7 +109,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                     ),
                     TextSpan(
                       text:
-                      "(${_selectedLeaveType!.remainingBalance} days left)",
+                      "(${_selectedLeaveType!.remainingBalanceFormatted} days left)",
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w600, // Semi Bold
@@ -238,7 +238,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                                     ),
                                     SizedBox(width: 8 * scale),
                                     Text(
-                                      "${type.remainingBalance} days left",
+                                      "${type.remainingBalanceFormatted} days left",
                                       style: TextStyle(
                                         fontFamily: 'Inter',
                                         fontWeight: FontWeight.w500,

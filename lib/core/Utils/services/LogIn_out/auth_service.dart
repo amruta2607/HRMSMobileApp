@@ -13,6 +13,7 @@ class AuthService {
     final url = Uri.parse(BaseUrls.loginWithEmail);
 
     final body = {
+      "usernameOrEmail": email.trim(),
       "email": email.trim(),
       "password": password.trim(),
     };

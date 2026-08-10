@@ -422,11 +422,14 @@ class _AttendanceBodyState extends State<AttendanceBody> {
               onPressed: () async {
                 await Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => DisputeScreen(selectedDate: selectedRow!.date)),
+                  MaterialPageRoute(builder: (_) => DisputeScreen(
+                    selectedDate: selectedRow!.date,
+                    punchId: selectedRow!.punchId,
+                  )),
                 );
                 if (mounted) setState(() => selectedRow = null);
               },
-              label: const Text('Raise Dispute', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
+              label: const Text('Regularization', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
             ),
           ),
       ],
