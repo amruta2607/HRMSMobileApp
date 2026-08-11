@@ -8,8 +8,11 @@ class TenantController extends ChangeNotifier {
   String? get companyLogoUrl => _companyLogoUrl;
   bool get isLoading => _isLoading;
 
-  Future<void> fetchCompanyLogo() async {
-    if (_companyLogoUrl != null) return; // Only fetch once
+  // Future<void> fetchCompanyLogo() async {
+  //   if (_companyLogoUrl != null) return; // Only fetch once
+
+  Future<void> fetchCompanyLogo({bool force = false}) async {
+    if (!force && _companyLogoUrl != null) return;
 
     _isLoading = true;
     notifyListeners();

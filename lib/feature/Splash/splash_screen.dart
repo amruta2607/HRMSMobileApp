@@ -1,5 +1,4 @@
-import 'dart:async';
-import 'dart:ui';
+import 'dart:async';import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../core/Utils/services/token_storage.dart';
 import '../Login/login_screen.dart';
@@ -54,17 +53,34 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       return;
     }
 
-    // Try to get a valid token (auto-refreshes if expired)
-    final validToken = await TokenStorage.getValidToken();
-    if (validToken == null) {
-      // Both access token and refresh token are invalid → must re-login
-      print('SPLASH → Token refresh failed, redirecting to login');
+    // -------- OLD (session bug): getValidToken did NOT refresh --------
+    // // Try to get a valid token (auto-refreshes if expired)
+    // final validToken = await TokenStorage.getValidToken();
+    // if (validToken == null) {
+    //   // Both access token and refresh token are invalid → must re-login
+    //   print('SPLASH → Token refresh failed, redirecting to login');
+    //   await TokenStorage.logout();
+    //   _goToLogin();
+    //   return;
+    // }
+    //
+    // await TokenStorage.loadModuleAccess();
+    // _goToMainNavigation();
+
+    // Cold start: force refresh so session stays alive after hours in background
+    final validToken = await TokenStorage.ensureSession(forceRefresh: true);
+    if (!mounted) return;
+
+    if (validToken == null || validToken.isEmpty) {
+      print('SPLASH → Session invalid, redirecting to login');
       await TokenStorage.logout();
       _goToLogin();
       return;
     }
 
+    print('SPLASH → Session OK, going to home');
     await TokenStorage.loadModuleAccess();
+    if (!mounted) return;
     _goToMainNavigation();
   }
 

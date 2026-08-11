@@ -108,7 +108,9 @@ class _LoginScreenState extends State<LoginScreen> {
         );
         if (!mounted) return;
         context.read<ProfileController>().refreshProfile();
-        context.read<TenantController>().fetchCompanyLogo();
+        // context.read<TenantController>().fetchCompanyLogo();
+        await context.read<TenantController>().fetchCompanyLogo(force: true);
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
@@ -176,7 +178,9 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       if (!mounted) return;
       context.read<ProfileController>().refreshProfile();
-      context.read<TenantController>().fetchCompanyLogo();
+      // context.read<TenantController>().fetchCompanyLogo();
+      await context.read<TenantController>().fetchCompanyLogo(force: true);
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const MainNavigationScreen()),

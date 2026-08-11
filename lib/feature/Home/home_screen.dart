@@ -46,7 +46,10 @@ class _HomeScreenState extends State<HomeScreen>
       LocationService.clearCache();
       _permissionChecked = false;
       _checkLocationPermission(requestIfDenied: false);
-      _homeController.fetchHomeData();
+      // _homeController.fetchHomeData();
+      TokenStorage.ensureSession().then((_) {
+        if (mounted) _homeController.fetchHomeData();
+      });
     }
   }
 

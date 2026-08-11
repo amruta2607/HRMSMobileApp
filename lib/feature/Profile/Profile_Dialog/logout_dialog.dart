@@ -9,6 +9,10 @@ import '../../../core/Background_location _tracking/services/location_service.da
     as bg_tracking;
 import '../../../core/Background_location _tracking/services/gps_monitor_service.dart';
 import '../../Login/login_screen.dart';
+import 'package:provider/provider.dart';
+import '../../Profile/controller/profile_controller.dart';
+import '../../Reuse_Widgets/authenticated_image.dart';
+import '../../Tenant/controller/tenant_controller.dart';
 
 class LogoutDialog {
   static void show(BuildContext context) {
@@ -134,7 +138,12 @@ class LogoutDialog {
   }
 
   static Future<void> _performLogout(BuildContext context) async {
-    // Safety: never logout while still clocked in.
+
+    try {
+      context.read<TenantController>().clearData();
+      context.read<ProfileController>().clearData();
+    } catch (_) {}
+    AuthenticatedImage.clearCache();
     if (AttendanceService.isClockedIn) {
       if (context.mounted) _showPunchOutRequired(context);
       return;

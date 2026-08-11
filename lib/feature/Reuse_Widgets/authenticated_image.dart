@@ -29,6 +29,15 @@ class AuthenticatedImage extends StatefulWidget {
     this.showLoader = true,
   });
 
+
+  static void clearCache([String? url]) {
+    if (url == null) {
+      _AuthenticatedImageState._imageCache.clear();
+    } else {
+      _AuthenticatedImageState._imageCache.remove(url);
+    }
+  }
+
   @override
   State<AuthenticatedImage> createState() => _AuthenticatedImageState();
 }
