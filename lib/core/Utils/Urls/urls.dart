@@ -1,14 +1,17 @@
 class BaseUrls {
 
-  //static const String base = "http://103.123.74.160:81"; //development
+  // static const String base = "http://20.44.57.126:82"; //development
 
 
-     static const String base = "http://103.123.74.159:5005"; //production
+    static const String base = "http://103.123.74.159:5005"; //production
 
   // AUTH
   static const String loginWithEmail = "$base/api/Auth/login-email";
   static const String loginWithMobile = "$base/api/Auth/login-mobile";
   static const String logout = "$base/api/Auth/logout";
+
+  static const String refreshToken = "$base/api/Auth/refresh-token";
+
 
   static const String forgotPassword = "$base/api/Auth/forgot-password";
      static const String moduleAccess = "$base/api/mobile/module-access";
@@ -69,6 +72,8 @@ static const String leaveHistory = "$base/api/Leave/history";
   static const String approveAlert = "$base/api/Alert/approve-request";
   static const String rejectAlert = "$base/api/Alert/reject-request";
   static const String markReadAlert = "$base/api/Alert/mark-read";
+  static const String templates = "$base/api/templates";
+
 
 
   //menu

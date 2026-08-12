@@ -14,6 +14,7 @@ import '../../Urls/urls.dart';
 import '../Time_Location/location_service.dart';
 import 'package:flutter/foundation.dart';
 import '../token_storage.dart';
+import '../authenticated_http.dart';
 
 class AttendanceService {
   // Global State Notifiers for real-time synchronization
@@ -126,7 +127,6 @@ class AttendanceService {
       print('📥 PUNCH BODY => ${response.body}');
 
       if (response.statusCode == 401) {
-        await TokenStorage.logoutAndNavigate();
         return (success: false, message: 'Session expired');
       }
 
@@ -210,7 +210,7 @@ class AttendanceService {
         final Map<String, dynamic> body = item['body'];
         final url = isPunchIn ? BaseUrls.punchIn : BaseUrls.punchOut;
 
-        final response = await http.post(
+        final response = await AuthenticatedHttp.post(
           Uri.parse(url),
           headers: {
             'accept': '*/*',
@@ -251,7 +251,7 @@ class AttendanceService {
       final uri = Uri.parse('${BaseUrls.attendanceCalendar}?user_id=$userId&month=$month&year=$year');
       // print('CALENDAR URL => $uri');
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         uri,
         headers: {
           'accept': '*/*',
@@ -291,7 +291,7 @@ class AttendanceService {
       final f = DateFormat("yyyy-MM-dd'T'HH:mm:ss");
       final uri = Uri.parse('${BaseUrls.attendanceOverview}?userId=$userId&organisationId=$orgId&fromDate=${f.format(startOfWeek)}&toDate=${f.format(endOfWeek)}');
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         uri,
         headers: {
           'accept': '*/*',
@@ -325,7 +325,7 @@ class AttendanceService {
       final f = DateFormat("yyyy-MM-dd'T'HH:mm:ss");
       final uri = Uri.parse('${BaseUrls.attendanceStatus}?userId=$userId&date=${f.format(date)}');
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         uri,
         headers: {
           'accept': '*/*',
@@ -402,7 +402,7 @@ class AttendanceService {
 
       print('ATTENDANCE SUMMARY URL => $uri');
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         uri,
         headers: {
           'accept': '*/*',
@@ -428,7 +428,7 @@ class AttendanceService {
       final token = await TokenStorage.getToken();
       if (token == null) return null;
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         Uri.parse(BaseUrls.geofencingByTenant),
         headers: {
           'accept': '*/*',
@@ -437,9 +437,17 @@ class AttendanceService {
       );
 
       if (response.statusCode == 200) {
-        return GeofencingModel.fromJson(jsonDecode(response.body));
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          if (decoded.containsKey('data') && decoded['data'] != null) {
+            return GeofencingModel.fromJson(decoded['data']);
+          }
+          return GeofencingModel.fromJson(decoded);
+        }
       }
-    } catch (e) {}
+    } catch (e) {
+      print('GEOFENCING ERROR: $e');
+    }
     return null;
   }
 

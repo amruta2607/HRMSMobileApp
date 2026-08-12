@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../../../../feature/Announcement/model/announcement_model.dart';
 import '../../Urls/urls.dart';
 import '../token_storage.dart';
+import '../authenticated_http.dart';
 
 class AnnouncementService {
   static Future<List<AnnouncementModel>> getAnnouncements() async {
@@ -13,7 +14,7 @@ class AnnouncementService {
         throw Exception('Token is missing');
       }
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         Uri.parse(BaseUrls.announcements),
         headers: {
           'accept': '*/*',
@@ -25,8 +26,7 @@ class AnnouncementService {
         final List<dynamic> data = jsonDecode(response.body);
         return data.map((json) => AnnouncementModel.fromJson(json)).toList();
       } else if (response.statusCode == 401) {
-        await TokenStorage.logoutAndNavigate();
-        throw Exception('Session expired');
+        return [];
       } else {
         throw Exception('Failed to load announcements: ${response.statusCode}');
       }

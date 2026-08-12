@@ -13,6 +13,7 @@ class AuthService {
     final url = Uri.parse(BaseUrls.loginWithEmail);
 
     final body = {
+      "usernameOrEmail": email.trim(),
       "email": email.trim(),
       "password": password.trim(),
     };
@@ -149,20 +150,12 @@ class AuthService {
   // ================= LOGOUT =================
   static Future<bool> logout() async {
     try {
-      // IMPORTANT: check token first
-      final token = await TokenStorage.getToken();
+      // Get a valid token (auto-refreshes if expired)
+      final token = await TokenStorage.getValidToken();
 
       if (token == null) {
-        print("LOGOUT: No token found, clearing storage");
+        print("LOGOUT: No valid token, clearing storage");
         await TokenStorage.logout();
-        return true;
-      }
-
-      // TOKEN EXPIRY CHECK
-      final isExpired = await TokenStorage.isTokenExpired();
-      if (isExpired) {
-        print("LOGOUT: Token expired, forcing logout");
-        await TokenStorage.logoutAndNavigate();
         return true;
       }
 

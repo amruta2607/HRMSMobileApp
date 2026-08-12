@@ -82,10 +82,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
 
   int get _unreadCount => _apiUnreadCount;
 
-  bool _isTask(AlertModel a) =>
-      a.title.contains("Leave Request") ||
-          a.title.contains("Payroll Submitted") ||a.title.contains("Reimbursement Request") ||
-          a.title.contains("Resignation Request") || a.title.contains("Cancel Leave Request") || a.title.contains("Cancel Payroll Request") || a.title.contains("Overtime Request");
+  bool _isTask(AlertModel a) => AlertService.isTask(a);
 
   Future<void> _handleAction(AlertModel alert, bool isApprove) async {
     setState(() => _isLoading = true);
@@ -172,7 +169,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
     final scale = (MediaQuery.of(context).size.width / 402).clamp(0.85, 1.1);
 
     final tasksUnreadCount = _alerts.where((a) => _isTask(a) && a.status == "Unread").length;
-    final notificationsUnreadCount = _apiUnreadCount;
+    final notificationsUnreadCount = _alerts.where((a) => !_isTask(a) && a.status == "Unread").length;
 
     return HomeScreenConstent(
       body: Column(

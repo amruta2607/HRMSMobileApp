@@ -1,18 +1,79 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../../Urls/urls.dart';
 import '../token_storage.dart';
+import '../authenticated_http.dart';
 import 'package:altroz/feature/alerts/model/alert_model.dart';
 
 class AlertService {
+  static Set<int> _taskTemplateIds = {};
+  static final Set<int> _defaultTaskTemplateIds = {
+    33,   // LeaveRequest
+    38,   // OvertimeRequest
+    43,   // ReimbursementRequest
+    48,   // ResignationRequest
+    53,   // CancelLeave
+    58,   // PayrollSubmission
+    1061, // RequisitionRequest
+    1066, // RegularizationRequest
+    1478, // TicketRequest
+  };
+
+  static Future<Set<int>> getTemplates() async {
+    try {
+      final token = await TokenStorage.getToken();
+      if (token == null) return _taskTemplateIds;
+
+      final url = Uri.parse(BaseUrls.templates);
+      final response = await AuthenticatedHttp.get(
+        url,
+        headers: {
+          'accept': '*/*',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> decoded = jsonDecode(response.body);
+        _taskTemplateIds = decoded.map<int>((item) => (item['id'] as num).toInt()).toSet();
+        print('DEBUG: Fetched ${_taskTemplateIds.length} Task Templates from API => $_taskTemplateIds');
+      }
+    } catch (e) {
+      print('GET TEMPLATES ERROR => $e');
+    }
+    return _taskTemplateIds;
+  }
+
+  static bool isTask(AlertModel a) {
+    if (_taskTemplateIds.isNotEmpty) {
+      if (_taskTemplateIds.contains(a.eventId)) return true;
+    }
+    if (_defaultTaskTemplateIds.contains(a.eventId)) return true;
+
+    // Fallback to title matching
+    return a.title.contains("Leave Request") ||
+        a.title.contains("Payroll Submitted") ||
+        a.title.contains("Reimbursement Request") ||
+        a.title.contains("Resignation Request") ||
+        a.title.contains("Cancel Leave Request") ||
+        a.title.contains("Cancel Payroll Request") ||
+        a.title.contains("Overtime Request") ||
+        a.title.contains("Regularization Request") ||
+        a.title.contains("Requisition Request") ||
+        a.title.contains("Ticket Request");
+  }
+
   static Future<Map<String, dynamic>?> getAlerts() async {
     try {
+      if (_taskTemplateIds.isEmpty) {
+        await getTemplates();
+      }
+
       final token = await TokenStorage.getToken();
       if (token == null) return null;
 
       final url = Uri.parse(BaseUrls.alerts);
 
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         url,
         headers: {
           'accept': '*/*',
@@ -21,7 +82,6 @@ class AlertService {
       );
 
       if (response.statusCode == 401) {
-        await TokenStorage.logoutAndNavigate();
         return null;
       }
 
@@ -68,7 +128,7 @@ class AlertService {
 
       print('DEBUG: Sending Approval/Rejection Payload => ${jsonEncode(body)}');
 
-      final response = await http.put(
+      final response = await AuthenticatedHttp.put(
         url,
         headers: {
           'accept': '*/*',
@@ -79,7 +139,6 @@ class AlertService {
       );
 
       if (response.statusCode == 401) {
-        await TokenStorage.logoutAndNavigate();
         return {'success': false, 'message': 'Session expired'};
       }
 
@@ -105,7 +164,7 @@ class AlertService {
         "updateUserId": 0
       };
 
-      final response = await http.put(
+      final response = await AuthenticatedHttp.put(
         url,
         headers: {
           'accept': '*/*',

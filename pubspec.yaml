@@ -1,7 +1,7 @@
 name: altroz
 description: "ALTROZ HRMS Application"
 publish_to: 'none'
-version: 1.0.0+19
+version: 1.0.1+29
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -26,6 +26,7 @@ dependencies:
 
 
 
+
   overlay_support: ^2.1.0
   cupertino_icons: ^1.0.8
   file_picker: ^8.0.0
@@ -38,9 +39,6 @@ dependencies:
   connectivity_plus: ^7.0.0
   flutter_widget_from_html: ^0.17.2
   image_cropper: ^12.2.0
-
-
-
 
 dev_dependencies:
   flutter_test:

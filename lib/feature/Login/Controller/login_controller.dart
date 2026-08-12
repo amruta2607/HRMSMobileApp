@@ -28,6 +28,7 @@ class LoginController {
 
     await TokenStorage.saveLoginData(
       token: model.token,
+      refreshToken: model.refreshToken,
       tokenExpiry: model.tokenExpiry,
       userId: model.userId,
       username: model.username,
@@ -83,6 +84,7 @@ class LoginController {
 
     await TokenStorage.saveLoginData(
       token: model.token,
+      refreshToken: model.refreshToken,
       tokenExpiry: model.tokenExpiry,
       userId: model.userId,
       username: model.username,

@@ -44,7 +44,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   Future<void> _navigate() async {
-    await Future.delayed(const Duration(seconds: 2, milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 800));
 
     final bool isLoggedIn = await TokenStorage.getLoginStatus();
     if (!mounted) return;
@@ -54,14 +54,20 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       return;
     }
 
-    final isExpired = await TokenStorage.isTokenExpired();
-    if (isExpired) {
+    // Cold start: force refresh so session stays alive after hours in background
+    final validToken = await TokenStorage.ensureSession(forceRefresh: true);
+    if (!mounted) return;
+
+    if (validToken == null || validToken.isEmpty) {
+      print('SPLASH → Session invalid, redirecting to login');
       await TokenStorage.logout();
       _goToLogin();
       return;
     }
 
+    print('SPLASH → Session OK, going to home');
     await TokenStorage.loadModuleAccess();
+    if (!mounted) return;
     _goToMainNavigation();
   }
 

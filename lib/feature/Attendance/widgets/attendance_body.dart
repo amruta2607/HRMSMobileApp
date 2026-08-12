@@ -275,6 +275,28 @@ class _AttendanceBodyState extends State<AttendanceBody> {
     print('---------------------------->>>>punchTime out: $punchTime');
     setState(() => _isLoading = true);
 
+    try {
+      final geoConfig = await AttendanceService.getGeofencingDetails();
+      if (geoConfig != null && geoConfig.isEnabled) {
+        final position = await LocationService.getLatLng();
+        final isWithin = AttendanceService.isWithinRadius(
+          currentLat: position.latitude,
+          currentLng: position.longitude,
+          branchLat: geoConfig.latitude,
+          branchLng: geoConfig.longitude,
+          radius: geoConfig.radius,
+        );
+
+        if (!isWithin) {
+          setState(() => _isLoading = false);
+          _showError('You are not in the office range. Radius: ${geoConfig.radius}m');
+          return;
+        }
+      }
+    } catch (e) {
+      print('Geofencing check failed (body clockOut): $e');
+    }
+
     print("SUBMIT ATTENDANCE punch out ------");
     print(punchTime);
     final result = await AttendanceService.submitAttendance(
@@ -375,11 +397,14 @@ class _AttendanceBodyState extends State<AttendanceBody> {
               onPressed: () async {
                 await Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => DisputeScreen(selectedDate: selectedRow!.date)),
+                  MaterialPageRoute(builder: (_) => DisputeScreen(
+                    selectedDate: selectedRow!.date,
+                    punchId: selectedRow!.punchId,
+                  )),
                 );
                 if (mounted) setState(() => selectedRow = null);
               },
-              label: const Text('Raise Dispute', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
+              label: const Text('Regularization', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
             ),
           ),
       ],

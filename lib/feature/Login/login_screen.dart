@@ -1,4 +1,4 @@
- import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
 
@@ -108,7 +108,8 @@ class _LoginScreenState extends State<LoginScreen> {
         );
         if (!mounted) return;
         context.read<ProfileController>().refreshProfile();
-        context.read<TenantController>().fetchCompanyLogo();
+        await context.read<TenantController>().fetchCompanyLogo(force: true);
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
@@ -176,7 +177,8 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       if (!mounted) return;
       context.read<ProfileController>().refreshProfile();
-      context.read<TenantController>().fetchCompanyLogo();
+      await context.read<TenantController>().fetchCompanyLogo(force: true);
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
@@ -320,7 +322,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 InputField(
                   hint: isEmailSelected
-                      ? "name@altroz.com"
+                      ? "Email or Username"
                       : "Mobile Number",
                   icon: isEmailSelected
                       ? Icons.email_outlined

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../feature/Home/model/holiday.dart';
 import '../../Urls/urls.dart';
 import '../token_storage.dart';
+import '../authenticated_http.dart';
 
 class HolidayService {
   static Future<int?> _getUserId() async {
@@ -31,7 +32,7 @@ class HolidayService {
           '${BaseUrls.holidays}?user_id=$userId&organization_id=$orgId&year=$queryYear');
 
       print(' HOLIDAY SERVICE: Calling standard API => $uri');
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         uri,
         headers: {
           'accept': '*/*',
@@ -40,7 +41,6 @@ class HolidayService {
       );
 
       if (response.statusCode == 401) {
-        await TokenStorage.logoutAndNavigate();
         return null;
       }
 
@@ -66,7 +66,7 @@ class HolidayService {
 
       final uri = Uri.parse(BaseUrls.upcoming);
       print(' HOLIDAY SERVICE: Calling upcoming API => $uri');
-      final response = await http.get(
+      final response = await AuthenticatedHttp.get(
         uri,
         headers: {
           'accept': '*/*',
@@ -75,7 +75,6 @@ class HolidayService {
       );
 
       if (response.statusCode == 401) {
-        await TokenStorage.logoutAndNavigate();
         return null;
       }
 

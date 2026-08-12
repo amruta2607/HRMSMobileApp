@@ -106,14 +106,7 @@ class HomeController extends ChangeNotifier {
     }
   }
 
-  bool _isTask(AlertModel a) =>
-      a.title.contains("Leave Request") ||
-          a.title.contains("Payroll Submitted") ||
-          a.title.contains("Reimbursement Request") ||
-          a.title.contains("Resignation Request") ||
-          a.title.contains("Cancel Leave Request") ||
-          a.title.contains("Cancel Payroll Request") ||
-          a.title.contains("Overtime Request");
+  bool _isTask(AlertModel a) => AlertService.isTask(a);
 
   // Keep old method for backwards compatibility
   Future<void> fetchAttendanceStatus() async {

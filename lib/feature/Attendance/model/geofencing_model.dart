@@ -19,7 +19,9 @@ class GeofencingModel {
 
   factory GeofencingModel.fromJson(Map<String, dynamic> json) {
     return GeofencingModel(
-      isEnabled: json['isEnabled'] ?? false,
+
+      isEnabled: json['isGeoFencingEnabled'] ??  false,
+
       branchId: json['branchId'] ?? 0,
       branchName: json['branchName'] ?? '',
       latitude: double.tryParse(json['latitude'].toString()) ?? 0.0,

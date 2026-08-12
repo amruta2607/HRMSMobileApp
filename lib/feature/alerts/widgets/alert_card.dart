@@ -72,7 +72,66 @@ class AlertCard extends StatelessWidget {
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 16),
+                if (isTask) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 38 * scale,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(ctx).pop();
+                              onApprove();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xffdcfce7),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8 * scale),
+                              ),
+                            ),
+                            child: Text(
+                              'Approve',
+                              style: TextStyle(
+                                color: const Color(0xff15803d),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13 * scale,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: SizedBox(
+                          height: 38 * scale,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(ctx).pop();
+                              onReject();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xffffe4e4),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8 * scale),
+                              ),
+                            ),
+                            child: Text(
+                              'Reject',
+                              style: TextStyle(
+                                color: const Color(0xffc62828),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13 * scale,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 SizedBox(
                   width: double.infinity,
                   height: 38 * scale,
@@ -109,7 +168,7 @@ class AlertCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scale = (MediaQuery.of(context).size.width / 402).clamp(0.85, 1.1);
-    final isActionable = isTask && !alert.isRead;
+    final isActionable = isTask;
     final isUnread = alert.status == "Unread";
 
     return Container(

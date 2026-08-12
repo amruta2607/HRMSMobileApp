@@ -80,9 +80,14 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import 'package:provider/provider.dart';
+
 import '../../../core/Utils/services/LogIn_out/auth_service.dart';
 import '../../../core/Utils/services/token_storage.dart';
 import '../../Login/login_screen.dart';
+import '../../Profile/controller/profile_controller.dart';
+import '../../Reuse_Widgets/authenticated_image.dart';
+import '../../Tenant/controller/tenant_controller.dart';
 
 class LogoutDialog {
   static void show(BuildContext context) {
@@ -167,6 +172,12 @@ class LogoutDialog {
   }
 
   static Future<void> _performLogout(BuildContext context) async {
+    try {
+      context.read<TenantController>().clearData();
+      context.read<ProfileController>().clearData();
+    } catch (_) {}
+    AuthenticatedImage.clearCache();
+
     await AuthService.logout();
     await TokenStorage.logout();
 

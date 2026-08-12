@@ -191,6 +191,29 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
 
   Future<void> _clockOut(DateTime punchTime, File image) async {
     setState(() => _isLoading = true);
+
+    try {
+      final geoConfig = await AttendanceService.getGeofencingDetails();
+      if (geoConfig != null && geoConfig.isEnabled) {
+        final position = await LocationService.getLatLng();
+        final isWithin = AttendanceService.isWithinRadius(
+          currentLat: position.latitude,
+          currentLng: position.longitude,
+          branchLat: geoConfig.latitude,
+          branchLng: geoConfig.longitude,
+          radius: geoConfig.radius,
+        );
+
+        if (!isWithin) {
+          setState(() => _isLoading = false);
+          _showError('You are not in the office range. Radius: ${geoConfig.radius}m');
+          return;
+        }
+      }
+    } catch (e) {
+      print('Geofencing check failed (home clockOut): $e');
+    }
+
     print("Home header punch out");
     print(punchTime);
     final result = await AttendanceService.submitAttendance(

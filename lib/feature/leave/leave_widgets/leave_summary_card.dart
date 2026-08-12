@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 class LeaveSummaryCard extends StatelessWidget {
   final String title;
-  final int used;
-  final int total;
+  final double used;
+  final double total;
   final Color color;
 
   const LeaveSummaryCard({
@@ -13,6 +13,13 @@ class LeaveSummaryCard extends StatelessWidget {
     required this.total,
     required this.color,
   });
+
+  String _formatValue(double val) {
+    if (val % 1 == 0) {
+      return val.toInt().toString();
+    }
+    return val.toString();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +63,7 @@ class LeaveSummaryCard extends StatelessWidget {
             text: TextSpan(
               children: [
                 TextSpan(
-                  text: "$used",
+                  text: _formatValue(used),
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w500,
@@ -66,7 +73,7 @@ class LeaveSummaryCard extends StatelessWidget {
                   ),
                 ),
                 TextSpan(
-                  text: "/$total",
+                  text: "/${_formatValue(total)}",
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w500,

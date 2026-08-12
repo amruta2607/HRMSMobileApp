@@ -8,10 +8,12 @@ import 'dispute_form.dart';
 
 class DisputeScreen extends StatelessWidget {
   final String selectedDate;
+  final int? punchId;
 
   const DisputeScreen({
     super.key,
     required this.selectedDate,
+    this.punchId,
   });
 
   @override
@@ -46,7 +48,7 @@ class DisputeScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  /// ✅ Material + InkWell wraps both arrow + "Raise a Dispute" text
+                  /// ✅ Material + InkWell wraps both arrow + title text
                   Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -68,7 +70,7 @@ class DisputeScreen extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            'Raise a Dispute',
+                            'Regularization',
                             style: TextStyle(
                               fontSize: 18 * scale,
                               fontWeight: FontWeight.w700,
@@ -86,6 +88,7 @@ class DisputeScreen extends StatelessWidget {
                   DisputeForm(
                     defaultDate: selectedDate,
                     scale: scale,
+                    punchId: punchId,
                   ),
                 ],
               ),
