@@ -108,6 +108,69 @@ namespace MobileWebApi.Services
                 throw;
             }
         }
+
+        public async Task<IReadOnlyList<BirthdayDto>> GetBirthdaysAsync(int tenantId)
+        {
+            try
+            {
+                using IDbConnection conn = _context.CreateConnection();
+                var sql = _queries.Get("MobileDashboard_GetBirthdays");
+                var result = await conn.QueryAsync<BirthdayDto>(sql, new
+                {
+                    TenantId = tenantId,
+                    Today = DateTime.Today
+                });
+
+                return result.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ExceptionCodes.MobileDashboard.GetBirthdays, nameof(GetBirthdaysAsync), ex);
+                throw;
+            }
+        }
+
+        public async Task<IReadOnlyList<WorkAnniversaryDto>> GetWorkAnniversariesAsync(int tenantId)
+        {
+            try
+            {
+                using IDbConnection conn = _context.CreateConnection();
+                var sql = _queries.Get("MobileDashboard_GetWorkAnniversaries");
+                var result = await conn.QueryAsync<WorkAnniversaryDto>(sql, new
+                {
+                    TenantId = tenantId,
+                    Today = DateTime.Today
+                });
+
+                return result.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ExceptionCodes.MobileDashboard.GetWorkAnniversaries, nameof(GetWorkAnniversariesAsync), ex);
+                throw;
+            }
+        }
+
+        public async Task<IReadOnlyList<AwardDto>> GetAwardsAsync(int tenantId)
+        {
+            try
+            {
+                using IDbConnection conn = _context.CreateConnection();
+                var sql = _queries.Get("MobileDashboard_GetAwards");
+                var result = await conn.QueryAsync<AwardDto>(sql, new
+                {
+                    TenantId = tenantId,
+                    Today = DateTime.Today
+                });
+
+                return result.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ExceptionCodes.MobileDashboard.GetAwards, nameof(GetAwardsAsync), ex);
+                throw;
+            }
+        }
     }
 }
 

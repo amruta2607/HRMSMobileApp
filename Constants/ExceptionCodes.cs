@@ -289,6 +289,9 @@ namespace MobileWebApi.Constants
             public const string GetLatestAnnouncements = "MOBD-002";
             public const string GetLatestEvents = "MOBD-003";
             public const string GetLatestHolidays = "MOBD-004";
+            public const string GetBirthdays = "MOBD-005";
+            public const string GetWorkAnniversaries = "MOBD-006";
+            public const string GetAwards = "MOBD-007";
         }
 
         // Mobile events (MobileEventController)

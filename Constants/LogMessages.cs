@@ -425,6 +425,9 @@ namespace MobileWebApi.Constants
             public const string ErrorFetchingLatestAnnouncements = "Error fetching latest announcements for mobile dashboard.";
             public const string ErrorFetchingLatestHolidays = "Error fetching latest holidays for mobile dashboard.";
             public const string ErrorFetchingLatestTrainings = "Error fetching latest trainings for mobile dashboard.";
+            public const string ErrorFetchingBirthdays = "Error fetching birthdays for dashboard.";
+            public const string ErrorFetchingWorkAnniversaries = "Error fetching work anniversaries for dashboard.";
+            public const string ErrorFetchingAwards = "Error fetching awards for dashboard.";
         }
 
         // Asset dashboard logs
