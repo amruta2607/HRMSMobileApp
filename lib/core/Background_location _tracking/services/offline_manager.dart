@@ -123,7 +123,7 @@ class OfflineManager {
    */
   void _startBulkUploadTimer() {
     _bulkUploadTimer = Timer.periodic(
-      Duration(minutes: 5), // Check every 5 minutes
+      LocationConfig.retryDelay,
       (timer) => _performBulkUpload(),
     );
   }
@@ -150,8 +150,8 @@ class OfflineManager {
 
       // LogConfig.logApi('📤 Starting bulk upload of ${unsentLocations.length} locations');
 
-      // Upload in batches of maximum 50
-      const batchSize = 50;
+      // Upload in batches of configured serverSyncBatchSize
+      final batchSize = LocationConfig.MAX_BATCH_SIZE;
       final batches = _createBatches(unsentLocations, batchSize);
 
       int successCount = 0;

@@ -36,6 +36,8 @@ class _LocationTrackerState extends State<LocationTracker>
 
   // ScrollController for pagination
   final ScrollController _scrollController = ScrollController();
+  DateTime? _lastLifecycleRefresh;
+  static const _lifecycleRefreshThrottle = Duration(seconds: 45);
 
   @override
   void initState() {
@@ -85,10 +87,14 @@ class _LocationTrackerState extends State<LocationTracker>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    // Update the foreground status for the location service
     if (state == AppLifecycleState.resumed) {
       LocationService.instance.isInForeground = true;
-      // Refresh data when coming to foreground
+      final now = DateTime.now();
+      if (_lastLifecycleRefresh != null &&
+          now.difference(_lastLifecycleRefresh!) < _lifecycleRefreshThrottle) {
+        return;
+      }
+      _lastLifecycleRefresh = now;
       _refreshData();
       _loadStorageInfo();
     } else if (state == AppLifecycleState.paused) {
@@ -358,16 +364,12 @@ class _LocationTrackerState extends State<LocationTracker>
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            _isInSelectionMode
-                ? Text('${_selectedLocationIds.length} selected')
-                : const Text(
-                    'Location Tracker',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-          ],
-        ),
+        title: _isInSelectionMode
+            ? Text('${_selectedLocationIds.length} selected')
+            : const Text(
+                'Location Tracker',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
         actions: [
           // Show cancel button in selection mode
           if (_isInSelectionMode)

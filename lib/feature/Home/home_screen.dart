@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/Theme/app_colors.dart';
-import '../../core/Utils/services/Time_Location/location_service.dart';
+import '../../core/Utils/services/app_permission_service.dart';
 import '../../core/Utils/services/token_storage.dart';
 import 'Widgets/home_up_next_section.dart';
 import 'widgets/home_header_section.dart';
@@ -18,7 +18,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with WidgetsBindingObserver {
 
-  bool _permissionChecked = false;
   final HomeController _homeController = HomeController();
 
   @override
@@ -29,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen>
     _homeController.fetchHomeData();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkLocationPermission();
+      _requestPermissionsOnOpen();
     });
   }
 
@@ -43,44 +42,20 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      LocationService.clearCache();
-      _permissionChecked = false;
-      _checkLocationPermission(requestIfDenied: false);
-      // _homeController.fetchHomeData();
+      // Soft session check only — full home reload is throttled inside controller.
       TokenStorage.ensureSession().then((_) {
         if (mounted) _homeController.fetchHomeData();
       });
+      // If user turned off any tracking permission in Settings, show popup again.
+      if (mounted) {
+        AppPermissionService.ensureTrackingPermissionsWithPopup(context);
+      }
     }
   }
 
-  Future<void> _checkLocationPermission({bool requestIfDenied = true}) async {
-    if (!TokenStorage.isModuleEnabled('attendance')) return;
-
-    if (_permissionChecked) return;
-    _permissionChecked = true;
-
-    final permissionGranted =
-    await LocationService.ensurePermissionGranted(requestIfDenied: requestIfDenied);
-
-    if (!permissionGranted && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Location permission is required'),
-        ),
-      );
-      return;
-    }
-
-    final serviceOn =
-    await LocationService.isLocationServiceOn();
-
-    if (!serviceOn && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please turn on location services'),
-        ),
-      );
-    }
+  Future<void> _requestPermissionsOnOpen() async {
+    if (!mounted) return;
+    await AppPermissionService.requestAllRequired(context);
   }
 
   @override

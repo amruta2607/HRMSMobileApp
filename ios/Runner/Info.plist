@@ -67,27 +67,25 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>This app requires location access to mark attendance.</string>
+	<string>Altroz HRM needs your location to mark attendance and verify you are at the workplace.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>This app requires location access to mark attendance.</string>
+	<string>Altroz HRM needs Always location access to track attendance reliably in the background while you are punched in.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>This app requires location access to mark attendance.</string>
+	<string>Altroz HRM needs Always location access to track attendance reliably in the background while you are punched in.</string>
 	<key>NSLocationUsageDescription</key>
-	<string>This app requires location access to mark attendance.</string>
+	<string>Altroz HRM needs your location to mark attendance and verify you are at the workplace.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
 		<string>fetch</string>
+		<string>remote-notification</string>
 	</array>
-
-
-
 	<key>UIFileSharingEnabled</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>This app requires camera access to take profile photos.</string>
+	<string>Altroz HRM needs camera access to capture your selfie when punching in or out.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>This app requires photo library access to select profile photos.</string>
 </dict>

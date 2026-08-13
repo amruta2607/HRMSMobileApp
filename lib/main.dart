@@ -38,16 +38,8 @@ Future<void> main() async {
     print('[BOOT] 3/6 HeadlessTask registration FAILED: $e');
   }
 
-  // Initialize background location tracking services asynchronously (non-blocking)
-  _initializeBackgroundServices();
-  print('[BOOT] 4/6 _initializeBackgroundServices() launched (async)');
-
-  // await Firebase.initializeApp(
-  //   options: DefaultFirebaseOptions.currentPlatform,
-  // );
-
   ConnectivityService.initialize();
-  print('[BOOT] 5/6 ConnectivityService initialised');
+  print('[BOOT] 4/6 ConnectivityService initialised');
 
   // Register global "Data Restore" / Sync tasks
   ConnectivityService.onReconnected(() {
@@ -55,18 +47,28 @@ Future<void> main() async {
     AttendanceService.syncPendingPunches();
   });
 
-  // Initial sync attempt if already online
-  AttendanceService.syncPendingPunches();
-
-  print('[BOOT] 6/6 calling runApp()');
+  print('[BOOT] 5/6 calling runApp()');
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider<ProfileController>(
-          create: (_) => ProfileController()..fetchProfileOnce(),
+          create: (_) {
+            final c = ProfileController();
+            // Defer network so first frame / splash aren't blocked.
+            Future.delayed(const Duration(seconds: 2), () {
+              c.fetchProfileOnce();
+            });
+            return c;
+          },
         ),
         ChangeNotifierProvider<TenantController>(
-          create: (_) => TenantController()..fetchCompanyLogo(),
+          create: (_) {
+            final c = TenantController();
+            Future.delayed(const Duration(seconds: 2), () {
+              c.fetchCompanyLogo();
+            });
+            return c;
+          },
         ),
         ChangeNotifierProvider<LocationProvider>(
           create: (_) => LocationProvider(),
@@ -77,27 +79,30 @@ Future<void> main() async {
       ),
     ),
   );
+
+  // Defer heavy BG init until after first paint so splash opens quickly.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    print('[BOOT] 6/6 deferred BG init scheduled');
+    Future.delayed(const Duration(milliseconds: 1500), () async {
+      await _initializeBackgroundServices();
+      AttendanceService.syncPendingPunches();
+    });
+  });
 }
 
 Future<void> _initializeBackgroundServices() async {
-  // Initialize background location tracking services
   try {
-    await LocationService.instance.initialize();
-    await GpsMonitorService.instance.initialize();
-    await LocationGapDetector.instance.initialize();
-
-    // Initialize location configuration from server API.
-    // This fetches /api/mobile/locationtrackingconfiguration and caches the
-    // result so that all LocationConfig values are server-driven.
+    // Config first (cached prefs / short HTTP), then heavy TrackingService.
     await LocationConfigService.initialize();
-
-    // Wire up callback so LocationService re-applies settings whenever
-    // a fresh config is fetched in the background.
     LocationConfigService.setOnConfigFetchedCallback(() {
       LocationService.instance.onConfigUpdated();
     });
 
-    print('🚀 Background location services initialized asynchronously in background.');
+    await LocationService.instance.initialize();
+    await GpsMonitorService.instance.initialize();
+    await LocationGapDetector.instance.initialize();
+
+    print('🚀 Background location services initialized (deferred).');
   } catch (e) {
     print('Error initializing background tracking services: $e');
   }
@@ -147,4 +152,3 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     );
   }
 }
-

@@ -18,6 +18,7 @@ import 'dart:io';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../../constants/log_levels.dart';
+import '../../constants/location_config.dart';
 import '../models/location_model.dart';
 
 class DatabaseHelper {
@@ -102,16 +103,77 @@ class DatabaseHelper {
 
   /**
    * Insert a new location record
+   * Enforces offlineStorageLimit from dashboard config (drop oldest first).
    * @param location - LocationData object to insert
    * @returns Future<int> - Row ID of inserted record
    */
   Future<int> insertLocation(LocationData location) async {
     final Database db = await database;
+    await _enforceOfflineStorageLimit(db);
     return await db.insert(
       _tableName,
       _locationToMap(location),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+  }
+
+  /// Drop oldest rows when count would exceed [LocationConfig.MAX_LOCATIONS_IN_DATABASE].
+  /// Prefers deleting synced rows first, then oldest unsent.
+  Future<void> _enforceOfflineStorageLimit(Database db) async {
+    try {
+      final max = LocationConfig.MAX_LOCATIONS_IN_DATABASE;
+      if (max <= 0) return;
+
+      final count = Sqflite.firstIntValue(
+              await db.rawQuery('SELECT COUNT(*) FROM $_tableName')) ??
+          0;
+      if (count < max) return;
+
+      final toDelete = count - max + 1;
+
+      // Prefer synced oldest
+      final synced = await db.query(
+        _tableName,
+        columns: ['id'],
+        where: 'isSynced = ?',
+        whereArgs: [1],
+        orderBy: 'timestamp ASC',
+        limit: toDelete,
+      );
+
+      var deleted = 0;
+      if (synced.isNotEmpty) {
+        final ids = synced.map((r) => r['id'] as int).toList();
+        deleted = await db.delete(
+          _tableName,
+          where: 'id IN (${List.filled(ids.length, '?').join(',')})',
+          whereArgs: ids,
+        );
+      }
+
+      final stillNeeded = toDelete - deleted;
+      if (stillNeeded > 0) {
+        final oldest = await db.query(
+          _tableName,
+          columns: ['id'],
+          orderBy: 'timestamp ASC',
+          limit: stillNeeded,
+        );
+        if (oldest.isNotEmpty) {
+          final ids = oldest.map((r) => r['id'] as int).toList();
+          await db.delete(
+            _tableName,
+            where: 'id IN (${List.filled(ids.length, '?').join(',')})',
+            whereArgs: ids,
+          );
+        }
+      }
+
+      LogConfig.logCleanup(
+          'Offline storage limit ($max): trimmed ~$toDelete oldest location(s)');
+    } catch (e) {
+      LogConfig.logError('Error enforcing offline storage limit', e);
+    }
   }
 
   /**

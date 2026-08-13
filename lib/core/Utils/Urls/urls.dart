@@ -42,6 +42,8 @@ class BaseUrls {
   static const String profileByUser =
       "$base/api/personal-details/Personal-Details-by-user";
 
+
+  //
   static const String createDispute = "$base/api/disputes";
   static const String disputeCategories = "$base/api/disputes/categories";
 

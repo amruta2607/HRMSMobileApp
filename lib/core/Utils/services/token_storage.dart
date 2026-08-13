@@ -166,8 +166,15 @@ class TokenStorage {
   // }
 
   /// True when access token expiry is past (or within 2 minutes).
+  /// Prefers JWT `exp` when present; falls back to stored `tokenExpiry`.
   static Future<bool> isTokenExpired() async {
     final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    if (token != null && token.isNotEmpty) {
+      final jwtExpired = _isJwtExpired(token);
+      if (jwtExpired != null) return jwtExpired;
+    }
+
     final expiryStr = prefs.getString('tokenExpiry');
     if (expiryStr == null || expiryStr.isEmpty) return false;
     try {
@@ -177,6 +184,28 @@ class TokenStorage {
     } catch (_) {
       return false;
     }
+  }
+
+  /// Returns true/false from JWT exp, or null if JWT cannot be parsed.
+  static bool? _isJwtExpired(String token, {Duration skew = const Duration(minutes: 2)}) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final normalized = base64Url.normalize(parts[1]);
+      final payload = jsonDecode(utf8.decode(base64Url.decode(normalized)));
+      final exp = payload['exp'];
+      if (exp is! int) return null;
+      final expiry = DateTime.fromMillisecondsSinceEpoch(exp * 1000, isUtc: true);
+      return DateTime.now().toUtc().isAfter(expiry.subtract(skew));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<bool> _hasUsableAccessToken() async {
+    final token = await _getRawToken();
+    if (token == null || token.isEmpty) return false;
+    return !(await isTokenExpired());
   }
 
   // ==================== AUTO REFRESH TOKEN ====================
@@ -203,17 +232,27 @@ class TokenStorage {
   }
 
   /// Ensures session on splash / resume.
-  /// [forceRefresh] true on cold start; otherwise refreshes only when access is near expiry.
+  /// Refreshes only when access is near expiry (or [forceRefresh] is true).
+  /// Prefer [forceRefresh]: false on cold start — forcing refresh every launch
+  /// races with token rotation and can invalidate a still-valid session.
   static Future<String?> ensureSession({bool forceRefresh = false}) async {
+    final access = await _getRawToken();
     final refreshToken = await getRefreshToken();
-    if (refreshToken == null || refreshToken.isEmpty) {
-      print('❌ [SESSION] No refresh token — cannot keep session');
+
+    if ((access == null || access.isEmpty) &&
+        (refreshToken == null || refreshToken.isEmpty)) {
+      print('❌ [SESSION] No tokens — cannot keep session');
       return null;
     }
 
     final shouldRefresh = forceRefresh || await isTokenExpired();
     if (!shouldRefresh) {
-      return await _getRawToken();
+      return access;
+    }
+
+    if (refreshToken == null || refreshToken.isEmpty) {
+      // Access may still be usable even without refresh token.
+      return await _hasUsableAccessToken() ? access : null;
     }
 
     try {
@@ -253,7 +292,11 @@ class TokenStorage {
     try {
       final refreshToken = await getRefreshToken();
       if (refreshToken == null || refreshToken.isEmpty) {
-        print('❌ [REFRESH FAILED] No refresh token found in storage. Logging out...');
+        if (await _hasUsableAccessToken()) {
+          print('⚠️ [REFRESH SKIPPED] No refresh token, but access still valid — keeping session');
+          return await _getRawToken();
+        }
+        print('❌ [REFRESH FAILED] No refresh token and access expired. Logging out...');
         await logoutAndNavigate();
         return null;
       }
@@ -287,9 +330,6 @@ class TokenStorage {
         final data = jsonDecode(response.body);
         final dynamic nested = data['data'];
 
-        // -------- OLD parse (kept for reference) --------
-        // final newAccessToken = (data['accessToken'] ?? data['token'] ?? (data['data'] != null ? (data['data']['accessToken'] ?? data['data']['token']) : null))?.toString();
-
         final newAccessToken = (data['accessToken'] ??
             data['token'] ??
             (nested is Map ? (nested['accessToken'] ?? nested['token']) : null))
@@ -297,12 +337,6 @@ class TokenStorage {
 
         if (newAccessToken != null && newAccessToken.isNotEmpty) {
           await prefs.setString('token', newAccessToken);
-
-          // -------- OLD expiry save --------
-          // String newExpiryStr = (data['tokenExpiry'] ?? data['expiry'] ?? data['expiresAt'] ?? data['expiration'] ?? (data['data'] != null ? (data['data']['tokenExpiry'] ?? data['data']['expiry'] ?? data['data']['expiresAt']) : null))?.toString() ?? 'Server Managed (Not provided by API)';
-          // if (newExpiryStr != 'Server Managed (Not provided by API)') {
-          //   await prefs.setString('tokenExpiry', newExpiryStr);
-          // }
 
           final newExpiryStr = (data['tokenExpiry'] ??
               data['expiry'] ??
@@ -315,11 +349,6 @@ class TokenStorage {
           if (newExpiryStr != null && newExpiryStr.isNotEmpty) {
             await prefs.setString('tokenExpiry', newExpiryStr);
           }
-
-          // -------- OLD: only top-level refreshToken --------
-          // if (data['refreshToken'] != null) {
-          //   await prefs.setString('refreshToken', data['refreshToken']);
-          // }
 
           // Top-level OR nested refresh token (rotation support)
           final newRefresh = data['refreshToken'] ??
@@ -345,15 +374,21 @@ class TokenStorage {
         }
       }
 
-      // If server explicitly returns 401 or 403, refresh token is rejected/expired
+      // 401/403: only logout when access is also unusable (rotation race / stale refresh).
       if (response.statusCode == 401 || response.statusCode == 403) {
-        print('❌ [REFRESH REJECTED] Server rejected refresh token (${response.statusCode}). Logging out...');
+        if (await _hasUsableAccessToken()) {
+          print(
+              '⚠️ [REFRESH REJECTED] ${response.statusCode} but access token still valid — keeping session (no logout)');
+          return await _getRawToken();
+        }
+        print(
+            '❌ [REFRESH REJECTED] Server rejected refresh (${response.statusCode}) and access expired. Logging out...');
         await logoutAndNavigate();
         return null;
       }
 
       print('⚠️ [REFRESH ERROR] Status ${response.statusCode}. Keeping session active.');
-      return null;
+      return await _getRawToken();
     } catch (e) {
       print('🌐 [REFRESH NETWORK ERROR] Exception during token refresh: $e. Keeping session active.');
       rethrow;

@@ -13,7 +13,8 @@ import '../../Tenant/controller/tenant_controller.dart';
 
 import '../../../core/Utils/services/Attendance service/attendance_service.dart';
 import '../../../core/Utils/services/Time_Location/location_service.dart';
-import '../../../core/Background_location _tracking/services/battery_optimization_service.dart';
+import '../../../core/Utils/services/app_permission_service.dart';
+import '../../../core/constants/location_config.dart';
 import '../../Attendance/dialogs/clock_in_dialog.dart';
 import '../../Attendance/dialogs/clock_out_dialog.dart';
 import '../../Attendance/dialogs/already_punched_dialog.dart';
@@ -33,6 +34,8 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
   Timer? _timer;
   Duration _workedDuration = Duration.zero;
   bool _isLoading = false;
+  DateTime? _lastResumeRefresh;
+  static const _resumeThrottle = Duration(seconds: 30);
 
   @override
   void initState() {
@@ -58,10 +61,13 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
   }
 
   Future<void> _restoreAttendanceState() async {
-    setState(() => _isLoading = true);
+    // Don't blank the attendance card on every resume.
+    final hadState = AttendanceService.punchInTime != null ||
+        AttendanceService.isClockedIn;
+    if (!hadState) setState(() => _isLoading = true);
     await AttendanceService.getTodayStatus();
     _updateTimerFromService();
-    setState(() => _isLoading = false);
+    if (mounted) setState(() => _isLoading = false);
   }
 
   void _updateTimerFromService() {
@@ -92,6 +98,12 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      final now = DateTime.now();
+      if (_lastResumeRefresh != null &&
+          now.difference(_lastResumeRefresh!) < _resumeThrottle) {
+        return;
+      }
+      _lastResumeRefresh = now;
       _refreshLocation();
       _restoreAttendanceState();
     }
@@ -123,11 +135,14 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
     if (_isLoading) return;
 
     if (!AttendanceService.isClockedIn) {
-      // MANDATORY: Check battery optimization BEFORE opening punch in selfie dialog
-      final batteryOptimizationCompleted =
-          await BatteryOptimizationService.showMandatoryBatteryOptimizationDialog(context);
-      if (!batteryOptimizationCompleted) {
-        _showError('Battery optimization settings are required for background location tracking.');
+      final ok =
+          await AppPermissionService.ensureTrackingPermissionsWithPopup(
+        context,
+        requestSystemDialogs: true,
+      );
+      if (!ok) {
+        _showError(
+            'Location tracking permissions are required for punch-in.');
         return;
       }
     }
@@ -144,30 +159,26 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
   Future<void> _clockIn(DateTime punchTime, File image) async {
     setState(() => _isLoading = true);
 
-    // MANDATORY: Check battery optimization before allowing punch in
-    final batteryOptimizationCompleted =
-        await BatteryOptimizationService.showMandatoryBatteryOptimizationDialog(context);
-    if (!batteryOptimizationCompleted) {
-      setState(() => _isLoading = false);
-      _showError('Battery optimization settings are required for background location tracking.');
-      return;
-    }
-
     try {
       final geoConfig = await AttendanceService.getGeofencingDetails();
-      if (geoConfig != null && geoConfig.isEnabled) {
-        final position = await LocationService.getLatLng();
+      if (!LocationConfig.ENABLE_FROM_ANYWHERE &&
+          geoConfig != null &&
+          geoConfig.isEnabled) {
+        final position = await LocationService.getLatLng(
+          requestPermissionIfDenied: false,
+        );
+        final radius = AttendanceService.resolveGeofenceRadius(geoConfig.radius);
         final isWithin = AttendanceService.isWithinRadius(
           currentLat: position.latitude,
           currentLng: position.longitude,
           branchLat: geoConfig.latitude,
           branchLng: geoConfig.longitude,
-          radius: geoConfig.radius,
+          radius: radius,
         );
 
         if (!isWithin) {
           setState(() => _isLoading = false);
-          _showError('You are not in the office range. Radius: ${geoConfig.radius}m');
+          _showError('You are not in the office range. Radius: ${radius}m');
           return;
         }
       }
@@ -200,9 +211,6 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
       }
     } else {
       _updateTimerFromService();
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        BatteryOptimizationService.showBatteryOptimizationDialog(context);
-      });
     }
     setState(() => _isLoading = false);
   }
@@ -212,19 +220,24 @@ class _HomeHeaderSectionState extends State<HomeHeaderSection>
 
     try {
       final geoConfig = await AttendanceService.getGeofencingDetails();
-      if (geoConfig != null && geoConfig.isEnabled) {
-        final position = await LocationService.getLatLng();
+      if (!LocationConfig.ENABLE_FROM_ANYWHERE &&
+          geoConfig != null &&
+          geoConfig.isEnabled) {
+        final position = await LocationService.getLatLng(
+          requestPermissionIfDenied: false,
+        );
+        final radius = AttendanceService.resolveGeofenceRadius(geoConfig.radius);
         final isWithin = AttendanceService.isWithinRadius(
           currentLat: position.latitude,
           currentLng: position.longitude,
           branchLat: geoConfig.latitude,
           branchLng: geoConfig.longitude,
-          radius: geoConfig.radius,
+          radius: radius,
         );
 
         if (!isWithin) {
           setState(() => _isLoading = false);
-          _showError('You are not in the office range. Radius: ${geoConfig.radius}m');
+          _showError('You are not in the office range. Radius: ${radius}m');
           return;
         }
       }

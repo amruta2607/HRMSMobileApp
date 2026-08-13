@@ -15,6 +15,9 @@ class HomeController extends ChangeNotifier {
   int _taskCount = 0;
   bool _isLoading = false;
   String _errorMessage = '';
+  DateTime? _lastFetchAt;
+  Future<void>? _inFlightFetch;
+  static const Duration _minFetchInterval = Duration(seconds: 45);
 
   // Getters
   AttendanceStatusData? get attendanceStatus => _attendanceStatus;
@@ -23,6 +26,8 @@ class HomeController extends ChangeNotifier {
   int get taskCount => _taskCount;
   bool get isLoading => _isLoading;
   String get errorMessage => _errorMessage;
+  bool get hasCachedData =>
+      _attendanceStatus != null || _userProfile != null;
 
   // Get user's first name
   String get firstName {
@@ -48,14 +53,35 @@ class HomeController extends ChangeNotifier {
     return '${BaseUrls.base}/upload/$picture';
   }
 
-  // Fetch all home data
-  Future<void> fetchHomeData() async {
-    try {
-      _isLoading = true;
-      _errorMessage = '';
-      notifyListeners();
+  /// Fetch home data. [force] bypasses throttle. Loading spinner only on first load.
+  Future<void> fetchHomeData({bool force = false}) async {
+    if (_inFlightFetch != null) return _inFlightFetch!;
 
-      // Fetch all required data concurrently
+    if (!force &&
+        _lastFetchAt != null &&
+        DateTime.now().difference(_lastFetchAt!) < _minFetchInterval) {
+      return;
+    }
+
+    _inFlightFetch = _doFetchHomeData();
+    try {
+      await _inFlightFetch;
+    } finally {
+      _inFlightFetch = null;
+    }
+  }
+
+  Future<void> _doFetchHomeData() async {
+    try {
+      // Avoid full-screen "Loading attendance..." when we already have data
+      // (resume / return from Track Location should feel instant).
+      final showSpinner = !hasCachedData;
+      if (showSpinner) {
+        _isLoading = true;
+        notifyListeners();
+      }
+      _errorMessage = '';
+
       final results = await Future.wait([
         HomeService.getAttendanceStatus(),
         HomeService.getUserProfile(),
@@ -68,35 +94,31 @@ class HomeController extends ChangeNotifier {
       final leaveHistoryModel = results[2] as LeaveHistoryModel?;
       final alertsResult = results[3] as Map<String, dynamic>?;
 
-      // Update attendance status
       if (attendanceResponse != null && attendanceResponse.success) {
         _attendanceStatus = attendanceResponse.data;
       } else {
-        _errorMessage = attendanceResponse?.message ?? 'Failed to fetch attendance status';
+        _errorMessage =
+            attendanceResponse?.message ?? 'Failed to fetch attendance status';
       }
 
-      // Update user profile
       _userProfile = profile;
 
-      // Update availed leaves count from API
       if (leaveHistoryModel != null && leaveHistoryModel.success) {
-        print('DEBUG: Leave History Count => ${leaveHistoryModel.leaveHistory.length}');
         _availedLeaves = leaveHistoryModel.usedLeaves;
-        print('DEBUG: Total Availed Leaves => $_availedLeaves');
-      } else {
-        print('DEBUG: Leave History Model is NULL or success=false');
       }
 
-      // Update task count (Only for Managers)
-      if (_userProfile != null && _userProfile!.designation.toLowerCase().contains("manager")) {
+      if (_userProfile != null &&
+          _userProfile!.designation.toLowerCase().contains("manager")) {
         if (alertsResult != null) {
           final List<AlertModel> alerts = alertsResult['alerts'] ?? [];
-          _taskCount = alerts.where((a) => _isTask(a) && a.status == "Unread").length;
+          _taskCount =
+              alerts.where((a) => _isTask(a) && a.status == "Unread").length;
         }
       } else {
-        _taskCount = 0; // Reset to 0 for non-managers
+        _taskCount = 0;
       }
 
+      _lastFetchAt = DateTime.now();
     } catch (e) {
       print('🔴 HOME CONTROLLER ERROR => $e');
       _errorMessage = 'An error occurred';

@@ -43,12 +43,15 @@ post_install do |installer|
 
 
    # =========================================================================
-      # Added: Preprocessor Macros for Permission Handler
+      # Preprocessor Macros for Permission Handler (iOS permissions off by default)
       # =========================================================================
       target.build_configurations.each do |config|
         config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
           '$(inherited)',
-          'PERMISSION_LOCATION=1',  # Enables Location permissions API
+          'PERMISSION_LOCATION=1',
+          'PERMISSION_CAMERA=1',
+          'PERMISSION_NOTIFICATIONS=1',
+          'PERMISSION_PHOTOS=1',
         ]
       end
     end

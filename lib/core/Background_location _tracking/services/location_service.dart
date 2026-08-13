@@ -85,6 +85,8 @@ class LocationService {
   // Tracking state management
   bool _isTrackingEnabled = false;
   bool _hasUserPunchedOut = false;
+  bool _isInitialized = false;
+  Future<void>? _initializeFuture;
 
   // =================== CONFIGURATION ===================
   static int get API_CALL_INTERVAL => LocationConfig.API_CALL_INTERVAL_MS;
@@ -105,7 +107,12 @@ class LocationService {
         fastestLocationUpdateInterval:
             LocationConfig.FAST_LOCATION_UPDATE_INTERVAL_MS,
         heartbeatInterval: LocationConfig.HEARTBEAT_INTERVAL_SECONDS,
+        preventSuspend: LocationConfig.PREVENT_SUSPEND,
+        enableHeadless: LocationConfig.ENABLE_HEADLESS_MODE,
       ));
+      if (_isTrackingEnabled && !_hasUserPunchedOut) {
+        _setupApiTimer();
+      }
     } catch (e) {
       LogConfig.logError(
           '[LocationService] Error reapplying geolocation settings', e);
@@ -161,12 +168,12 @@ class LocationService {
   bool get hasUserPunchedOut => _hasUserPunchedOut;
 
   set isInForeground(bool value) {
+    if (_isInForeground == value) return;
     _isInForeground = value;
     LogConfig.logBackground('App is in ${value ? "foreground" : "background"}');
 
-    if (value) {
-      _loadSavedLocations();
-    }
+    // Don't reload all saved locations on every brief pause/resume
+    // (Track Location / OEM activity causes rapid toggles).
   }
 
   // =================== INITIALIZATION ===================
@@ -176,6 +183,18 @@ class LocationService {
    * Sets up background geolocation with optimal settings
    */
   Future<void> initialize() async {
+    if (_isInitialized) return;
+    if (_initializeFuture != null) return _initializeFuture!;
+
+    _initializeFuture = _doInitialize();
+    try {
+      await _initializeFuture;
+    } finally {
+      _initializeFuture = null;
+    }
+  }
+
+  Future<void> _doInitialize() async {
     try {
       // Initialize supporting services
       await _offlineManager.initialize();
@@ -189,6 +208,7 @@ class LocationService {
       await processPendingTerminatePunchOut();
 
       if (_hasUserPunchedOut) {
+        _isInitialized = true;
         return;
       }
 
@@ -237,6 +257,7 @@ class LocationService {
       if (shouldTrack && !_hasUserPunchedOut) {
         await startTracking();
       }
+      _isInitialized = true;
     } catch (e) {
       rethrow;
     }
@@ -281,11 +302,15 @@ class LocationService {
         await bg.BackgroundGeolocation.setConfig(bg.Config(
             debug: false,
             logLevel: bg.Config.LOG_LEVEL_OFF,
-            heartbeatInterval: 60,
-            preventSuspend: true,
+            distanceFilter: LocationConfig.DISTANCE_FILTER_METERS,
+            locationUpdateInterval: LocationConfig.LOCATION_UPDATE_INTERVAL_MS,
+            fastestLocationUpdateInterval:
+                LocationConfig.FAST_LOCATION_UPDATE_INTERVAL_MS,
+            heartbeatInterval: LocationConfig.HEARTBEAT_INTERVAL_SECONDS,
+            preventSuspend: LocationConfig.PREVENT_SUSPEND,
             stopOnTerminate: false,
             startOnBoot: true,
-            enableHeadless: true));
+            enableHeadless: LocationConfig.ENABLE_HEADLESS_MODE));
 
         await bg.BackgroundGeolocation.start();
         _isTrackingEnabled = true;
@@ -363,6 +388,12 @@ class LocationService {
     try {
       final location = await bg.BackgroundGeolocation.getCurrentPosition(
           samples: 1, persist: true, extras: {'manual': true});
+
+      if (!_isAccuracyAcceptable(location.coords.accuracy)) {
+        LogConfig.logWarning(
+            'Manual location rejected — accuracy ${location.coords.accuracy}m');
+        return null;
+      }
 
       await _cacheLastKnownLocation(
           location.coords.latitude, location.coords.longitude);
@@ -510,6 +541,16 @@ class LocationService {
           persist: true,
           extras: {'timer': true, 'manual': isManualRefresh});
 
+      if (!_isAccuracyAcceptable(location.coords.accuracy)) {
+        LogConfig.logWarning(
+            'Skipping low-accuracy location: ${location.coords.accuracy}m > ${LocationConfig.LOCATION_ACCURACY_THRESHOLD_METERS}m');
+        await _issueTracker.reportIssue(
+          LocationIssueTracker.ISSUE_LOCATION_ACCURACY_LOW,
+          'Accuracy ${location.coords.accuracy}m exceeds threshold ${LocationConfig.LOCATION_ACCURACY_THRESHOLD_METERS}m',
+        );
+        return;
+      }
+
       await _cacheLastKnownLocation(
           location.coords.latitude, location.coords.longitude);
       final locationTimestamp = DateTime.now().millisecondsSinceEpoch;
@@ -544,7 +585,7 @@ class LocationService {
   }
 
   /**
-   * Check if location is duplicate to avoid unnecessary processing
+   * Check if location is duplicate using dashboard duplicateLocationRadius (meters).
    */
   bool _checkIfDuplicateLocation(
       double latitude, double longitude, int timestamp) {
@@ -552,13 +593,26 @@ class LocationService {
       return false;
     }
 
-    final sameCoordinates = (latitude - _lastSentLatitude!).abs() < 0.0000001 &&
-        (longitude - _lastSentLongitude!).abs() < 0.0000001;
+    final distanceMeters = Geolocator.distanceBetween(
+      _lastSentLatitude!,
+      _lastSentLongitude!,
+      latitude,
+      longitude,
+    );
+
+    final withinRadius =
+        distanceMeters <= LocationConfig.DUPLICATE_LOCATION_THRESHOLD_METERS;
 
     final shortTimeWindow =
         timestamp - _lastSentTimestamp < LOCATION_STALENESS_THRESHOLD;
 
-    return sameCoordinates && shortTimeWindow;
+    return withinRadius && shortTimeWindow;
+  }
+
+  /// Reject points whose horizontal accuracy exceeds dashboard gpsAccuracyThreshold.
+  bool _isAccuracyAcceptable(double accuracyMeters) {
+    if (accuracyMeters <= 0) return true; // unknown accuracy — allow
+    return accuracyMeters <= LocationConfig.LOCATION_ACCURACY_THRESHOLD_METERS;
   }
 
   /**
@@ -891,6 +945,16 @@ class LocationService {
   void _onLocation(bg.Location location) async {
     if (_hasUserPunchedOut) return;
 
+    if (!_isAccuracyAcceptable(location.coords.accuracy)) {
+      LogConfig.logWarning(
+          'Skipping low-accuracy location update: ${location.coords.accuracy}m > ${LocationConfig.LOCATION_ACCURACY_THRESHOLD_METERS}m');
+      await _issueTracker.reportIssue(
+        LocationIssueTracker.ISSUE_LOCATION_ACCURACY_LOW,
+        'Accuracy ${location.coords.accuracy}m exceeds threshold ${LocationConfig.LOCATION_ACCURACY_THRESHOLD_METERS}m',
+      );
+      return;
+    }
+
     final locationTimestamp = DateTime.now().millisecondsSinceEpoch;
 
     await _cacheLastKnownLocation(
@@ -953,7 +1017,21 @@ class LocationService {
           samples: 1,
           persist: true,
           extras: {'heartbeat': true}).then((bg.Location location) async {
+        if (!_isAccuracyAcceptable(location.coords.accuracy)) {
+          LogConfig.logWarning(
+              'Skipping low-accuracy heartbeat location: ${location.coords.accuracy}m');
+          return;
+        }
+
         final locationTimestamp = now;
+
+        final isDuplicate = _checkIfDuplicateLocation(location.coords.latitude,
+            location.coords.longitude, locationTimestamp);
+        if (isDuplicate) {
+          LogConfig.logDuplicate('Skipping duplicate heartbeat location');
+          _sendLocationsToApi();
+          return;
+        }
 
         _updateLastSentLocation(location.coords.latitude,
             location.coords.longitude, locationTimestamp);
@@ -1003,6 +1081,9 @@ class LocationService {
       );
     }
 
+    // Permission status (Android/iOS status code on provider event when available)
+    await _handlePossiblePermissionRevokedPunchOut();
+
     if (!_hasUserPunchedOut) {
       if (!LocationConfig.AUTO_PUNCH_OUT_ON_GPS_OFF &&
           !LocationConfig.AUTO_PUNCH_OUT_ON_LOCATION_OFF) {
@@ -1017,11 +1098,36 @@ class LocationService {
         isBackgroundMode: !_isInForeground,
       );
 
-      if (!event.gps || !event.enabled) {
+      if ((!event.gps && LocationConfig.AUTO_PUNCH_OUT_ON_GPS_OFF) ||
+          (!event.enabled && LocationConfig.AUTO_PUNCH_OUT_ON_LOCATION_OFF)) {
         LogConfig.logWarning(
             'Location services disabled - triggering auto punch out');
         await _performAutoPunchOut(reason: reason);
       }
+    }
+  }
+
+  Future<void> _handlePossiblePermissionRevokedPunchOut() async {
+    try {
+      if (_hasUserPunchedOut) return;
+      if (!LocationConfig.PERMISSION_REVOKED_AUTO_PUNCH_OUT) return;
+
+      final permission = await Geolocator.checkPermission();
+      final revoked = permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever;
+
+      if (!revoked) return;
+
+      LogConfig.logWarning(
+          'Location permission revoked while punched in — auto punch-out');
+      await _issueTracker.reportIssue(
+        LocationIssueTracker.ISSUE_LOCATION_PERMISSION_DENIED,
+        'Permission revoked: $permission',
+      );
+      await _performAutoPunchOut(
+          reason: PunchOutReasons.LOCATION_PERMISSION_REVOKED);
+    } catch (e) {
+      LogConfig.logError('Error handling permission-revoked punch-out', e);
     }
   }
 
@@ -1365,6 +1471,17 @@ class LocationService {
           'Provider change - GPS: ${providerEvent.gps}, Enabled: ${providerEvent.enabled}');
 
       if (!providerEvent.gps || !providerEvent.enabled) {
+        if (!providerEvent.gps && !LocationConfig.AUTO_PUNCH_OUT_ON_GPS_OFF) {
+          LogConfig.logHeadless('GPS off ignored — dashboard flag disabled');
+          return;
+        }
+        if (!providerEvent.enabled &&
+            !LocationConfig.AUTO_PUNCH_OUT_ON_LOCATION_OFF) {
+          LogConfig.logHeadless(
+              'Location services off ignored — dashboard flag disabled');
+          return;
+        }
+
         final reason = !providerEvent.gps
             ? PunchOutReasons.GPS_DISABLED_APP_KILLED
             : PunchOutReasons.LOCATION_SERVICES_DISABLED_APP_KILLED;

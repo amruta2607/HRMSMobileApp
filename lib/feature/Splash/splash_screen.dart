@@ -67,8 +67,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     // await TokenStorage.loadModuleAccess();
     // _goToMainNavigation();
 
-    // Cold start: force refresh so session stays alive after hours in background
-    final validToken = await TokenStorage.ensureSession(forceRefresh: true);
+    // Refresh only when access is near expiry — force refresh every cold start
+    // races with refresh-token rotation and can kick a still-valid session out.
+    final validToken = await TokenStorage.ensureSession();
     if (!mounted) return;
 
     if (validToken == null || validToken.isEmpty) {

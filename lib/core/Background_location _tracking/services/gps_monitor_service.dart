@@ -130,6 +130,18 @@ class GpsMonitorService {
     if (!_isMonitoring || !_isUserPunchedIn) return;
 
     try {
+      // Permission revoked while punched in
+      if (LocationConfig.PERMISSION_REVOKED_AUTO_PUNCH_OUT) {
+        final permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied ||
+            permission == LocationPermission.deniedForever) {
+          LogConfig.logWarning(
+              '🚨 Location permission revoked while punched in!');
+          await _handlePermissionRevoked();
+          return;
+        }
+      }
+
       final currentGpsState = await Geolocator.isLocationServiceEnabled();
 
       // GPS was turned off
@@ -145,6 +157,40 @@ class GpsMonitorService {
       _lastGpsState = currentGpsState;
     } catch (e) {
       LogConfig.logError('Error checking GPS status: $e', e);
+    }
+  }
+
+  Future<void> _handlePermissionRevoked() async {
+    try {
+      final currentTime = DateTime.now();
+      final today = DateFormat('yyyy-MM-dd').format(currentTime);
+
+      final punchOutData = {
+        'timestamp': currentTime.toIso8601String(),
+        'punch_out_time':
+            '${today}T${DateFormat('HH:mm:ss').format(currentTime)}',
+        'attendance_date': today,
+        'latitude': _lastKnownPosition?.latitude.toString() ?? '0.0',
+        'longitude': _lastKnownPosition?.longitude.toString() ?? '0.0',
+        'reason': PunchOutReasons.LOCATION_PERMISSION_REVOKED,
+        'auto_punch_out': 'true',
+        'cached_at': currentTime.toIso8601String(),
+      };
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyPendingPunchOut, true);
+      await prefs.setString(_keyPunchOutData, jsonEncode(punchOutData));
+      await prefs.setString(_keyCacheDate, today);
+
+      final hasInternet = await _hasInternetConnection();
+      if (hasInternet) {
+        await _processPendingPunchOut();
+      } else {
+        LogConfig.logInfo(
+            'Permission-revoked punch-out cached until network restores');
+      }
+    } catch (e) {
+      LogConfig.logError('Error handling permission revoked: $e', e);
     }
   }
 

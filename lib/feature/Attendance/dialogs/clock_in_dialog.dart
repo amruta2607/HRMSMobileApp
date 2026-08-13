@@ -29,7 +29,9 @@ class _ClockInDialogState extends State<ClockInDialog> {
   @override
   void initState() {
     super.initState();
-    _locationFuture = LocationService.getLocation();
+    _locationFuture = LocationService.getLocation(
+      requestPermissionIfDenied: false,
+    );
   }
 
   Future<void> _captureImage() async {

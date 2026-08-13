@@ -22,6 +22,7 @@ class LocationProvider extends ChangeNotifier {
   final int _pageSize = 20;
   bool _hasMoreData = true;
   bool _isLoadingMore = false;
+  DateTime? _lastRefreshAt;
 
   bool get isTracking => _isTracking;
   List<LocationData> get locations => _locations;
@@ -45,7 +46,8 @@ class LocationProvider extends ChangeNotifier {
   }
 
   LocationProvider() {
-    _initialize();
+    // Defer heavy TrackingService work so cold start / splash stay responsive.
+    Future.delayed(const Duration(milliseconds: 1800), _initialize);
   }
 
   Future<void> _initialize() async {
@@ -202,6 +204,15 @@ class LocationProvider extends ChangeNotifier {
 
   Future<void> refreshData({bool showLoadingIndicator = true}) async {
     if (_isRefreshing) return;
+
+    // Soft throttle — Track Location / lifecycle resume was stacking refreshes.
+    final now = DateTime.now();
+    if (_lastRefreshAt != null &&
+        now.difference(_lastRefreshAt!) < const Duration(seconds: 15) &&
+        !showLoadingIndicator) {
+      return;
+    }
+    _lastRefreshAt = now;
 
     if (showLoadingIndicator) {
       _isRefreshing = true;

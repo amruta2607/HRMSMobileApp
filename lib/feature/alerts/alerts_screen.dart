@@ -50,11 +50,15 @@ class _AlertsScreenState extends State<AlertsScreen> {
     }
   }
 
-  Future<void> _loadAlerts() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  Future<void> _loadAlerts({bool force = false}) async {
+    // Keep existing list visible — only spinner on first load.
+    final showSpinner = _alerts.isEmpty;
+    if (showSpinner) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
 
     try {
       final result = await AlertService.getAlerts();
@@ -64,7 +68,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
             _alerts = result['alerts'] ?? [];
             _apiUnreadCount = result['unreadCount'] ?? 0;
             AlertCountService.updateCount(_apiUnreadCount);
-          } else {
+          } else if (_alerts.isEmpty) {
             _error = "Failed to load alerts";
           }
           _isLoading = false;
@@ -73,7 +77,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          if (_alerts.isEmpty) _error = e.toString();
           _isLoading = false;
         });
       }

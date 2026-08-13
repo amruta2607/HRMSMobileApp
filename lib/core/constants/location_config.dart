@@ -215,9 +215,14 @@ class LocationConfig {
   static bool get ENABLE_LOCATION_GAP_VALIDATION =>
       LocationConfigService.enableLocationGapValidation;
 
-  /// Master switch: org + employee location tracking both enabled.
+  /// Master switch for attendance punch APIs from dashboard.
+  static bool get ATTENDANCE_ENABLED =>
+      LocationConfigService.attendanceEnabled;
+
+  /// Master switch: org + employee-level + employee toggles all enabled.
   static bool get IS_LOCATION_TRACKING_ENABLED =>
       LocationConfigService.enableLocationTracking &&
+      LocationConfigService.enableEmployeeLevelLocationTracking &&
       LocationConfigService.employeeLocationTrackingEnabled;
 
   static bool get DUPLICATE_SESSION_CHECK =>
@@ -243,6 +248,9 @@ class LocationConfig {
 
   static bool get PERMISSION_REVOKED_AUTO_PUNCH_OUT =>
       LocationConfigService.permissionRevokedAutoPunchOut;
+
+  static bool get ALWAYS_ALLOW_PERMISSION_CHECK =>
+      LocationConfigService.alwaysAllowPermissionCheck;
 
   // =================== HELPER METHODS ===================
 

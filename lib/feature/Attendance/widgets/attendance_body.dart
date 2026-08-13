@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import '../../../core/Theme/app_colors.dart';
 import '../../../core/Utils/services/Attendance service/attendance_service.dart';
 import '../../../core/Utils/services/Time_Location/location_service.dart';
-import '../../../core/Background_location _tracking/services/battery_optimization_service.dart';
+import '../../../core/Utils/services/app_permission_service.dart';
+import '../../../core/constants/location_config.dart';
 
 import '../../Navigation/main_navigation_screen.dart';
 import 'mothOverview/attendance_month_overview.dart';
@@ -62,12 +63,20 @@ class _AttendanceBodyState extends State<AttendanceBody> {
     ConnectivityService.onReconnected(_handleReconnection);
   }
 
+  DateTime? _lastManualRefresh;
+  static const _manualRefreshThrottle = Duration(seconds: 20);
+
   void _onManualRefresh() {
-    if (mounted) {
-      _fetchCalendar(_currentYear, _currentMonth);
-      _fetchRecordsByMonth(_currentYear, _currentMonth);
-      _restoreAttendanceState();
+    if (!mounted) return;
+    final now = DateTime.now();
+    if (_lastManualRefresh != null &&
+        now.difference(_lastManualRefresh!) < _manualRefreshThrottle) {
+      return;
     }
+    _lastManualRefresh = now;
+    _fetchCalendar(_currentYear, _currentMonth);
+    _fetchRecordsByMonth(_currentYear, _currentMonth);
+    _restoreAttendanceState(silent: true);
   }
 
   void _onAttendanceUpdate() {
@@ -80,11 +89,11 @@ class _AttendanceBodyState extends State<AttendanceBody> {
     }
   }
 
-  Future<void> _restoreAttendanceState() async {
-    setState(() => _isLoading = true);
+  Future<void> _restoreAttendanceState({bool silent = false}) async {
+    if (!silent) setState(() => _isLoading = true);
     await AttendanceService.getTodayStatus();
     _updateTimerFromService();
-    setState(() => _isLoading = false);
+    if (!silent && mounted) setState(() => _isLoading = false);
   }
 
   void _updateTimerFromService() {
@@ -207,11 +216,14 @@ class _AttendanceBodyState extends State<AttendanceBody> {
 
     print("_handleClockTap");
     if (!AttendanceService.isClockedIn) {
-      // MANDATORY: Check battery optimization BEFORE opening punch in selfie dialog
-      final batteryOptimizationCompleted =
-      await BatteryOptimizationService.showMandatoryBatteryOptimizationDialog(context);
-      if (!batteryOptimizationCompleted) {
-        _showError('Battery optimization settings are required for background location tracking.');
+      final ok =
+          await AppPermissionService.ensureTrackingPermissionsWithPopup(
+        context,
+        requestSystemDialogs: true,
+      );
+      if (!ok) {
+        _showError(
+            'Location tracking permissions are required for punch-in.');
         return;
       }
     }
@@ -229,30 +241,26 @@ class _AttendanceBodyState extends State<AttendanceBody> {
     print('---------------------------->>>>punchTime IN: $punchTime');
     setState(() => _isLoading = true);
 
-    // MANDATORY: Check battery optimization before allowing punch in
-    final batteryOptimizationCompleted =
-    await BatteryOptimizationService.showMandatoryBatteryOptimizationDialog(context);
-    if (!batteryOptimizationCompleted) {
-      setState(() => _isLoading = false);
-      _showError('Battery optimization settings are required for background location tracking.');
-      return;
-    }
-
     try {
       final geoConfig = await AttendanceService.getGeofencingDetails();
-      if (geoConfig != null && geoConfig.isEnabled) {
-        final position = await LocationService.getLatLng();
+      if (!LocationConfig.ENABLE_FROM_ANYWHERE &&
+          geoConfig != null &&
+          geoConfig.isEnabled) {
+        final position = await LocationService.getLatLng(
+          requestPermissionIfDenied: false,
+        );
+        final radius = AttendanceService.resolveGeofenceRadius(geoConfig.radius);
         final isWithin = AttendanceService.isWithinRadius(
           currentLat: position.latitude,
           currentLng: position.longitude,
           branchLat: geoConfig.latitude,
           branchLng: geoConfig.longitude,
-          radius: geoConfig.radius,
+          radius: radius,
         );
 
         if (!isWithin) {
           setState(() => _isLoading = false);
-          _showError('You are not in the office range. Radius: ${geoConfig.radius}m');
+          _showError('You are not in the office range. Radius: ${radius}m');
           return;
         }
       }
@@ -284,9 +292,6 @@ class _AttendanceBodyState extends State<AttendanceBody> {
       }
     } else {
       _updateTimerFromService();
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        BatteryOptimizationService.showBatteryOptimizationDialog(context);
-      });
     }
     setState(() => _isLoading = false);
   }
@@ -298,19 +303,24 @@ class _AttendanceBodyState extends State<AttendanceBody> {
 
     try {
       final geoConfig = await AttendanceService.getGeofencingDetails();
-      if (geoConfig != null && geoConfig.isEnabled) {
-        final position = await LocationService.getLatLng();
+      if (!LocationConfig.ENABLE_FROM_ANYWHERE &&
+          geoConfig != null &&
+          geoConfig.isEnabled) {
+        final position = await LocationService.getLatLng(
+          requestPermissionIfDenied: false,
+        );
+        final radius = AttendanceService.resolveGeofenceRadius(geoConfig.radius);
         final isWithin = AttendanceService.isWithinRadius(
           currentLat: position.latitude,
           currentLng: position.longitude,
           branchLat: geoConfig.latitude,
           branchLng: geoConfig.longitude,
-          radius: geoConfig.radius,
+          radius: radius,
         );
 
         if (!isWithin) {
           setState(() => _isLoading = false);
-          _showError('You are not in the office range. Radius: ${geoConfig.radius}m');
+          _showError('You are not in the office range. Radius: ${radius}m');
           return;
         }
       }

@@ -22,73 +22,96 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   late int _currentIndex;
-  bool _alertShowTasks = false; // 👈 lifted state
-  bool _fromMenu = false; // 👈 Track navigation source
+  bool _fromMenu = false;
+  late final List<Widget> _screens;
+  DateTime? _lastAttendanceTabRefresh;
+  static const _attendanceTabThrottle = Duration(seconds: 30);
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex ?? 0;
-    _alertShowTasks = widget.initialAlertShowTasks;
 
-    // Auto-refresh attendance if starting there
+    _screens = [
+      const HomeScreen(),
+      AlertsScreen(
+        key: const ValueKey('alerts'),
+        initialShowTasks: widget.initialAlertShowTasks,
+        onBack: _onAlertsBack,
+      ),
+      AttendanceScreen(
+        key: const ValueKey('attendance'),
+        onBack: _onAttendanceBack,
+      ),
+      MenuScreen(
+        key: const ValueKey('menu'),
+        onNavigate: (index) => _navigateTo(index, fromMenu: true),
+        onNavigateToTasks: _navigateToAlertsTasks,
+      ),
+    ];
+
     if (_currentIndex == 2) {
-      AttendanceService.triggerRefresh();
+      _maybeRefreshAttendanceTab();
     }
+  }
+
+  void _onAlertsBack() {
+    if (_fromMenu) {
+      _navigateTo(3);
+    } else {
+      _navigateTo(0);
+    }
+  }
+
+  void _onAttendanceBack() {
+    if (_fromMenu) {
+      _navigateTo(3);
+    } else {
+      _navigateTo(0);
+    }
+  }
+
+  void _maybeRefreshAttendanceTab() {
+    final now = DateTime.now();
+    if (_lastAttendanceTabRefresh != null &&
+        now.difference(_lastAttendanceTabRefresh!) < _attendanceTabThrottle) {
+      return;
+    }
+    _lastAttendanceTabRefresh = now;
+    AttendanceService.triggerRefresh();
+  }
+
+  void _setAlertsShowTasks(bool showTasks) {
+    _screens[1] = AlertsScreen(
+      key: const ValueKey('alerts'),
+      initialShowTasks: showTasks,
+      onBack: _onAlertsBack,
+    );
   }
 
   void _navigateTo(int index, {bool fromMenu = false}) {
     setState(() {
       _currentIndex = index;
       _fromMenu = fromMenu;
-      // Reset to Notifications tab when switching via bottom nav
-      if (index == 1) _alertShowTasks = false;
-
-      // Auto-refresh attendance when switching to it
+      if (index == 1) {
+        _setAlertsShowTasks(false);
+      }
       if (index == 2) {
-        AttendanceService.triggerRefresh();
+        _maybeRefreshAttendanceTab();
       }
     });
   }
 
-  // 👇 New method for navigating to Alerts with Tasks tab
   void _navigateToAlertsTasks() {
     setState(() {
       _currentIndex = 1;
-      _alertShowTasks = true;
-      _fromMenu = true; // Alerts from Menu
+      _fromMenu = true;
+      _setAlertsShowTasks(true);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final screens = [
-      const HomeScreen(),
-      AlertsScreen(
-        initialShowTasks: _alertShowTasks,
-        onBack: () {
-          if (_fromMenu) {
-            _navigateTo(3);
-          } else {
-            _navigateTo(0);
-          }
-        },
-      ), // 👈 dynamic now
-      AttendanceScreen(
-        onBack: () {
-          if (_fromMenu) {
-            _navigateTo(3);
-          } else {
-            _navigateTo(0);
-          }
-        },
-      ),
-      MenuScreen(
-        onNavigate: (index) => _navigateTo(index, fromMenu: true),
-        onNavigateToTasks: _navigateToAlertsTasks, // 👈 pass new callback
-      ),
-    ];
-
     return PopScope(
       canPop: _currentIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
@@ -105,7 +128,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         resizeToAvoidBottomInset: false,
         body: IndexedStack(
           index: _currentIndex,
-          children: screens,
+          children: _screens,
         ),
         bottomNavigationBar: CustomNavigationBar(
           currentIndex: _currentIndex,

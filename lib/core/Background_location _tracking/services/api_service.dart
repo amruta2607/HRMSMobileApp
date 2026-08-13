@@ -14,6 +14,7 @@
  * - Sync status management
  */
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -30,8 +31,22 @@ class ApiService {
   static int get _batchRequestTimeout => LocationConfig.BATCH_API_TIMEOUT_SECONDS;
   static int get _maxBatchSize => LocationConfig.MAX_BATCH_SIZE;
 
-  // Request state management
-  bool _isCallInProgress = false;
+  /// Shared across all `ApiService()` instances (LocationService, OfflineManager, headless).
+  static Future<void> _sendChain = Future.value();
+
+  static Future<T> _serialized<T>(Future<T> Function() action) {
+    final result = Completer<T>();
+    _sendChain = _sendChain.then((_) async {
+      try {
+        result.complete(await action());
+      } catch (e, st) {
+        if (!result.isCompleted) result.completeError(e, st);
+      }
+    }).catchError((_) {
+      // Keep the chain alive after a prior failure.
+    });
+    return result.future;
+  }
 
   // SharedPreferences keys
   static const String _batchQueueKey = 'batch_queue';
@@ -44,25 +59,22 @@ class ApiService {
    * @param locationData - LocationData object to send
    * @returns Future<bool> - Success status
    */
-  Future<bool> sendLocationData(LocationData locationData) async {
+  Future<bool> sendLocationData(LocationData locationData) {
+    return _serialized(() => _sendLocationDataUnlocked(locationData));
+  }
+
+  Future<bool> _sendLocationDataUnlocked(LocationData locationData) async {
     if (!LocationConfig.IS_LOCATION_TRACKING_ENABLED) {
       LogConfig.logWarning('Location tracking disabled by config — skip send');
       return false;
     }
 
-    if (_isCallInProgress) {
-      LogConfig.logWarning(
-          'Another API call in progress, queuing this request');
-      await _saveForBatchProcessing(locationData);
-      return false;
-    }
-
-    _isCallInProgress = true;
-
     try {
       final userId = await TokenStorage.getUserId();
       if (userId == null) {
-        LogConfig.logError('User ID is null, cannot send location');
+        // Not logged in yet (headless/boot) — queue locally, don't treat as hard fail.
+        LogConfig.logWarning('User ID null — queueing location for later');
+        await _saveForBatchProcessing(locationData);
         return false;
       }
 
@@ -98,8 +110,6 @@ class ApiService {
       LogConfig.logError('Error sending location to API', e);
       await _saveFailedRequest(locationData);
       return false;
-    } finally {
-      _isCallInProgress = false;
     }
   }
 
@@ -108,7 +118,11 @@ class ApiService {
    * @param locations - List of LocationData objects to send
    * @returns Future<bool> - Success status
    */
-  Future<bool> sendBatchLocationData(List<LocationData> locations) async {
+  Future<bool> sendBatchLocationData(List<LocationData> locations) {
+    return _serialized(() => _sendBatchLocationDataUnlocked(locations));
+  }
+
+  Future<bool> _sendBatchLocationDataUnlocked(List<LocationData> locations) async {
     if (locations.isEmpty) return true;
 
     if (!LocationConfig.IS_LOCATION_TRACKING_ENABLED) {
@@ -116,21 +130,13 @@ class ApiService {
       return false;
     }
 
-    if (_isCallInProgress) {
-      LogConfig.logWarning(
-          'Another API call in progress, queuing this batch request');
-      for (final location in locations) {
-        await _saveForBatchProcessing(location);
-      }
-      return false;
-    }
-
-    _isCallInProgress = true;
-
     try {
       final userId = await TokenStorage.getUserId();
       if (userId == null) {
-        LogConfig.logError('User ID is null, cannot send batch locations');
+        LogConfig.logWarning('User ID null — queueing batch for later');
+        for (final location in locations) {
+          await _saveForBatchProcessing(location);
+        }
         return false;
       }
 
@@ -179,8 +185,6 @@ class ApiService {
         await _saveFailedRequest(location);
       }
       return false;
-    } finally {
-      _isCallInProgress = false;
     }
   }
 
@@ -220,12 +224,6 @@ class ApiService {
    * This method handles bulk upload of all cached locations
    */
   Future<void> sendAllPendingLocations() async {
-    if (_isCallInProgress) {
-      LogConfig.logWarning(
-          'Another API call in progress, skipping bulk upload');
-      return;
-    }
-
     if (!await _hasInternetConnection()) {
       LogConfig.logNetwork(
           'No internet connection - cannot send pending locations');
@@ -248,95 +246,97 @@ class ApiService {
   /**
    * Retry all failed location requests
    * Should be called when connectivity is restored
+   * (Interval between retry waves = dashboard retryInterval via OfflineManager timer)
    */
-  Future<void> retryFailedRequests() async {
-    if (_isCallInProgress) {
-      LogConfig.logWarning(
-          'Another API call in progress, skipping retry of failed requests');
-      return;
-    }
+  Future<void> retryFailedRequests() {
+    return _serialized(() async {
+      try {
+        final failedRequests = await _getFailedRequests();
 
-    _isCallInProgress = true;
-
-    try {
-      final failedRequests = await _getFailedRequests();
-
-      if (failedRequests.isEmpty) {
-        return;
-      }
-
-      LogConfig.logBackground(
-          'Retrying ${failedRequests.length} failed location requests');
-
-      // Try batch first if multiple requests
-      if (failedRequests.length > 1) {
-        final batchSuccess = await sendBatchLocationData(failedRequests);
-        if (batchSuccess) {
-          await _clearFailedRequests();
-          LogConfig.logSuccess(
-              'Batch retry complete. All ${failedRequests.length} requests succeeded');
+        if (failedRequests.isEmpty) {
           return;
         }
-      }
 
-      // Retry individually
-      final remainingFailed = <LocationData>[];
+        LogConfig.logBackground(
+            'Retrying ${failedRequests.length} failed location requests');
 
-      for (final locationData in failedRequests) {
-        final success = await _retrySingleLocation(locationData);
-        if (!success) {
-          remainingFailed.add(locationData);
+        // Drop requests that exceeded max attempts (dashboard-driven)
+        final eligible = <LocationData>[];
+        for (final loc in failedRequests) {
+          if (loc.retryCount >= LocationConfig.MAX_RETRY_ATTEMPTS) {
+            LogConfig.logWarning(
+                'Dropping location ${loc.id} after ${loc.retryCount} retries');
+          } else {
+            eligible.add(loc.copyWith(retryCount: loc.retryCount + 1));
+          }
         }
+
+        if (eligible.isEmpty) {
+          await _clearFailedRequests();
+          return;
+        }
+
+        // Try batch first if multiple requests
+        if (eligible.length > 1) {
+          final batchSuccess = await _sendBatchLocationDataUnlocked(eligible);
+          if (batchSuccess) {
+            await _clearFailedRequests();
+            LogConfig.logSuccess(
+                'Batch retry complete. All ${eligible.length} requests succeeded');
+            return;
+          }
+        }
+
+        // Retry individually
+        final remainingFailed = <LocationData>[];
+
+        for (final locationData in eligible) {
+          final success = await _retrySingleLocation(locationData);
+          if (!success) {
+            remainingFailed.add(locationData);
+          }
+          // Brief gap between singles; wave timing uses LocationConfig.retryDelay
+          await Future.delayed(const Duration(milliseconds: 400));
+        }
+
+        await _saveFailedRequests(remainingFailed);
+
+        LogConfig.logBackground(
+            'Retry complete. ${eligible.length - remainingFailed.length} succeeded, ${remainingFailed.length} failed');
+      } catch (e) {
+        LogConfig.logError('Error retrying failed requests', e);
       }
-
-      // Update failed requests with remaining failures
-      await _saveFailedRequests(remainingFailed);
-
-      LogConfig.logBackground(
-          'Retry complete. ${failedRequests.length - remainingFailed.length} succeeded, ${remainingFailed.length} failed');
-    } catch (e) {
-      LogConfig.logError('Error retrying failed requests', e);
-    } finally {
-      _isCallInProgress = false;
-    }
+    });
   }
 
   /**
    * Process any queued batch requests
    * Should be called periodically to process pending requests
    */
-  Future<void> processBatchQueue() async {
-    if (_isCallInProgress) {
-      LogConfig.logWarning(
-          'Another API call in progress, skipping batch queue processing');
-      return;
-    }
+  Future<void> processBatchQueue() {
+    return _serialized(() async {
+      try {
+        final batchQueue = await _getBatchQueue();
 
-    _isCallInProgress = true;
+        if (batchQueue.isEmpty) {
+          return;
+        }
 
-    try {
-      final batchQueue = await _getBatchQueue();
+        LogConfig.logBackground(
+            'Processing ${batchQueue.length} locations from batch queue');
 
-      if (batchQueue.isEmpty) {
-        return;
+        final batchSuccess = await _sendBatchLocationDataUnlocked(batchQueue);
+        if (batchSuccess) {
+          await _clearBatchQueue();
+          LogConfig.logSuccess(
+              'Batch queue processing complete. All ${batchQueue.length} requests succeeded');
+        } else {
+          LogConfig.logError('Failed to process batch queue');
+        }
+      } catch (e) {
+        LogConfig.logError('Error processing batch queue', e);
       }
-
-      LogConfig.logBackground(
-          'Processing ${batchQueue.length} locations from batch queue');
-
-      final batchSuccess = await sendBatchLocationData(batchQueue);
-      if (batchSuccess) {
-        await _clearBatchQueue();
-        LogConfig.logSuccess(
-            'Batch queue processing complete. All ${batchQueue.length} requests succeeded');
-      } else {
-        LogConfig.logError('Failed to process batch queue');
-      }
-    } catch (e) {
-      LogConfig.logError('Error processing batch queue', e);
-    } finally {
-      _isCallInProgress = false;
-    }
+    });
   }
 
   // =================== PRIVATE HELPER METHODS ===================
@@ -621,7 +621,10 @@ class ApiService {
       final existingIndex =
       failedRequests.indexWhere((loc) => loc.id == locationData.id);
       if (existingIndex != -1) {
-        failedRequests[existingIndex] = locationData;
+        final existing = failedRequests[existingIndex];
+        failedRequests[existingIndex] = locationData.copyWith(
+          retryCount: existing.retryCount,
+        );
       } else {
         failedRequests.add(locationData);
       }

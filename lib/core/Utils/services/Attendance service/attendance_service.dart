@@ -18,6 +18,7 @@ import '../../../Background_location _tracking/services/location_service.dart' a
 import '../../../Background_location _tracking/services/location_config_service.dart';
 import '../../../Background_location _tracking/services/gps_monitor_service.dart';
 import '../../../constants/location_config.dart';
+import '../holiday_service/holiday_service.dart';
 
 class AttendanceService {
   // Global State Notifiers for real-time synchronization
@@ -33,6 +34,19 @@ class AttendanceService {
   static int get refreshCount => attendanceRefreshNotifier.value;
 
   static void triggerRefresh() => attendanceRefreshNotifier.value++;
+
+  /// Avoid notifying listeners when punch-in time is effectively unchanged
+  /// (new DateTime instances were causing Attendance tab to re-fetch repeatedly).
+  static void _setPunchInTimeIfChanged(DateTime? next) {
+    final prev = punchInTimeNotifier.value;
+    if (prev == null && next == null) return;
+    if (prev != null &&
+        next != null &&
+        prev.millisecondsSinceEpoch == next.millisecondsSinceEpoch) {
+      return;
+    }
+    punchInTimeNotifier.value = next;
+  }
 
   static Future<int?> _getUserId() async {
     final prefs = await SharedPreferences.getInstance();
@@ -83,6 +97,14 @@ class AttendanceService {
 
     // Sync status for UI. Allow another punch-in after punch-out.
     await LocationConfigService.fetchConfig();
+
+    if (!LocationConfig.ATTENDANCE_ENABLED) {
+      return (
+        success: false,
+        message: 'Attendance is disabled by admin configuration.',
+      );
+    }
+
     final todayStatus = await getTodayStatus();
     print('📋 TODAY STATUS before punch => '
         'punchIn=${todayStatus?.punchIn}, punchOut=${todayStatus?.punchOut}, '
@@ -90,11 +112,30 @@ class AttendanceService {
         'duplicateSessionCheck=${LocationConfig.DUPLICATE_SESSION_CHECK} '
         '(fresh config)');
 
-    // Open session only: already in, no out yet.
-    if (isPunchIn &&
+    // Block punch-in on holiday when dashboard flag is on.
+    if (isPunchIn && LocationConfig.BLOCK_PUNCH_ON_HOLIDAY) {
+      final isHoliday = await HolidayService.isTodayHoliday();
+      if (isHoliday) {
+        return (
+          success: false,
+          message: 'Punch-in is blocked on holidays.',
+        );
+      }
+    }
+
+    // Duplicate session: open punch-in on server without punch-out.
+    if (isPunchIn && LocationConfig.DUPLICATE_SESSION_CHECK) {
+      if (todayStatus?.punchIn != null && todayStatus?.punchOut == null) {
+        return (
+          success: false,
+          message: 'Already punched in. Use Punch-Out first.',
+        );
+      }
+    } else if (isPunchIn &&
         todayStatus?.punchIn != null &&
         todayStatus?.punchOut == null &&
         isClockedIn) {
+      // Legacy local-only guard when duplicateSessionCheck is off.
       return (
         success: false,
         message: 'Already punched in. Use Punch-Out first.',
@@ -114,19 +155,21 @@ class AttendanceService {
     try {
       final geoConfig = await getGeofencingDetails();
       final fromAnywhere = LocationConfig.ENABLE_FROM_ANYWHERE;
-      print('📍 GEOFENCE => enabled=${geoConfig?.isEnabled}, fromAnywhere=$fromAnywhere');
+      final radius = resolveGeofenceRadius(geoConfig?.radius);
+      print(
+          '📍 GEOFENCE => enabled=${geoConfig?.isEnabled}, fromAnywhere=$fromAnywhere, radius=$radius');
       if (!fromAnywhere && geoConfig != null && geoConfig.isEnabled) {
         final within = isWithinRadius(
           currentLat: position.latitude,
           currentLng: position.longitude,
           branchLat: geoConfig.latitude,
           branchLng: geoConfig.longitude,
-          radius: geoConfig.radius,
+          radius: radius,
         );
         if (!within) {
           return (
             success: false,
-            message: 'You are not in the office range. Radius: ${geoConfig.radius}m',
+            message: 'You are not in the office range. Radius: ${radius}m',
           );
         }
       }
@@ -458,7 +501,7 @@ class AttendanceService {
         if (localOpen != null && localOpen.isNotEmpty) {
           final localIn = DateTime.tryParse(localOpen);
           if (localIn != null) {
-            punchInTimeNotifier.value = localIn;
+            _setPunchInTimeIfChanged(localIn);
             isClockedInNotifier.value = true;
             isPunchedOutForTodayNotifier.value = false;
           }
@@ -471,7 +514,7 @@ class AttendanceService {
         if (data != null) {
           if (data.punchIn != null && data.punchOut == null) {
             isClockedInNotifier.value = true;
-            punchInTimeNotifier.value = data.punchIn;
+            _setPunchInTimeIfChanged(data.punchIn);
             isPunchedOutForTodayNotifier.value = false;
             try {
               final prefs = await SharedPreferences.getInstance();
@@ -606,6 +649,15 @@ class AttendanceService {
   }) {
     final distanceInMeters = Geolocator.distanceBetween(currentLat, currentLng, branchLat, branchLng);
     return distanceInMeters <= radius;
+  }
+
+  /// Effective geofence radius: dashboard Location Tracking value wins when > 0,
+  /// otherwise site geofencing API radius.
+  static double resolveGeofenceRadius(double? siteRadius) {
+    final dashboard = LocationConfig.GEOFENCE_RADIUS_METERS;
+    if (dashboard > 0) return dashboard;
+    if (siteRadius != null && siteRadius > 0) return siteRadius;
+    return 100.0;
   }
 
   static Future<void> _clearLocalOpenSession() async {

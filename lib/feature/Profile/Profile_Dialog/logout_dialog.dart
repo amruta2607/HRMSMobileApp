@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/Utils/services/LogIn_out/auth_service.dart';
 import '../../../core/Utils/services/token_storage.dart';
+import '../../../core/Utils/services/app_permission_service.dart';
 import '../../../core/Utils/services/Attendance service/attendance_service.dart';
 import '../../../core/Background_location _tracking/services/location_service.dart'
     as bg_tracking;
@@ -158,6 +159,7 @@ class LogoutDialog {
 
     await AuthService.logout();
     await TokenStorage.logout();
+    AppPermissionService.resetSession();
 
     AttendanceService.isClockedInNotifier.value = false;
     AttendanceService.punchInTimeNotifier.value = null;
