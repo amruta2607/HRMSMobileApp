@@ -102,6 +102,10 @@ namespace MobileWebApi.Controllers
         /// POST: api/auth/login-email
         /// </summary>
         [HttpPost("login-email")]
+        [ProducesResponseType(typeof(TokenWithRefreshResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> LoginWithEmail([FromBody] EmailLoginRequest request)
         {
             try
@@ -174,6 +178,10 @@ namespace MobileWebApi.Controllers
         /// POST: api/auth/login-mobile
         /// </summary>
         [HttpPost("login-mobile")]
+        [ProducesResponseType(typeof(TokenWithRefreshResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(MobileLoginResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> LoginMobile([FromBody] MobileLoginRequest request)
         {
             try
@@ -982,7 +990,11 @@ namespace MobileWebApi.Controllers
                 AccessToken = authTokens.AccessToken,
                 RefreshToken = authTokens.RefreshToken,
                 ExpiresIn = authTokens.ExpiresIn,
-                TokenExpiry = DateTime.UtcNow.AddSeconds(authTokens.ExpiresIn),
+                TokenExpiry = authTokens.AccessTokenExpiry,
+                AccessTokenExpiresIn = authTokens.AccessTokenExpiresIn,
+                RefreshTokenExpiresIn = authTokens.RefreshTokenExpiresIn,
+                AccessTokenExpiry = authTokens.AccessTokenExpiry,
+                RefreshTokenExpiry = authTokens.RefreshTokenExpiry,
                 UserId = user.UserId,
                 Username = user.Username,
                 OrganisationId = organisationIdOverride ?? user.OrganisationId,
