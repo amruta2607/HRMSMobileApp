@@ -50,6 +50,9 @@ namespace MobileWebApi.Models
 
         public int OrganisationId { get; set; }
         public bool AttendanceEnabled { get; set; }
+        public bool EnableLocationTracking { get; set; }
+        public bool EnableEmployeeLevelLocationTracking { get; set; }
+        public bool EmployeeLocationTrackingEnabled { get; set; }
 		public bool IsGeoLocationEnabled { get; set; }
 		public bool IsGeoFencingEnabled { get; set; }
 		public bool IsActive { get; set; }

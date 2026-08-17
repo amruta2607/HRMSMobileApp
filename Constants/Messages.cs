@@ -603,6 +603,63 @@ namespace MobileWebApi.Constants
     }
 
     /// <summary>
+    /// Location tracking API messages
+    /// </summary>
+    public static class LocationTrackingMessages
+    {
+        public const string LocationRecordedSuccessfully = "Location recorded successfully.";
+        public const string UserIdRequired = "User ID is required.";
+        public const string LatitudeRequired = "Latitude is required.";
+        public const string LongitudeRequired = "Longitude is required.";
+        public const string InvalidLatitude = "Latitude must be between -90 and 90.";
+        public const string InvalidLongitude = "Longitude must be between -180 and 180.";
+        public const string TrackingDateTimeRequired = "Tracking date and time is required.";
+        public const string EmployeeNotFound = "Employee not found.";
+        public const string TenantNotFound = "Tenant not found.";
+        public const string EmployeeDoesNotBelongToTenant = "Employee does not belong to the specified tenant.";
+        public const string EmployeeNotPunchedIn = "Employee is not currently punched in.";
+        public const string LocationTrackingDisabled = "Location tracking is disabled.";
+        public const string FailedToRecordLocation = "Failed to record location.";
+        public const string LocationsRequired = "At least one location record is required.";
+        public const string BatchProcessedSuccessfully = "Location batch processed successfully.";
+        public const string BatchPartiallyProcessed = "Location batch processed with some invalid records skipped.";
+        public const string BatchAllRecordsInvalid = "All location records in the batch are invalid.";
+        public const string FailedToRecordLocationBatch = "Failed to record location batch.";
+    }
+
+    /// <summary>
+    /// Location tracking issue API messages
+    /// </summary>
+    public static class LocationTrackingIssueMessages
+    {
+        public const string IssueLoggedSuccessfully = "Location tracking issue logged successfully.";
+        public const string InvalidIssueType = "Invalid Issue Type.";
+        public const string IssueTypeRequired = "Issue type is required.";
+        public const string IssueDescriptionRequired = "Issue description is required.";
+        public const string TimestampRequired = "Timestamp is required.";
+        public const string EmployeeNotFound = "Employee not found.";
+        public const string TenantNotFound = "Tenant not found.";
+        public const string EmployeeDoesNotBelongToTenant = "Employee does not belong to the specified tenant.";
+        public const string FailedToLogIssue = "Failed to log location tracking issue.";
+        public const string ViolationNotificationTitle = "Location Tracking Violation";
+        public const string ViolationNotificationMessage = "Employee {0} triggered a {1} violation.";
+        public const string UnknownEmployeeName = "Unknown Employee";
+    }
+
+    /// <summary>
+    /// Location tracking configuration API messages
+    /// </summary>
+    public static class LocationTrackingConfigurationMessages
+    {
+        public const string ConfigurationFetchedSuccessfully = "Location tracking configuration fetched successfully.";
+        public const string EmployeeNotFound = "Employee not found.";
+        public const string TenantNotFound = "Tenant not found.";
+        public const string TenantConfigurationNotFound = "Tenant configuration not found.";
+        public const string LocationTrackingConfigurationNotFound = "Location tracking configuration not found.";
+        public const string EmployeeDoesNotBelongToTenant = "Employee does not belong to the specified tenant.";
+    }
+
+    /// <summary>
     /// Attendance status text used in responses
     /// </summary>
     public static class AttendanceStatusMessages
