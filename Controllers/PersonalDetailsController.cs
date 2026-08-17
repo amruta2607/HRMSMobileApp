@@ -74,6 +74,7 @@ namespace MobileWebApi.Controllers
         /// <summary>
         /// Get personal details by user ID
         /// Note: Regular users can only access their own details. HR/TenantAdmin can access all.
+        /// Supports both employees and system users without an Employee record (Admin, Super Admin, etc.).
         /// </summary>
         [HttpGet("Personal-Details-by-user/{userId}")]
         public async Task<IActionResult> GetPersonalDetailsByUser(int userId)
@@ -95,49 +96,15 @@ namespace MobileWebApi.Controllers
                 return UserAccessDenied();
             }
 
-            // Get employee by userId to fetch employee number
             Logger.LogInformation(LogMessages.Employee.RetrievingEmployeeByUserId, userId);
-            var employee = await _employeeRepository.GetEmployeebyUserIdAsync(userId);
-            
-            if (employee == null)
-            {
-                Logger.LogWarning(LogMessages.PersonalDetails.EmployeeNotFoundForUserId, userId);
-                return NotFound(new { 
-                    Success = false, 
-                    Message = $"Employee not found for user ID: {userId}" 
-                });
-            }
+            var result = await _employeeService.GetPersonalDetailsByUserIdAsync(userId);
 
-            // Get employee number and use it to get the employee ID (empId)
-            if (string.IsNullOrWhiteSpace(employee.EmployeeNumber))
-            {
-                Logger.LogWarning(LogMessages.PersonalDetails.EmployeeDoesNotHaveEmployeeNumber, employee.Id);
-                return NotFound(new { 
-                    Success = false, 
-                    Message = $"Employee does not have an employee number" 
-                });
-            }
-
-            Logger.LogInformation(LogMessages.PersonalDetails.FoundEmployeeNumberForUserId, employee.EmployeeNumber, userId);
-            var employeeByNumber = await _employeeRepository.GetEmployeeByEmployeeNumberAsync(employee.EmployeeNumber);
-            
-            if (employeeByNumber == null)
-            {
-                Logger.LogWarning(LogMessages.PersonalDetails.EmployeeNotFoundWithEmployeeNumber, employee.EmployeeNumber);
-                return NotFound(new { 
-                    Success = false, 
-                    Message = $"Employee not found with employee number: {employee.EmployeeNumber}" 
-                });
-            }
-
-            int employeeId = employeeByNumber.Id;
-            Logger.LogInformation(LogMessages.PersonalDetails.UsingEmployeeIdFromEmployeeNumber, employeeId, employee.EmployeeNumber);
-            
-            var result = await _employeeService.GetEmployeeByIdAsync(employeeId);
-            
             if (!result.Success)
             {
-                Logger.LogWarning(LogMessages.Employee.EmployeeNotFound, employeeId);
+                Logger.LogWarning(
+                    "Personal details not found for user ID {UserId}: {Message}",
+                    userId,
+                    result.Message);
                 return NotFound(result);
             }
 

@@ -5,6 +5,7 @@ using MobileWebApi.Helper;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -24,24 +25,26 @@ namespace MobileWebApi.Services
         private static readonly ConcurrentDictionary<string, RefreshTokenEntry> _refreshTokens = new();
         private static readonly object _refreshTokenLock = new();
 
-        private readonly int _accessTokenExpiryMinutes;
-        private readonly int _refreshTokenExpiryDays;
+        private readonly int _accessTokenExpiryInSeconds;
+        private readonly int _refreshTokenExpiryInHours;
+        private const string LocalExpiryFormat = "yyyy-MM-ddTHH:mm:ss";
 
         public TokenService(IConfiguration config, IHttpContextAccessor httpContextAccessor)
         {
             _config = config;
             _httpContextAccessor = httpContextAccessor;
 
-            if (int.TryParse(_config["Jwt:TokenExpiryMinutes"], out int expiryMinutes))
-                _accessTokenExpiryMinutes = expiryMinutes;
-            else if (int.TryParse(_config["Jwt:TokenExpiryHours"], out int expiryHours))
-                _accessTokenExpiryMinutes = expiryHours * 60;
-            else
-                _accessTokenExpiryMinutes = 15;
+            if (!int.TryParse(_config["Jwt:AccessTokenExpiryInSeconds"], out _accessTokenExpiryInSeconds) || _accessTokenExpiryInSeconds <= 0)
+            {
+                throw new InvalidOperationException(
+                    "Jwt:AccessTokenExpiryInSeconds is missing or invalid. Set a positive number of seconds in appsettings.json.");
+            }
 
-            _refreshTokenExpiryDays = int.TryParse(_config["Jwt:RefreshTokenExpiryDays"], out int refreshDays)
-                ? refreshDays
-                : 30;
+            if (!int.TryParse(_config["Jwt:RefreshTokenExpiryInHours"], out _refreshTokenExpiryInHours) || _refreshTokenExpiryInHours <= 0)
+            {
+                throw new InvalidOperationException(
+                    "Jwt:RefreshTokenExpiryInHours is missing or invalid. Set a positive number of hours in appsettings.json.");
+            }
         }
 
         public string GenerateToken(User user)
@@ -72,7 +75,7 @@ namespace MobileWebApi.Services
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(_accessTokenExpiryMinutes),
+                expires: DateTime.Now.AddSeconds(_accessTokenExpiryInSeconds),
                 signingCredentials: creds);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
@@ -80,7 +83,11 @@ namespace MobileWebApi.Services
 
         public Task<AuthResponse> GenerateTokensAsync(User user)
         {
-            var (accessToken, jti, expiresAt) = CreateAccessToken(user);
+            var issuedAt = DateTime.Now;
+            var accessTokenExpiry = issuedAt.AddSeconds(_accessTokenExpiryInSeconds);
+            var refreshTokenExpiry = issuedAt.AddHours(_refreshTokenExpiryInHours);
+
+            var (accessToken, jti, expiresAt) = CreateAccessToken(user, accessTokenExpiry);
             var refreshToken = GenerateSecureRefreshToken();
             var refreshTokenHash = HashToken(refreshToken);
 
@@ -93,8 +100,8 @@ namespace MobileWebApi.Services
                 IsHrUser = user.IsHrUser,
                 IsTenantAdmin = user.IsTenantAdmin,
                 JwtId = jti,
-                ExpiryDate = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays),
-                CreatedDate = DateTime.UtcNow,
+                ExpiryDate = refreshTokenExpiry,
+                CreatedDate = issuedAt,
                 IsUsed = false,
                 IsRevoked = false,
                 CreatedByIp = GetClientIpAddress()
@@ -106,7 +113,11 @@ namespace MobileWebApi.Services
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
-                ExpiresIn = (int)(expiresAt - DateTime.UtcNow).TotalSeconds
+                ExpiresIn = (int)(expiresAt - DateTime.Now).TotalSeconds,
+                AccessTokenExpiresIn = _accessTokenExpiryInSeconds,
+                RefreshTokenExpiresIn = _refreshTokenExpiryInHours,
+                AccessTokenExpiry = FormatLocalExpiry(accessTokenExpiry),
+                RefreshTokenExpiry = FormatLocalExpiry(refreshTokenExpiry)
             });
         }
 
@@ -131,7 +142,7 @@ namespace MobileWebApi.Services
                 if (storedToken.IsRevoked)
                     throw new TokenRefreshException(AuthMessages.RefreshTokenRevokedLoginRequired);
 
-                if (storedToken.ExpiryDate <= DateTime.UtcNow)
+                if (storedToken.ExpiryDate <= DateTime.Now)
                     throw new TokenRefreshException(AuthMessages.RefreshTokenExpired);
 
                 var user = new User
@@ -270,15 +281,15 @@ namespace MobileWebApi.Services
 
         public DateTime GetTokenExpiry()
         {
-            return DateTime.UtcNow.AddMinutes(_accessTokenExpiryMinutes);
+            return DateTime.Now.AddSeconds(_accessTokenExpiryInSeconds);
         }
 
-        private (string AccessToken, string Jti, DateTime ExpiresAt) CreateAccessToken(User user)
+        private (string AccessToken, string Jti, DateTime ExpiresAt) CreateAccessToken(User user, DateTime? expiresAt = null)
         {
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var jti = Guid.NewGuid().ToString();
-            var expiresAt = DateTime.UtcNow.AddMinutes(_accessTokenExpiryMinutes);
+            var tokenExpiry = expiresAt ?? DateTime.Now.AddSeconds(_accessTokenExpiryInSeconds);
 
             var claims = new[]
             {
@@ -295,10 +306,15 @@ namespace MobileWebApi.Services
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: expiresAt,
+                expires: tokenExpiry,
                 signingCredentials: creds);
 
-            return (new JwtSecurityTokenHandler().WriteToken(token), jti, expiresAt);
+            return (new JwtSecurityTokenHandler().WriteToken(token), jti, tokenExpiry);
+        }
+
+        private static string FormatLocalExpiry(DateTime value)
+        {
+            return value.ToString(LocalExpiryFormat, CultureInfo.InvariantCulture);
         }
 
         private static string GenerateSecureRefreshToken()
@@ -331,7 +347,7 @@ namespace MobileWebApi.Services
         private static void CleanupExpiredRefreshTokens()
         {
             var expiredKeys = _refreshTokens
-                .Where(x => x.Value.ExpiryDate <= DateTime.UtcNow)
+                .Where(x => x.Value.ExpiryDate <= DateTime.Now)
                 .Select(x => x.Key)
                 .ToList();
 

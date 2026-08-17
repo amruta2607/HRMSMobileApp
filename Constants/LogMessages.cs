@@ -307,6 +307,9 @@ namespace MobileWebApi.Constants
             public const string FailedToRecordLocation = "Failed to record location for employee {EmployeeId}";
             public const string ProcessingLocationBatch = "Processing location batch for employee {EmployeeId}, tenant {TenantId}, record count {RecordCount}";
             public const string FailedToRecordLocationBatch = "Failed to record location batch for employee {EmployeeId}";
+            public const string PunchLocationRecorded = "Recorded {Direction} punch location tracking record {RecordId} for employee {EmployeeId}, tenant {TenantId}.";
+            public const string PunchLocationSkipped = "Skipped {Direction} punch location tracking for employee {EmployeeId}, tenant {TenantId}: {Reason}.";
+            public const string FailedToRecordPunchLocation = "Failed to record {Direction} punch location tracking for employee {EmployeeId}, tenant {TenantId}.";
         }
 
         public static class LocationTrackingIssue
@@ -422,6 +425,9 @@ namespace MobileWebApi.Constants
             public const string ErrorFetchingLatestAnnouncements = "Error fetching latest announcements for mobile dashboard.";
             public const string ErrorFetchingLatestHolidays = "Error fetching latest holidays for mobile dashboard.";
             public const string ErrorFetchingLatestTrainings = "Error fetching latest trainings for mobile dashboard.";
+            public const string ErrorFetchingBirthdays = "Error fetching birthdays for dashboard.";
+            public const string ErrorFetchingWorkAnniversaries = "Error fetching work anniversaries for dashboard.";
+            public const string ErrorFetchingAwards = "Error fetching awards for dashboard.";
         }
 
         // Asset dashboard logs
@@ -456,10 +462,18 @@ namespace MobileWebApi.Constants
             public const string AssetDeleted = "Asset deleted. AssetId={AssetId}, Number={AssetNumber}, Name={AssetName}, DeletedByUserId={UserId}, TenantId={TenantId}, IpAddress={IpAddress}, DeletedAtUtc={Timestamp}.";
             public const string ErrorDeletingAsset = "Error deleting asset {AssetId} for organisation {OrganisationId}.";
             public const string DeleteForbidden = "User {UserId} attempted to delete asset {AssetId} without Admin/SuperAdmin role.";
+            public const string FetchingQrCode = "Fetching QR code for asset {AssetId} by user {UserId} in organisation {OrganisationId}.";
+            public const string QrCodeFetched = "Fetched QR code for asset {AssetId} in organisation {OrganisationId}.";
+            public const string ErrorFetchingQrCode = "Error fetching QR code for asset {AssetId} in organisation {OrganisationId}.";
+            public const string QrCodeNotFound = "QR code not found for asset {AssetId} in organisation {OrganisationId}.";
+            public const string FetchingTimeline = "Fetching asset timeline for asset {AssetId} by user {UserId} in organisation {OrganisationId}.";
+            public const string TimelineFetched = "Fetched {Count} asset timeline records for asset {AssetId} in organisation {TenantId}.";
+            public const string ErrorFetchingTimeline = "Error fetching asset timeline for asset {AssetId} in organisation {OrganisationId}.";
         }
 
         // Asset hand over logs
         public static class AssetHandOver
+
         {
             public const string ErrorFetchingList = "Error fetching asset hand over list for organisation {OrganisationId}.";
             public const string ErrorHandingOver = "Error handing over asset {AssetId} for organisation {OrganisationId}.";
@@ -470,6 +484,38 @@ namespace MobileWebApi.Constants
             public const string HandoverDeleted = "Asset handover deleted. HandoverId={HandoverId}, Number={HandoverNumber}, AssetId={AssetId}, DeletedByUserId={UserId}, TenantId={TenantId}, IpAddress={IpAddress}, DeletedAtUtc={Timestamp}.";
             public const string ErrorDeletingHandover = "Error deleting asset handover {HandoverId} for organisation {OrganisationId}.";
             public const string DeleteForbidden = "User {UserId} attempted to delete asset handover {HandoverId} without Admin/SuperAdmin role.";
+            public const string FetchingTimeline = "Fetching asset handover timeline for asset {AssetId} by user {UserId} in organisation {OrganisationId}.";
+            public const string TimelineFetched = "Fetched {Count} asset handover timeline records for asset {AssetId} in organisation {TenantId}.";
+            public const string ErrorFetchingTimeline = "Error fetching asset handover timeline for asset {AssetId} in organisation {OrganisationId}.";
+        }
+
+        // Asset maintenance logs
+        public static class AssetMaintenance
+        {
+            public const string Creating = "Creating asset maintenance for asset {AssetId} by user {UserId} in organisation {OrganisationId}.";
+            public const string Created = "Asset maintenance created. MaintenanceId={MaintenanceId}, AssetId={AssetId}, CreatedByUserId={UserId}, TenantId={TenantId}, CreatedAtUtc={Timestamp}.";
+            public const string ErrorCreating = "Error creating asset maintenance for organisation {OrganisationId}.";
+            public const string ErrorFetching = "Error fetching asset maintenance {MaintenanceId} for organisation {OrganisationId}.";
+            public const string ErrorFetchingList = "Error fetching asset maintenance list for organisation {OrganisationId}.";
+            public const string Deleting = "Deleting asset maintenance {MaintenanceId} by user {UserId} in organisation {OrganisationId}.";
+            public const string Deleted = "Asset maintenance deleted. MaintenanceId={MaintenanceId}, AssetId={AssetId}, DeletedByUserId={UserId}, TenantId={TenantId}, IpAddress={IpAddress}, DeletedAtUtc={Timestamp}.";
+            public const string ErrorDeleting = "Error deleting asset maintenance {MaintenanceId} for organisation {OrganisationId}.";
+            public const string DeleteForbidden = "User {UserId} attempted to delete asset maintenance {MaintenanceId} without Admin/SuperAdmin role.";
+            public const string Updating = "Updating asset maintenance {MaintenanceId} for asset {AssetId} by user {UserId} in organisation {OrganisationId}.";
+            public const string Updated = "Asset maintenance updated. MaintenanceId={MaintenanceId}, AssetId={AssetId}, UpdatedByUserId={UserId}, TenantId={TenantId}, UpdatedAtUtc={Timestamp}.";
+            public const string ErrorUpdating = "Error updating asset maintenance {MaintenanceId} for organisation {OrganisationId}.";
+            public const string FetchingByAsset = "Fetching asset maintenance history for asset {AssetId} in organisation {OrganisationId}.";
+            public const string FetchedByAsset = "Fetched {Count} asset maintenance records for asset {AssetId} in organisation {TenantId}.";
+            public const string ErrorFetchingByAsset = "Error fetching asset maintenance history for asset {AssetId} in organisation {OrganisationId}.";
+            public const string ValidationFailed = "Asset maintenance validation failed for user {UserId} in organisation {OrganisationId}: {Reason}.";
+            public const string AttachmentsUploaded = "Uploaded {Count} asset maintenance attachment(s) for tenant {TenantId} by user {UserId}.";
+            public const string AttachmentUploadFailed = "Failed to upload asset maintenance attachment '{FileName}' for tenant {TenantId}.";
+            public const string FetchingLookups = "Fetching asset maintenance lookups for user {UserId} in organisation {OrganisationId}.";
+            public const string LookupsFetched = "Fetched asset maintenance lookups for organisation {OrganisationId}: assets={AssetCount}, responsiblePersons={ResponsiblePersonCount}.";
+            public const string ErrorFetchingLookups = "Error fetching asset maintenance lookups for organisation {OrganisationId}.";
+            public const string FetchingTimeline = "Fetching asset timeline for asset {AssetId} by user {UserId} in organisation {OrganisationId}.";
+            public const string TimelineFetched = "Fetched {Count} asset timeline records for asset {AssetId} in organisation {TenantId}.";
+            public const string ErrorFetchingTimeline = "Error fetching asset timeline for asset {AssetId} in organisation {OrganisationId}.";
         }
 
         // Scanner logs
@@ -654,6 +700,12 @@ namespace MobileWebApi.Constants
             public const string FoundEmployeeNumberForUserId = "Found employee number {EmployeeNumber} for user ID {UserId}";
             public const string EmployeeNotFoundWithEmployeeNumber = "Employee not found with employee number: {EmployeeNumber}";
             public const string UsingEmployeeIdFromEmployeeNumber = "Using employee ID {EmployeeId} (empId) from employee number {EmployeeNumber}";
+
+            // Non-employee (system user) personal details
+            public const string NoEmployeeFallingBackToUser = "No employee found for user ID {UserId}; loading personal details from Users/WorkRole";
+            public const string RetrievedNonEmployeePersonalDetails = "Retrieved non-employee personal details for user ID {UserId} with designation {Designation}";
+            public const string UserNotFoundForPersonalDetails = "Neither employee nor user found for user ID: {UserId}";
+            public const string ErrorRetrievingPersonalDetailsByUserId = "Error retrieving personal details for user ID {UserId}";
             
             // Request validation
             public const string InvalidRequestOrUserId = "Invalid request or UserId";

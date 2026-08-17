@@ -8,11 +8,16 @@ namespace MobileWebApi.Services
     public class EmployeeService : IEmployeeService
     {
         private readonly IEmployeeRepository _employeeRepository;
+        private readonly IUserRepository _userRepository;
         private readonly ILogger<EmployeeService> _logger;
 
-        public EmployeeService(IEmployeeRepository employeeRepository, ILogger<EmployeeService> logger)
+        public EmployeeService(
+            IEmployeeRepository employeeRepository,
+            IUserRepository userRepository,
+            ILogger<EmployeeService> logger)
         {
             _employeeRepository = employeeRepository;
+            _userRepository = userRepository;
             _logger = logger;
         }
 
@@ -69,6 +74,119 @@ namespace MobileWebApi.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, LogMessages.Employee.ErrorRetrievingEmployee, id);
+                return new PersonalDetailServiceResponse
+                {
+                    Success = false,
+                    Message = EmployeeMessages.ErrorRetrievingEmployee,
+                    Data = null
+                };
+            }
+        }
+
+        /// <summary>
+        /// Gets personal details by user ID. Uses the employee path when an Employee exists;
+        /// otherwise builds the same response model from Users + WorkRole.
+        /// </summary>
+        public async Task<PersonalDetailServiceResponse> GetPersonalDetailsByUserIdAsync(int userId)
+        {
+            try
+            {
+                _logger.LogInformation(LogMessages.Employee.RetrievingEmployeeByUserId, userId);
+                var employee = await _employeeRepository.GetEmployeebyUserIdAsync(userId);
+
+                if (employee != null)
+                {
+                    if (string.IsNullOrWhiteSpace(employee.EmployeeNumber))
+                    {
+                        _logger.LogWarning(LogMessages.PersonalDetails.EmployeeDoesNotHaveEmployeeNumber, employee.Id);
+                        return new PersonalDetailServiceResponse
+                        {
+                            Success = false,
+                            Message = "Employee does not have an employee number",
+                            Data = null
+                        };
+                    }
+
+                    _logger.LogInformation(
+                        LogMessages.PersonalDetails.FoundEmployeeNumberForUserId,
+                        employee.EmployeeNumber,
+                        userId);
+
+                    var employeeByNumber = await _employeeRepository.GetEmployeeByEmployeeNumberAsync(employee.EmployeeNumber);
+                    if (employeeByNumber == null)
+                    {
+                        _logger.LogWarning(
+                            LogMessages.PersonalDetails.EmployeeNotFoundWithEmployeeNumber,
+                            employee.EmployeeNumber);
+                        return new PersonalDetailServiceResponse
+                        {
+                            Success = false,
+                            Message = $"Employee not found with employee number: {employee.EmployeeNumber}",
+                            Data = null
+                        };
+                    }
+
+                    _logger.LogInformation(
+                        LogMessages.PersonalDetails.UsingEmployeeIdFromEmployeeNumber,
+                        employeeByNumber.Id,
+                        employee.EmployeeNumber);
+
+                    // Existing employee flow — do not use WorkRoleId
+                    return await GetEmployeeByIdAsync(employeeByNumber.Id);
+                }
+
+                // Non-employee system user path (Admin, Super Admin, Tenant Admin, etc.)
+                _logger.LogInformation(LogMessages.PersonalDetails.NoEmployeeFallingBackToUser, userId);
+                var userDetails = await _userRepository.GetUserPersonalDetailsByUserIdAsync(userId);
+                if (userDetails == null)
+                {
+                    _logger.LogWarning(LogMessages.PersonalDetails.UserNotFoundForPersonalDetails, userId);
+                    return new PersonalDetailServiceResponse
+                    {
+                        Success = false,
+                        Message = EmployeeMessages.EmployeeOrUserNotFoundForUserId,
+                        Data = null
+                    };
+                }
+
+                var designation = string.IsNullOrWhiteSpace(userDetails.Designation)
+                    ? WorkRoleHelper.DefaultWorkRoleName
+                    : userDetails.Designation.Trim();
+
+                var dto = new PersonalDetailResponseDto
+                {
+                    EmpId = string.Empty,
+                    Name = userDetails.Name?.Trim() ?? string.Empty,
+                    Picture = string.IsNullOrWhiteSpace(userDetails.Picture) ? null : userDetails.Picture.Trim(),
+                    Phone = string.IsNullOrWhiteSpace(userDetails.Phone) ? null : userDetails.Phone.Trim(),
+                    Email = string.IsNullOrWhiteSpace(userDetails.Email) ? null : userDetails.Email.Trim(),
+                    Designation = designation,
+                    Department = string.IsNullOrWhiteSpace(userDetails.Department) ? null : userDetails.Department.Trim(),
+                    Address = null,
+                    ReportingManager = null
+                };
+
+                _logger.LogInformation(
+                    LogMessages.PersonalDetails.RetrievedNonEmployeePersonalDetails,
+                    userId,
+                    designation);
+
+                return new PersonalDetailServiceResponse
+                {
+                    Success = true,
+                    Message = EmployeeMessages.EmployeeRetrievedSuccessfully,
+                    Data = dto,
+                    SystemUserId = userDetails.SystemUserId
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(
+                    ExceptionCodes.Employee.GetPersonalDetailsByUserId,
+                    nameof(GetPersonalDetailsByUserIdAsync),
+                    ex,
+                    userId);
+                _logger.LogError(ex, LogMessages.PersonalDetails.ErrorRetrievingPersonalDetailsByUserId, userId);
                 return new PersonalDetailServiceResponse
                 {
                     Success = false,
@@ -747,6 +865,7 @@ namespace MobileWebApi.Services
                 Phone = queryResult.Phone,
                 Email = queryResult.Email,
                 Designation = queryResult.Designation,
+                Department = string.IsNullOrWhiteSpace(queryResult.Department) ? null : queryResult.Department.Trim(),
                 Address = address,
                 ReportingManager = reportingManager
             };

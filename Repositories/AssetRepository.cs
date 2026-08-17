@@ -345,8 +345,8 @@ namespace MobileWebApi.Repositories
                 if (asset == null)
                     throw new AssetNotFoundException(AssetMessages.NotFound);
 
-                var purchaseDate = OptionalValueHelper.NullIfDefault(request.PurchaseDate)
-                    ?? throw new AssetValidationException(AssetMessages.PurchaseDateRequired);
+                //var purchaseDate = OptionalValueHelper.NullIfDefault(request.PurchaseDate)
+                //    ?? throw new AssetValidationException(AssetMessages.PurchaseDateRequired);
 
                 if (request.PurchasePrice < 0)
                     throw new AssetValidationException(AssetMessages.PurchasePriceRequired);
@@ -368,8 +368,9 @@ namespace MobileWebApi.Repositories
                 var branchId = OptionalValueHelper.NullIfNonPositive(request.BranchId);
                 var businessUnitId = OptionalValueHelper.NullIfNonPositive(request.BusinessUnitId);
                 var productionYear = OptionalValueHelper.NullIfNonPositive(request.ProductionYear);
+                var purchaseDate = OptionalValueHelper.NullIfDefault(request.PurchaseDate);
 
-                var warrantyExpiryDate = OptionalValueHelper.NullIfDefault(request.WarrantyExpiryDate);
+				var warrantyExpiryDate = OptionalValueHelper.NullIfDefault(request.WarrantyExpiryDate);
                 var maintenanceDueDate = OptionalValueHelper.NullIfDefault(request.MaintenanceDueDate);
 
                 await ValidateOptionalLookupsAsync(
@@ -569,6 +570,119 @@ namespace MobileWebApi.Repositories
             }
         }
 
+        /// <inheritdoc />
+        public async Task<AssetQrCodeResponse> GetAssetQrCodeAsync(int assetId)
+        {
+            var tenantId = _tenantContext.GetRequiredOrganisationId();
+            var userId = _tenantContext.UserId;
+
+            try
+            {
+                _logger.LogInformation(
+                    LogMessages.Asset.FetchingQrCode,
+                    assetId,
+                    userId,
+                    tenantId);
+
+                using var connection = _context.CreateConnection();
+                var asset = await connection.QueryFirstOrDefaultAsync<AssetQrCodeRow>(
+                    _queries.Get("Asset_GetQrCodeById"),
+                    new { AssetId = assetId, TenantId = tenantId });
+
+                if (asset == null)
+                    throw new AssetNotFoundException(AssetMessages.NotFound);
+
+                var qrCode = asset.QRCodePath;
+
+                if (string.IsNullOrWhiteSpace(qrCode))
+                {
+                    _logger.LogWarning(
+                        LogMessages.Asset.QrCodeNotFound,
+                        assetId,
+                        tenantId);
+                    throw new AssetQrCodeNotFoundException(AssetMessages.QrCodeNotFound);
+                }
+
+                var assetTagNumber = !string.IsNullOrWhiteSpace(asset.AssetTagNumber)
+                    ? asset.AssetTagNumber
+                    : asset.AssetCode;
+
+                _logger.LogInformation(
+                    LogMessages.Asset.QrCodeFetched,
+                    assetId,
+                    tenantId);
+
+                return new AssetQrCodeResponse
+                {
+                    Success = true,
+                    AssetId = asset.Id,
+                    AssetTagNumber = assetTagNumber,
+                    AssetName = asset.AssetName,
+                    QrCode = qrCode
+                };
+            }
+            catch (AssetNotFoundException)
+            {
+                throw;
+            }
+            catch (AssetQrCodeNotFoundException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    LogMessages.Asset.ErrorFetchingQrCode,
+                    assetId,
+                    tenantId);
+
+                _logger.LogException(
+                    ExceptionCodes.Asset.GetQrCode,
+                    nameof(GetAssetQrCodeAsync),
+                    ex,
+                    userId);
+
+                throw;
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<AssetTimelineListResponse> GetAssetTimelineAsync(int assetId)
+        {
+            try
+            {
+                var tenantId = _tenantContext.GetRequiredOrganisationId();
+
+                using var connection = _context.CreateConnection();
+                var items = (await connection.QueryAsync<AssetTimelineResponse>(
+                    _queries.Get("Asset_GetTimeline"),
+                    new { AssetId = assetId, TenantId = tenantId })).ToList();
+
+                _logger.LogInformation(
+                    LogMessages.Asset.TimelineFetched,
+                    items.Count,
+                    assetId,
+                    tenantId);
+
+                return new AssetTimelineListResponse
+                {
+                    Success = true,
+                    Message = AssetMessages.TimelineFetchedSuccessfully,
+                    Data = items
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(
+                    ExceptionCodes.Asset.GetTimeline,
+                    nameof(GetAssetTimelineAsync),
+                    ex,
+                    _tenantContext.UserId);
+                throw;
+            }
+        }
+
         private static async Task DeleteOptionalDependentTablesAsync(
             IDbConnection connection,
             IDbTransaction transaction,
@@ -626,6 +740,17 @@ namespace MobileWebApi.Repositories
             public int Id { get; set; }
             public string Number { get; set; } = string.Empty;
             public string AssetName { get; set; } = string.Empty;
+        }
+
+        private sealed class AssetQrCodeRow
+        {
+            public int Id { get; set; }
+            public string? AssetName { get; set; }
+            public string? AssetTagNumber { get; set; }
+            public string? AssetCode { get; set; }
+            public string? QRCodePath { get; set; }
+            public string? QRCodeText { get; set; }
+            public bool? QRCodeGenerated { get; set; }
         }
 
         private sealed class ForeignKeyChildRow

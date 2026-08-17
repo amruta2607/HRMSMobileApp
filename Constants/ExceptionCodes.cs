@@ -124,6 +124,7 @@ namespace MobileWebApi.Constants
             public const string TenantWeekOffGetConfigurationDatabaseError = "REP103";
             public const string TenantWeekOffGetWeekOffDaysDatabaseError = "REP104";
             public const string UserGetActiveWorkRolesByUserIdDatabaseError = "REP105";
+            public const string UserGetUserPersonalDetailsByUserIdDatabaseError = "REP106";
         }
 
         // Service layer (generic)
@@ -152,6 +153,7 @@ namespace MobileWebApi.Constants
             public const string UpdateEmployeePhoneAndPicture = "EMP-007";
             public const string DeleteEmployee = "EMP-008";
             public const string DeactivateEmployee = "EMP-009";
+            public const string GetPersonalDetailsByUserId = "EMP-010";
         }
 
         // Authentication module (AuthController, TokenService)
@@ -287,6 +289,9 @@ namespace MobileWebApi.Constants
             public const string GetLatestAnnouncements = "MOBD-002";
             public const string GetLatestEvents = "MOBD-003";
             public const string GetLatestHolidays = "MOBD-004";
+            public const string GetBirthdays = "MOBD-005";
+            public const string GetWorkAnniversaries = "MOBD-006";
+            public const string GetAwards = "MOBD-007";
         }
 
         // Mobile events (MobileEventController)
@@ -380,7 +385,10 @@ namespace MobileWebApi.Constants
             public const string Update = "ASSET-005";
             public const string GetLookups = "ASSET-008";
             public const string Delete = "ASSET-010";
+            public const string GetQrCode = "ASSET-012";
+            public const string GetTimeline = "ASSET-022";
         }
+
 
         // Asset hand over list (AssetHandOverRepository)
         public static class AssetHandOver
@@ -390,6 +398,21 @@ namespace MobileWebApi.Constants
             public const string Update = "ASSET-007";
             public const string GetLookups = "ASSET-009";
             public const string Delete = "ASSET-011";
+            public const string GetTimeline = "ASSET-023";
+        }
+
+        // Asset maintenance (AssetMaintenanceRepository / AssetMaintenanceService)
+        public static class AssetMaintenance
+        {
+            public const string Create = "ASSET-013";
+            public const string GetById = "ASSET-014";
+            public const string GetList = "ASSET-015";
+            public const string Delete = "ASSET-016";
+            public const string Update = "ASSET-017";
+            public const string GetByAsset = "ASSET-018";
+            public const string AttachmentUpload = "ASSET-019";
+            public const string GetLookups = "ASSET-020";
+            public const string GetTimeline = "ASSET-021";
         }
 
         // Scanner (ScannerRepository)

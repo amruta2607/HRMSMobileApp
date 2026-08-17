@@ -14,7 +14,11 @@ namespace MobileWebApi.Constants
         public const string HandoverUpdatedSuccessfully = "Asset handover updated successfully.";
         public const string HandoverNotFound = "Asset handover record not found.";
         public const string NotFound = "Asset not found.";
+        public const string QrCodeNotFound = "QR Code not found.";
+        public const string NotFoundForQrCodeGeneration = "Asset was not found for QR code generation.";
+        public const string QrCodeFetchedSuccessfully = "Asset QR code fetched successfully.";
         public const string EmployeeNotFound = "Employee not found.";
+
         public const string AssetInactiveOrDisposed = "Asset is disposed or retired and cannot be handed over.";
         public const string SameHandoverEmployee = "Asset is already assigned to this employee.";
         public const string HandoverByEmployeeRequired = "A valid employee record is required to perform handover.";
@@ -38,5 +42,19 @@ namespace MobileWebApi.Constants
         public const string HandoverLookupsFetchedSuccessfully = "Lookup data retrieved successfully.";
         public const string AssetNotAvailableForHandover = "The selected asset is not available for handover.";
         public const string InvalidHandOverByEmployee = "The selected hand over by employee is invalid.";
+
+        // Asset maintenance messages
+        public const string MaintenanceCreatedSuccessfully = "Asset maintenance created successfully.";
+        public const string MaintenanceUpdatedSuccessfully = "Asset maintenance updated successfully.";
+        public const string MaintenanceRetrievedSuccessfully = "Asset maintenance records retrieved successfully.";
+        public const string MaintenanceDeletedSuccessfully = "Asset maintenance deleted successfully.";
+        public const string MaintenanceNotFound = "Asset maintenance record not found.";
+        public const string MaintenanceDateRequired = "Maintenance date is required.";
+        public const string MaintenanceCostInvalid = "Cost must be greater than or equal to 0.";
+        public const string MaintenanceDeleteForbidden = "You are not authorized to delete this asset maintenance record.";
+        public const string InvalidAsset = "The selected asset is invalid.";
+        public const string AttachmentUploadFailed = "Failed to upload one or more attachments. No changes were saved.";
+        public const string MaintenanceLookupsFetchedSuccessfully = "Asset maintenance lookups fetched successfully.";
+        public const string TimelineFetchedSuccessfully = "Timeline fetched successfully.";
     }
 }

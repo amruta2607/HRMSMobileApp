@@ -4,6 +4,7 @@ using MobileWebApi.Constants;
 using MobileWebApi.Helper;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models.Requests;
+using MobileWebApi.Models.Responses;
 using MobileWebApi.Repositories.Interfaces;
 using MobileWebApi.Services;
 
@@ -188,6 +189,119 @@ namespace MobileWebApi.Controllers
                 Logger.LogException(
                     ExceptionCodes.Asset.Update,
                     nameof(Update),
+                    ex,
+                    CurrentUserId);
+
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = GeneralMessages.UnexpectedError
+                });
+            }
+        }
+
+        /// <summary>
+        /// Returns AssetHistory rows for the specified asset where SourceTable = 'Asset',
+        /// ordered by ActionDate descending (latest activity first).
+        /// </summary>
+        /// <param name="assetId">The asset identifier.</param>
+        /// <response code="200">Timeline fetched successfully (may be an empty list).</response>
+        /// <response code="401">Caller is not authenticated or tenant access is denied.</response>
+        /// <response code="500">Unexpected server error.</response>
+        [HttpGet("{assetId:int}/timeline")]
+        [ProducesResponseType(typeof(AssetTimelineListResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetTimeline(int assetId)
+        {
+            try
+            {
+                var tenantId = CurrentOrganisationId;
+                var userId = CurrentUserId;
+
+                Logger.LogInformation(
+                    LogMessages.Asset.FetchingTimeline,
+                    assetId,
+                    userId,
+                    tenantId);
+
+                var result = await _assetRepository.GetAssetTimelineAsync(assetId);
+                return Ok(result);
+            }
+            catch (TenantAccessException)
+            {
+                return TenantAccessDenied();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(
+                    ExceptionCodes.Asset.GetTimeline,
+                    nameof(GetTimeline),
+                    ex,
+                    CurrentUserId);
+
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    success = false,
+                    message = GeneralMessages.UnexpectedError
+                });
+            }
+        }
+
+        /// <summary>
+        /// Returns the QR code for the specified asset.
+        /// Returns the QRCodePath value as stored on the Asset record.
+        /// </summary>
+        /// <response code="200">QR code retrieved successfully.</response>
+        /// <response code="404">Asset or QR code not found.</response>
+        /// <response code="500">Unexpected server error.</response>
+        [HttpGet("{assetId:int}/QrCode")]
+        [ProducesResponseType(typeof(AssetQrCodeResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetQrCode(int assetId)
+        {
+            try
+            {
+                var tenantId = CurrentOrganisationId;
+                var userId = CurrentUserId;
+
+                Logger.LogInformation(
+                    LogMessages.Asset.FetchingQrCode,
+                    assetId,
+                    userId,
+                    tenantId);
+
+                var result = await _assetRepository.GetAssetQrCodeAsync(assetId);
+
+                Logger.LogInformation(
+                    LogMessages.Asset.QrCodeFetched,
+                    assetId,
+                    tenantId);
+
+                return Ok(result);
+            }
+            catch (AssetNotFoundException ex)
+            {
+                return NotFound(new { success = false, message = ex.Message });
+            }
+            catch (AssetQrCodeNotFoundException ex)
+            {
+                Logger.LogWarning(
+                    LogMessages.Asset.QrCodeNotFound,
+                    assetId,
+                    CurrentOrganisationId);
+
+                return NotFound(new { success = false, message = ex.Message });
+            }
+            catch (TenantAccessException)
+            {
+                return TenantAccessDenied();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(
+                    ExceptionCodes.Asset.GetQrCode,
+                    nameof(GetQrCode),
                     ex,
                     CurrentUserId);
 

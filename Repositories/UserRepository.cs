@@ -238,6 +238,25 @@ namespace MobileWebApi.Repositories
             }
         }
 
+        public async Task<UserPersonalDetailsQueryResult?> GetUserPersonalDetailsByUserIdAsync(int userId)
+        {
+            try
+            {
+                using var connection = _context.CreateConnection();
+                string query = _queryProvider.Get("GetUserPersonalDetailsByUserId");
+                return await connection.QueryFirstOrDefaultAsync<UserPersonalDetailsQueryResult>(
+                    query,
+                    new { UserId = userId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetUserPersonalDetailsByUserIdAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.UserGetUserPersonalDetailsByUserIdDatabaseError}: Failed to fetch user personal details by user id",
+                    ex);
+            }
+        }
+
         public async Task<int> CreateUserAsync(UserCreateRequest request)
         {
             try

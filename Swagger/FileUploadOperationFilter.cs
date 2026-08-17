@@ -22,8 +22,11 @@ namespace MobileWebApi.Swagger
             if (!ConsumesMultipart(context))
                 return;
 
+            // IFormFile properties on a [FromForm] model are reported by the ApiExplorer
+            // with BindingSource.FormFile (not BindingSource.Form), so both must be included
+            // or the file upload field is dropped from the generated schema.
             var formParameters = context.ApiDescription.ParameterDescriptions
-                .Where(p => p.Source == BindingSource.Form)
+                .Where(p => p.Source == BindingSource.Form || p.Source == BindingSource.FormFile)
                 .ToList();
 
             if (formParameters.Count == 0)
@@ -39,9 +42,11 @@ namespace MobileWebApi.Swagger
                 var underlying = Nullable.GetUnderlyingType(modelType) ?? modelType;
 
                 // Expand complex [FromForm] models (e.g. PunchInRequest) into form fields.
+                // IFormFile and IFormFile collections must NOT be expanded (a List<IFormFile>
+                // otherwise leaks its Capacity/Count properties instead of a file field).
                 if (modelMetadata?.Properties is { Count: > 0 } children &&
                     underlying != typeof(IFormFile) &&
-                    underlying != typeof(IFormFile[]) &&
+                    !IsFormFileCollection(underlying) &&
                     underlying != typeof(string) &&
                     !underlying.IsPrimitive &&
                     underlying != typeof(decimal) &&
@@ -86,7 +91,14 @@ namespace MobileWebApi.Swagger
                 }
             };
 
-            operation.Parameters?.Clear();
+            // Keep path/header parameters (e.g. the PUT {id} route value); only the
+            // query/form parameters are replaced by the multipart request body above.
+            if (operation.Parameters != null)
+            {
+                operation.Parameters = operation.Parameters
+                    .Where(p => p.In == ParameterLocation.Path || p.In == ParameterLocation.Header)
+                    .ToList();
+            }
         }
 
         private static void AddFormProperty(
@@ -100,7 +112,19 @@ namespace MobileWebApi.Swagger
 
             var underlying = Nullable.GetUnderlyingType(modelType) ?? modelType;
 
-            if (underlying == typeof(IFormFile) || underlying == typeof(IFormFile[]))
+            if (IsFormFileCollection(underlying))
+            {
+                properties[name] = new OpenApiSchema
+                {
+                    Type = "array",
+                    Items = new OpenApiSchema { Type = "string", Format = "binary" },
+                    Description = "One or more files to upload."
+                };
+                encoding[name] = new OpenApiEncoding { Style = ParameterStyle.Form };
+                return;
+            }
+
+            if (underlying == typeof(IFormFile))
             {
                 properties[name] = new OpenApiSchema
                 {
@@ -139,6 +163,20 @@ namespace MobileWebApi.Swagger
                 Example = AttendanceDateTimeSwaggerExamples.ToOpenApiString(propertyName),
                 Description = $"Format: {AttendanceDateTimeSwaggerExamples.FormatHint}. Example: {example}"
             };
+        }
+
+        private static bool IsFormFileCollection(Type type)
+        {
+            if (type == typeof(IFormFileCollection))
+                return true;
+
+            if (type.IsArray)
+                return type.GetElementType() == typeof(IFormFile);
+
+            if (type.IsGenericType)
+                return type.GetGenericArguments().FirstOrDefault() == typeof(IFormFile);
+
+            return false;
         }
 
         private static bool ConsumesMultipart(OperationFilterContext context)

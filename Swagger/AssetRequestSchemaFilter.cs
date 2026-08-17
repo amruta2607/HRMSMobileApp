@@ -16,7 +16,9 @@ namespace MobileWebApi.Swagger
             typeof(UpdateAssetRequest),
             typeof(AssetHandoverRequest),
             typeof(UpdateAssetHandoverRequest),
-            typeof(CreateAssetMaintenanceRequest)
+            typeof(CreateAssetMaintenanceRequest),
+            typeof(AssetMaintenanceRequest),
+            typeof(UpdateAssetMaintenanceRequest)
         };
 
         public void Apply(OpenApiSchema schema, SchemaFilterContext context)

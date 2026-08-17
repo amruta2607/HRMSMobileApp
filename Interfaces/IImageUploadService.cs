@@ -29,6 +29,24 @@ namespace MobileWebApi.Interfaces
         /// <param name="employeeId">The employee ID</param>
         /// <returns>Relative path of saved image (e.g., "Image/Employee/00000/00000420_xxxxx.jpg")</returns>
         Task<string> SaveEmployeeImageAsync(IFormFile file, int employeeId);
+
+        /// <summary>
+        /// Validates an attachment/document file (size and allowed extension).
+        /// </summary>
+        /// <param name="file">The attachment file to validate.</param>
+        /// <returns>Tuple with success status and error message (if any).</returns>
+        (bool IsValid, string ErrorMessage) ValidateAttachment(IFormFile file);
+
+        /// <summary>
+        /// Saves an asset document to the shared upload folder using the Serenity-compatible
+        /// filename format and returns the relative path stored in the database.
+        /// Format: AssetDocument/{tenantId/1000 padded 5 digits}/{tenantId padded 8 digits}_{random}{extension}
+        /// Example: AssetDocument/00000/00000002_fxusfogpf6lhs.pdf
+        /// </summary>
+        /// <param name="file">The document file to save.</param>
+        /// <param name="tenantId">The tenant (organisation) identifier used for folder/filename generation.</param>
+        /// <returns>Relative path of the saved document (e.g., "AssetDocument/00000/00000002_xxxxx.pdf").</returns>
+        Task<string> SaveAssetDocumentAsync(IFormFile file, int tenantId);
     }
 }
 

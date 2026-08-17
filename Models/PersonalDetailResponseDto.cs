@@ -31,9 +31,14 @@ namespace MobileWebApi.Models
         public string? Email { get; set; }
 
         /// <summary>
-        /// Designation name from Designation table
+        /// Designation name from Designation table (employees) or WorkRoleName (non-employee users)
         /// </summary>
         public string? Designation { get; set; }
+
+        /// <summary>
+        /// Department from Users.department (populated for non-employee users)
+        /// </summary>
+        public string? Department { get; set; }
 
         /// <summary>
         /// Current address merged object

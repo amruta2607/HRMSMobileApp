@@ -102,6 +102,10 @@ namespace MobileWebApi.Controllers
         /// POST: api/auth/login-email
         /// </summary>
         [HttpPost("login-email")]
+        [ProducesResponseType(typeof(TokenWithRefreshResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> LoginWithEmail([FromBody] EmailLoginRequest request)
         {
             try
@@ -174,6 +178,10 @@ namespace MobileWebApi.Controllers
         /// POST: api/auth/login-mobile
         /// </summary>
         [HttpPost("login-mobile")]
+        [ProducesResponseType(typeof(TokenWithRefreshResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(MobileLoginResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> LoginMobile([FromBody] MobileLoginRequest request)
         {
             try
@@ -981,6 +989,30 @@ namespace MobileWebApi.Controllers
                 enableEmployeeLevelLocationTracking,
                 employeeLocationTracking);
 
+            // Hierarchical master-switch resolution:
+            // 1. EnableLocationTracking is the master switch. If it is off, all
+            //    employee-level flags are forced false and employee settings ignored.
+            // 2. When on, EnableEmployeeLevelLocationTracking gates whether the
+            //    employee's own EnableLocationTracking value is surfaced.
+            var effectiveEnableLocationTracking = locationTracking.EnableLocationTracking;
+            bool effectiveEnableEmployeeLevelLocationTracking;
+            bool effectiveEmployeeLocationTrackingEnabled;
+            if (!effectiveEnableLocationTracking)
+            {
+                effectiveEnableEmployeeLevelLocationTracking = false;
+                effectiveEmployeeLocationTrackingEnabled = false;
+            }
+            else if (!enableEmployeeLevelLocationTracking)
+            {
+                effectiveEnableEmployeeLevelLocationTracking = false;
+                effectiveEmployeeLocationTrackingEnabled = false;
+            }
+            else
+            {
+                effectiveEnableEmployeeLevelLocationTracking = true;
+                effectiveEmployeeLocationTrackingEnabled = employeeLocationTracking ?? false;
+            }
+
             return new TokenWithRefreshResponse
             {
                 Success = true,
@@ -988,14 +1020,18 @@ namespace MobileWebApi.Controllers
                 AccessToken = authTokens.AccessToken,
                 RefreshToken = authTokens.RefreshToken,
                 ExpiresIn = authTokens.ExpiresIn,
-                TokenExpiry = DateTime.UtcNow.AddSeconds(authTokens.ExpiresIn),
+                TokenExpiry = authTokens.AccessTokenExpiry,
+                AccessTokenExpiresIn = authTokens.AccessTokenExpiresIn,
+                RefreshTokenExpiresIn = authTokens.RefreshTokenExpiresIn,
+                AccessTokenExpiry = authTokens.AccessTokenExpiry,
+                RefreshTokenExpiry = authTokens.RefreshTokenExpiry,
                 UserId = user.UserId,
                 Username = user.Username,
                 OrganisationId = organisationIdOverride ?? user.OrganisationId,
                 AttendanceEnabled = locationTracking.AttendanceEnabled,
-                EnableLocationTracking = locationTracking.EnableLocationTracking,
-                EnableEmployeeLevelLocationTracking = locationTracking.EnableEmployeeLevelLocationTracking,
-                EmployeeLocationTrackingEnabled = locationTracking.EmployeeLocationTrackingEnabled,
+                EnableLocationTracking = effectiveEnableLocationTracking,
+                EnableEmployeeLevelLocationTracking = effectiveEnableEmployeeLevelLocationTracking,
+                EmployeeLocationTrackingEnabled = effectiveEmployeeLocationTrackingEnabled,
                 IsGeoLocationEnabled = tenantConfig?.IsGeoLocationEnabled ?? false,
                 IsGeoFencingEnabled = isGeoFencingEnabled,
                 Latitude = isGeoFencingEnabled ? tenantConfig?.Latitude : null,
