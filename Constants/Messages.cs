@@ -137,6 +137,9 @@ namespace MobileWebApi.Constants
         public const string PunchInFailed = "Punch In Failed";
         public const string CannotPunchOutWithoutPunchIn = "Cannot Punch Out — Punch In not done.";
         public const string PunchOutAlreadyDone = "Punch Out already done.";
+        public const string AlreadyPunchedIn = "Already punched in.";
+        public const string AlreadyPunchedOut = "Already punched out.";
+        public const string PleasePunchInFirst = "Please Punch In first.";
         public const string CalendarDateRequiredForDaily = "CalendarDate is required for daily attendance report.";
         public const string DateRangeRequiredForMonthly = "DateFrom and DateTo are required for monthly attendance report.";
         public const string EmployeeIdRequired = "Employee ID is required.";

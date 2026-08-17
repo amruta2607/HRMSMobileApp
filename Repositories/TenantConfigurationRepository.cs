@@ -69,6 +69,24 @@ namespace MobileWebApi.Repositories
 			}
 		}
 
+		public async Task<TenantPunchConfiguration?> GetTenantPunchConfigurationAsync(int tenantId)
+		{
+			try
+			{
+				string query = _queryProvider.Get("GetTenantPunchConfiguration");
+
+				using var connection = _context.CreateConnection();
+				return await connection.QueryFirstOrDefaultAsync<TenantPunchConfiguration>(
+					query,
+					new { TenantId = tenantId });
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, LogMessages.User.ErrorFetchingTenantConfigurationByOrganisationId);
+				throw;
+			}
+		}
+
 	}
 
 }

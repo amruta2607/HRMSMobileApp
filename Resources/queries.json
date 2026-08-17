@@ -316,7 +316,7 @@
 
     "GetTenantPunchConfiguration": "SELECT TOP 1 EnableLocationTracking AS IsLocationTrackingEnabled FROM MobileTenantConfiguration WHERE TenantId = @TenantId",
 
-    "GetTodayPunch": "SELECT TOP 1 Id, EmployeeId, PunchDate, PunchIn, PunchOut, Duration, ImageUrl, InsertDate, InsertUserId, UpdateDate, UpdateUserId, TenantId AS OrganisationId, InSource, OutSource, CoordinateIn, CoordinateOut, LinkIn, LinkOut, Manual, PunchOutReason FROM Punch WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND PunchDate = @PunchDate",
+    "GetTodayPunch": "SELECT TOP 1 Id, EmployeeId, PunchDate, PunchIn, PunchOut, Duration, PunchInImage, PunchOutImage, PunchOutReason, InsertDate, InsertUserId, UpdateDate, UpdateUserId, TenantId AS OrganisationId, InSource, OutSource, CoordinateIn, CoordinateOut, LinkIn, LinkOut FROM Punch WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND PunchDate = @PunchDate",
 
     "InsertPunchTracking": "INSERT INTO PunchTracking (TenantId, EmployeeId, PunchId, PunchDate, Direction, PunchIn, PunchOut, Duration, InsertDate, InsertUserId, InSource, OutSource, CoordinateIn, CoordinateOut, LinkIn, LinkOut, ImageUrl, Manual, PunchOutReason) VALUES (@TenantId, @EmployeeId, @PunchId, @PunchDate, @Direction, @PunchIn, @PunchOut, @Duration, GETDATE(), @InsertUserId, @InSource, @OutSource, @CoordinateIn, @CoordinateOut, @LinkIn, @LinkOut, @ImageUrl, @Manual, @PunchOutReason); SELECT CAST(SCOPE_IDENTITY() AS INT);",
 

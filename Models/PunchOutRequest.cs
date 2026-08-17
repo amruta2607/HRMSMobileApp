@@ -11,6 +11,11 @@ namespace MobileWebApi.Models
         public double? latitude { get; set; }
         [FromForm(Name = "punchOutImage")]
         public IFormFile? PunchOutImage { get; set; }
+        /// <summary>
+        /// true = employee manually punched out; false = system auto punch-out. Defaults to true when omitted.
+        /// </summary>
+        public bool? Manual { get; set; }
+        public string? PunchOutReason { get; set; }
         public string? punchOutReason { get; set; }
     }
 }
