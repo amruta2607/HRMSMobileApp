@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+
 
 import '../../core/Theme/app_colors.dart';
 import '../../core/Utils/services/notification_permission_service.dart';
@@ -82,7 +82,7 @@ class _ProfileBodyState extends State<ProfileBody> {
                       value: profile?.address ?? '--',
                     ),
                     ProfileInfoItem(
-                      icon: FontAwesomeIcons.addressCard,
+                      icon: Icons.badge,
                       label: 'Reporting Manager',
                       value: profile?.reportingManager ?? '--',
                     ),

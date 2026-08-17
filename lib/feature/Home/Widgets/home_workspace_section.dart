@@ -18,6 +18,11 @@ class HomeWorkspaceSection extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         const spacing = 14.0;
+        const designHeight = 874.0;
+        // Cards flatten on shorter screens so the fixed workspace grid never
+        // pushes the home layout past the available height.
+        final vScale =
+            (MediaQuery.of(context).size.height / designHeight).clamp(0.8, 1.0);
 
         return Consumer<HomeController>(
           builder: (context, controller, child) {
@@ -150,16 +155,16 @@ class HomeWorkspaceSection extends StatelessWidget {
                     color: AppColors.textGrey,
                   ),
                 ),
-                const SizedBox(height: 13),
+                SizedBox(height: 13 * vScale),
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: items.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 3,
                     crossAxisSpacing: spacing,
-                    mainAxisSpacing: spacing,
-                    childAspectRatio: 110 / 105,
+                    mainAxisSpacing: spacing * vScale,
+                    childAspectRatio: (110 / 105) / vScale,
                   ),
                   itemBuilder: (_, index) => items[index],
                 ),

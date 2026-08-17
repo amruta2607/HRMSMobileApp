@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/Theme/app_colors.dart';
@@ -83,11 +85,25 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  // ============================================================
+  // SCROLL PHYSICS
+  // ============================================================
+  ScrollPhysics get _scrollPhysics {
+    if (!kIsWeb && Platform.isAndroid) {
+      return const ClampingScrollPhysics();
+    }
+    return const BouncingScrollPhysics();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+    final screenSize = MediaQuery.of(context).size;
     const designWidth = 402.0;
-    final scale = (screenWidth / designWidth).clamp(0.9, 1.05);
+    const designHeight = 874.0;
+    final scale = (screenSize.width / designWidth).clamp(0.9, 1.05);
+    // Shorter screens get tighter vertical rhythm so the pinned header and
+    // workspace always leave room for the scrollable 'Up Next' list.
+    final vScale = (screenSize.height / designHeight).clamp(0.8, 1.0);
 
     return ChangeNotifierProvider.value(
       value: _homeController,
@@ -98,34 +114,41 @@ class _HomeScreenState extends State<HomeScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const HomeHeaderSection(),
+
+              // --- STATIC SECTION: Workspace remains fixed ---
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20 * scale),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 13 * scale * vScale),
+                    const HomeWorkspaceSection(),
+                    SizedBox(height: 13 * scale * vScale),
+                    const Text(
+                      'UP NEXT',
+                      style: TextStyle(
+                        letterSpacing: 1.4,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textGrey,
+                      ),
+                    ),
+                    SizedBox(height: 13 * scale * vScale),
+                  ],
+                ),
+              ),
+
+              // --- SCROLLABLE SECTION: Only 'Up Next' items scroll ---
               Expanded(
                 child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
+                  physics: _scrollPhysics,
                   padding: EdgeInsets.fromLTRB(
                     20 * scale,
-                    8 * scale,
+                    0,
                     20 * scale,
                     24 * scale,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(height: 13 * scale),
-                      const HomeWorkspaceSection(),
-                      SizedBox(height: 13 * scale),
-                      const Text(
-                        'UP NEXT',
-                        style: TextStyle(
-                          letterSpacing: 1.4,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textGrey,
-                        ),
-                      ),
-                      SizedBox(height: 13 * scale),
-                      const HomeUpNextSection(),
-                    ],
-                  ),
+                  child: const HomeUpNextSection(),
                 ),
               ),
             ],
