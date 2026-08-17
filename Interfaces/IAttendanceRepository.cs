@@ -14,7 +14,7 @@ namespace MobileWebApi.Interfaces
             string inSource,
             string? coordinateIn,
             string? linkIn,
-            string? imageUrl);
+            string? punchInImage);
         Task UpdatePunchOut(
             int punchId,
             DateTime punchOut,
@@ -22,8 +22,9 @@ namespace MobileWebApi.Interfaces
             string outSource,
             string? coordinateOut,
             string? linkOut,
-            string? imageUrl,
-            int userId = 0);
+            string? punchOutImage,
+            int userId = 0,
+            string? punchOutReason = null);
 
         /// <summary>
         /// Updates punch-out on the Punch table (latest out time).
@@ -36,7 +37,8 @@ namespace MobileWebApi.Interfaces
             string outSource,
             string? coordinateOut,
             string? linkOut,
-            string? imageUrl);
+            string? punchOutImage,
+            string? punchOutReason = null);
 
         Task<List<DateTime>> GetHolidayDatesAsync(int tenantId, DateTime fromDate, DateTime toDate);
         Task<List<(DateTime FromDate, DateTime ToDate)>> GetApprovedLeaveDateRangesAsync(int employeeId, DateTime fromDate, DateTime toDate);

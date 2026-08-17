@@ -61,6 +61,8 @@ namespace MobileWebApi.Models
         public string? coordinateOut { get; set; }
         public string? linkIn { get; set; }
         public string? linkOut { get; set; }
+        public string? punchInImage { get; set; }
+        public string? punchOutImage { get; set; }
     }
 }
 

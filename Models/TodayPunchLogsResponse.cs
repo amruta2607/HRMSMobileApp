@@ -19,6 +19,8 @@ namespace MobileWebApi.Models
         public string? CoordinateOut { get; set; }
         public string? LinkIn { get; set; }
         public string? LinkOut { get; set; }
+        public string? PunchInImage { get; set; }
+        public string? PunchOutImage { get; set; }
     }
 
     public class TodayPunchLogsResponse

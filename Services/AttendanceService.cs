@@ -122,11 +122,11 @@ namespace MobileWebApi.Services
 					return AttendanceMessages.PunchInAlreadyDone;
 				}
 
-				// Upload image to Azure Blob, then persist blob URL in Punch.ImageUrl
-				string? imageUrl = null;
-				if (req.image != null && req.image.Length > 0)
+				// Upload Punch In image to Azure Blob, then persist blob URL only in Punch.PunchInImage
+				string? punchInImage = null;
+				if (req.PunchInImage != null && req.PunchInImage.Length > 0)
 				{
-					imageUrl = await _blobService.UploadAsync(req.image, employeeId.Value);
+					punchInImage = await _blobService.UploadAsync(req.PunchInImage, employeeId.Value);
 					_logger.LogInformation("Punch-in image uploaded for employee {EmployeeId}", employeeId.Value);
 				}
 
@@ -151,7 +151,7 @@ namespace MobileWebApi.Services
 					MobileSource,
 					coordinateIn,
 					linkIn,
-					imageUrl
+					punchInImage
 				);
 
 				if (punchId > 0)
@@ -246,11 +246,11 @@ namespace MobileWebApi.Services
 					punch.PunchIn,
 					punchOut);
 
-				// Upload image to Azure Blob, then persist blob URL in Punch.ImageUrl
-				string? imageUrl = null;
-				if (req.image != null && req.image.Length > 0)
+				// Upload Punch Out image to Azure Blob, then persist blob URL only in Punch.PunchOutImage
+				string? punchOutImage = null;
+				if (req.PunchOutImage != null && req.PunchOutImage.Length > 0)
 				{
-					imageUrl = await _blobService.UploadAsync(req.image, employeeId.Value);
+					punchOutImage = await _blobService.UploadAsync(req.PunchOutImage, employeeId.Value);
 					_logger.LogInformation("Punch-out image uploaded for employee {EmployeeId}", employeeId.Value);
 				}
 
@@ -267,7 +267,7 @@ namespace MobileWebApi.Services
 					req.latitude,
 					req.longitude);
 
-				// Update punch out
+				// Update punch out — does not modify PunchInImage
 				await _repo.UpdatePunchOut(
 					punch.Id,
 					punchOut,
@@ -275,8 +275,9 @@ namespace MobileWebApi.Services
 					MobileSource,
 					coordinateOut,
 					linkOut,
-					imageUrl,
-					req.userId
+					punchOutImage,
+					req.userId,
+					req.punchOutReason
 				);
 
 				var savedPunch = await _repo.GetPunchByIdAsync(punch.Id, await GetEmployeeTenantIdAsync(employeeId.Value));
@@ -319,10 +320,10 @@ namespace MobileWebApi.Services
                 return AttendanceMessages.PunchInAlreadyDone;
             }
 
-            // Upload punch photo if provided.
-            string? imageUrl = null;
-            if (req.image != null)
-                imageUrl = await _blobService.UploadAsync(req.image, employeeId);
+            // Upload punch-in photo if provided.
+            string? punchInImage = null;
+            if (req.PunchInImage != null)
+                punchInImage = await _blobService.UploadAsync(req.PunchInImage, employeeId);
 
             var punchId = await _repo.InsertPunchIn(
                 employeeId,
@@ -331,7 +332,7 @@ namespace MobileWebApi.Services
                 MobileSource,
                 coordinateIn: null,
                 linkIn: null,
-                imageUrl: imageUrl
+                punchInImage: punchInImage
             );
 
             if (punchId > 0)
@@ -368,10 +369,10 @@ namespace MobileWebApi.Services
                 return AttendanceMessages.PunchOutAlreadyDone;
             }
 
-            // Upload punch photo if provided.
-            string? imageUrl = null;
-            if (req.image != null)
-                imageUrl = await _blobService.UploadAsync(req.image, employeeId);
+            // Upload punch-out photo if provided.
+            string? punchOutImage = null;
+            if (req.PunchOutImage != null)
+                punchOutImage = await _blobService.UploadAsync(req.PunchOutImage, employeeId);
 
             var duration = CalculateDurationInMinutes(openPunch.PunchIn, punchOut);
 
@@ -382,7 +383,7 @@ namespace MobileWebApi.Services
                 MobileSource,
                 coordinateOut: null,
                 linkOut: null,
-                imageUrl: imageUrl
+                punchOutImage: punchOutImage
             );
 
             _logger.LogInformation(LogMessages.Attendance.PunchOutSuccessful, employeeId);
@@ -849,7 +850,8 @@ namespace MobileWebApi.Services
                         dayAttendance.CoordinateOut = attendance.CoordinateOut;
                         dayAttendance.LinkIn = attendance.LinkIn;
                         dayAttendance.LinkOut = attendance.LinkOut;
-                        dayAttendance.ImageUrl = attendance.ImageUrl;
+                        dayAttendance.PunchInImage = attendance.PunchInImage;
+                        dayAttendance.PunchOutImage = attendance.PunchOutImage;
 
                         var hasPunchIn = attendance.PunchIn.HasValue;
                         var hasPunchOut = attendance.PunchOut.HasValue;
@@ -1015,6 +1017,8 @@ namespace MobileWebApi.Services
                         detail.CoordinateOut = attendance.CoordinateOut;
                         detail.LinkIn = attendance.LinkIn;
                         detail.LinkOut = attendance.LinkOut;
+                        detail.PunchInImage = attendance.PunchInImage;
+                        detail.PunchOutImage = attendance.PunchOutImage;
                         detail.Status = "Present";
                         presentDays++;
                         
@@ -1254,6 +1258,8 @@ namespace MobileWebApi.Services
                     statusData.coordinateOut = punch.CoordinateOut;
                     statusData.linkIn = punch.LinkIn;
                     statusData.linkOut = punch.LinkOut;
+                    statusData.punchInImage = punch.PunchInImage;
+                    statusData.punchOutImage = punch.PunchOutImage;
                     statusData.punchIn = punch.PunchIn;
                     statusData.punchOut = punch.PunchOut;
                     statusData.duration = punch.Duration;

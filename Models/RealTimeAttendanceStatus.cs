@@ -20,6 +20,8 @@ namespace MobileWebApi.Models
         public DateTime PunchDate { get; set; }
         public DateTime? PunchIn { get; set; }
         public DateTime? PunchOut { get; set; }
+        public string? PunchInImage { get; set; }
+        public string? PunchOutImage { get; set; }
         public bool IsPunchedIn => PunchIn.HasValue && !PunchOut.HasValue;
         
         /// <summary>

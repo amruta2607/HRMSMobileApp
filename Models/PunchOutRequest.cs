@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Mvc;
+
 namespace MobileWebApi.Models
 {
     public class PunchOutRequest
@@ -7,6 +9,8 @@ namespace MobileWebApi.Models
         public DateTime attendance_date { get; set; }
         public double? longitude { get; set; }
         public double? latitude { get; set; }
-        public IFormFile? image { get; set; }
+        [FromForm(Name = "punchOutImage")]
+        public IFormFile? PunchOutImage { get; set; }
+        public string? punchOutReason { get; set; }
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace MobileWebApi.Models
+﻿using Microsoft.AspNetCore.Mvc;
+
+namespace MobileWebApi.Models
 {
     public class PunchInRequest
     {
@@ -11,7 +13,8 @@
 
         public double? longitude { get; set; }
         public double? latitude { get; set; }
-		public IFormFile? image { get; set; }
+		[FromForm(Name = "punchInImage")]
+		public IFormFile? PunchInImage { get; set; }
 
 
 	}

@@ -8,7 +8,9 @@ namespace MobileWebApi.Models
         public DateTime? PunchIn { get; set; }
         public DateTime? PunchOut { get; set; }
         public double? Duration { get; set; }
-        public string? ImageUrl { get; set; }
+        public string? PunchInImage { get; set; }
+        public string? PunchOutImage { get; set; }
+        public string? PunchOutReason { get; set; }
         public DateTime InsertDate { get; set; }
         public int InsertUserId { get; set; }
         public DateTime? UpdateDate { get; set; }

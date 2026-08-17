@@ -59,7 +59,7 @@ namespace MobileWebApi.Repositories
             string inSource,
             string? coordinateIn,
             string? linkIn,
-            string? imageUrl)
+            string? punchInImage)
         {
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("InsertPunchIn");
@@ -80,7 +80,7 @@ namespace MobileWebApi.Repositories
                     InSource = inSource,
                     CoordinateIn = coordinateIn,
                     LinkIn = linkIn,
-                    ImageUrl = imageUrl
+                    PunchInImage = punchInImage
                 });
 
             _logger.LogInformation(
@@ -97,8 +97,9 @@ namespace MobileWebApi.Repositories
             string outSource,
             string? coordinateOut,
             string? linkOut,
-            string? imageUrl,
-            int userId = 0)
+            string? punchOutImage,
+            int userId = 0,
+            string? punchOutReason = null)
         {
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("UpdatePunchOut");
@@ -120,7 +121,8 @@ namespace MobileWebApi.Repositories
                     OutSource = outSource,
                     CoordinateOut = coordinateOut,
                     LinkOut = linkOut,
-                    ImageUrl = imageUrl
+                    PunchOutImage = punchOutImage,
+                    PunchOutReason = punchOutReason
                 });
 
             _logger.LogInformation(
@@ -137,7 +139,8 @@ namespace MobileWebApi.Repositories
             string outSource,
             string? coordinateOut,
             string? linkOut,
-            string? imageUrl)
+            string? punchOutImage,
+            string? punchOutReason = null)
         {
             await UpdatePunchOut(
                 punchId,
@@ -146,8 +149,9 @@ namespace MobileWebApi.Repositories
                 outSource,
                 coordinateOut,
                 linkOut,
-                imageUrl,
-                userId);
+                punchOutImage,
+                userId,
+                punchOutReason);
         }
 
         public async Task<List<DateTime>> GetHolidayDatesAsync(int tenantId, DateTime fromDate, DateTime toDate)
