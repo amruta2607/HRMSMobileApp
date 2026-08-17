@@ -19,6 +19,11 @@ namespace MobileWebApi.Models
         public double ExpectedHours { get; set; }
         public double ActualHours { get; set; }
         public double ShortfallHours { get; set; }
+
+        /// <summary>
+        /// Not applicable for aggregate overview (always null). Present for API shape consistency.
+        /// </summary>
+        public int? PunchId { get; set; }
     }
 }
 

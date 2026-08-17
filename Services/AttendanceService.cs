@@ -50,6 +50,18 @@ namespace MobileWebApi.Services
             _logger = logger;
         }
 
+        /// <summary>
+        /// Ensures PunchId is populated from Punch.Id when SQL only mapped Id.
+        /// </summary>
+        private static void EnsurePunchIds(IEnumerable<AttendanceReport> records)
+        {
+            foreach (var record in records)
+            {
+                if (!record.PunchId.HasValue && record.Id > 0)
+                    record.PunchId = record.Id;
+            }
+        }
+
         private const string MobileSource = "Mobile";
         private const string DirectionIn = "IN";
         private const string DirectionOut = "OUT";
@@ -114,20 +126,6 @@ namespace MobileWebApi.Services
 					punchIn.Kind,
 					attendanceDate);
 
-				var tenantId = await GetEmployeeTenantIdAsync(employeeId.Value);
-				var locationTrackingEnabled = await IsLocationTrackingEnabledAsync(tenantId);
-
-				if (locationTrackingEnabled)
-				{
-					return await PunchInMultipleAsync(
-						employeeId.Value,
-						tenantId,
-						req.userId,
-						punchIn,
-						attendanceDate,
-						req);
-				}
-
 				// Prevent duplicate punch in
 				var existingPunch = await _repo.GetPunchByEmployeeAndDate(
 					employeeId.Value,
@@ -140,11 +138,11 @@ namespace MobileWebApi.Services
 					return AttendanceMessages.PunchInAlreadyDone;
 				}
 
-				// Upload image to Azure Blob, then persist blob URL in Punch.ImageUrl
-				string? imageUrl = null;
-				if (req.image != null && req.image.Length > 0)
+				// Upload Punch In image to Azure Blob, then persist blob URL only in Punch.PunchInImage
+				string? punchInImage = null;
+				if (req.PunchInImage != null && req.PunchInImage.Length > 0)
 				{
-					imageUrl = await _blobService.UploadAsync(req.image, employeeId.Value);
+					punchInImage = await _blobService.UploadAsync(req.PunchInImage, employeeId.Value);
 					_logger.LogInformation("Punch-in image uploaded for employee {EmployeeId}", employeeId.Value);
 				}
 
@@ -169,7 +167,7 @@ namespace MobileWebApi.Services
 					MobileSource,
 					coordinateIn,
 					linkIn,
-					imageUrl
+					punchInImage
 				);
 
 				if (punchId > 0)
@@ -247,20 +245,6 @@ namespace MobileWebApi.Services
 					punchOut,
 					punchOut.Kind);
 
-				var tenantId = await GetEmployeeTenantIdAsync(employeeId.Value);
-				var locationTrackingEnabled = await IsLocationTrackingEnabledAsync(tenantId);
-
-				if (locationTrackingEnabled)
-				{
-					return await PunchOutMultipleAsync(
-						employeeId.Value,
-						tenantId,
-						req.userId,
-						punchOut,
-						PreserveReceivedDateTime(req.attendance_date).Date,
-						req);
-				}
-
 				// Get open attendance
 				var punch = await _repo.GetOpenPunchByEmployeeId(
 					employeeId.Value);
@@ -288,11 +272,11 @@ namespace MobileWebApi.Services
 					punch.PunchIn,
 					punchOut);
 
-				// Upload image to Azure Blob, then persist blob URL in Punch.ImageUrl
-				string? imageUrl = null;
-				if (req.image != null && req.image.Length > 0)
+				// Upload Punch Out image to Azure Blob, then persist blob URL only in Punch.PunchOutImage
+				string? punchOutImage = null;
+				if (req.PunchOutImage != null && req.PunchOutImage.Length > 0)
 				{
-					imageUrl = await _blobService.UploadAsync(req.image, employeeId.Value);
+					punchOutImage = await _blobService.UploadAsync(req.PunchOutImage, employeeId.Value);
 					_logger.LogInformation("Punch-out image uploaded for employee {EmployeeId}", employeeId.Value);
 				}
 
@@ -309,10 +293,7 @@ namespace MobileWebApi.Services
 					req.latitude,
 					req.longitude);
 
-				var isManual = req.Manual ?? true;
-				var punchOutReason = ResolvePunchOutReason(req.PunchOutReason, isManual);
-
-				// Update punch out
+				// Update punch out — does not modify PunchInImage
 				await _repo.UpdatePunchOut(
 					punch.Id,
 					punchOut,
@@ -320,10 +301,9 @@ namespace MobileWebApi.Services
 					MobileSource,
 					coordinateOut,
 					linkOut,
-					imageUrl,
-					isManual,
-					punchOutReason,
-					req.userId
+					punchOutImage,
+					req.userId,
+					req.punchOutReason
 				);
 
 				var savedPunch = await _repo.GetPunchByIdAsync(punch.Id, await GetEmployeeTenantIdAsync(employeeId.Value));
@@ -368,87 +348,18 @@ namespace MobileWebApi.Services
 
             var punchIn = PreserveReceivedDateTime(req.punchTime);
             var attendanceDate = punchIn.Date;
-            var tenantId = await GetEmployeeTenantIdAsync(employeeId);
 
-            if (await IsLocationTrackingEnabledAsync(tenantId))
+            var existingPunch = await _repo.GetPunchByEmployeeAndDate(employeeId, attendanceDate);
+            if (existingPunch != null && existingPunch.PunchIn != null)
             {
-                var lastTracking = await _repo.GetLastPunchTrackingAsync(employeeId, tenantId, attendanceDate);
-                if (lastTracking != null && string.Equals(lastTracking.Direction, DirectionIn, StringComparison.OrdinalIgnoreCase))
-                {
-                    _logger.LogWarning(AttendanceMessages.AlreadyPunchedIn);
-                    return AttendanceMessages.AlreadyPunchedIn;
-                }
-            }
-            else
-            {
-                var existingPunch = await _repo.GetPunchByEmployeeAndDate(employeeId, attendanceDate);
-                if (existingPunch != null && existingPunch.PunchIn != null)
-                {
-                    _logger.LogWarning(AttendanceMessages.PunchInAlreadyDone);
-                    return AttendanceMessages.PunchInAlreadyDone;
-                }
+                _logger.LogWarning(AttendanceMessages.PunchInAlreadyDone);
+                return AttendanceMessages.PunchInAlreadyDone;
             }
 
-            // Upload punch photo if provided.
-            string? imageUrl = null;
-            if (req.image != null)
-                imageUrl = await _blobService.UploadAsync(req.image, employeeId);
-
-            if (await IsLocationTrackingEnabledAsync(tenantId))
-            {
-                var existingPunch = await _repo.GetTodayPunchAsync(employeeId, tenantId, attendanceDate);
-                if (existingPunch == null)
-                {
-                    var tracking = BuildInTracking(
-                        tenantId,
-                        employeeId,
-                        0,
-                        attendanceDate,
-                        punchIn,
-                        employeeId,
-                        coordinateIn: null,
-                        linkIn: null,
-                        imageUrl);
-
-                    var newPunchId = await _repo.InsertPunchInWithTrackingAsync(
-                        employeeId,
-                        tenantId,
-                        punchIn,
-                        attendanceDate,
-                        MobileSource,
-                        coordinateIn: null,
-                        linkIn: null,
-                        imageUrl,
-                        employeeId,
-                        tracking);
-
-                    if (newPunchId > 0)
-                    {
-                        _logger.LogInformation(LogMessages.Attendance.PunchInSuccessful, employeeId);
-                        return AttendanceMessages.PunchInSuccessful;
-                    }
-                }
-                else
-                {
-                    var tracking = BuildInTracking(
-                        tenantId,
-                        employeeId,
-                        existingPunch.Id,
-                        attendanceDate,
-                        punchIn,
-                        employeeId,
-                        coordinateIn: null,
-                        linkIn: null,
-                        imageUrl);
-
-                    await _repo.InsertPunchTrackingAsync(tracking);
-                    _logger.LogInformation(LogMessages.Attendance.PunchInSuccessful, employeeId);
-                    return AttendanceMessages.PunchInSuccessful;
-                }
-
-                _logger.LogWarning(AttendanceMessages.PunchInFailed);
-                return AttendanceMessages.PunchInFailed;
-            }
+            // Upload punch-in photo if provided.
+            string? punchInImage = null;
+            if (req.PunchInImage != null)
+                punchInImage = await _blobService.UploadAsync(req.PunchInImage, employeeId);
 
             var punchId = await _repo.InsertPunchIn(
                 employeeId,
@@ -457,7 +368,7 @@ namespace MobileWebApi.Services
                 MobileSource,
                 coordinateIn: null,
                 linkIn: null,
-                imageUrl: imageUrl
+                punchInImage: punchInImage
             );
 
             if (punchId > 0)
@@ -480,108 +391,36 @@ namespace MobileWebApi.Services
 
             var punchOut = PreserveReceivedDateTime(req.punchTime);
             var attendanceDate = punchOut.Date;
-            var tenantId = await GetEmployeeTenantIdAsync(employeeId);
-            var locationTrackingEnabled = await IsLocationTrackingEnabledAsync(tenantId);
-            Punch? openPunch;
-            PunchTracking? lastTracking = null;
 
-            if (locationTrackingEnabled)
+            var openPunch = await _repo.GetOpenPunchByEmployeeId(employeeId);
+            if (openPunch == null || openPunch.PunchIn == null || openPunch.PunchDate.Date != attendanceDate)
             {
-                openPunch = await _repo.GetTodayPunchAsync(employeeId, tenantId, attendanceDate);
-                if (openPunch == null || openPunch.PunchIn == null)
-                {
-                    _logger.LogWarning(AttendanceMessages.PleasePunchInFirst);
-                    return AttendanceMessages.PleasePunchInFirst;
-                }
-
-                lastTracking = await _repo.GetLastPunchTrackingAsync(employeeId, tenantId, attendanceDate);
-                if (lastTracking == null || !string.Equals(lastTracking.Direction, DirectionIn, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (lastTracking != null && string.Equals(lastTracking.Direction, DirectionOut, StringComparison.OrdinalIgnoreCase))
-                    {
-                        _logger.LogWarning(AttendanceMessages.AlreadyPunchedOut);
-                        return AttendanceMessages.AlreadyPunchedOut;
-                    }
-
-                    _logger.LogWarning(AttendanceMessages.PleasePunchInFirst);
-                    return AttendanceMessages.PleasePunchInFirst;
-                }
-            }
-            else
-            {
-                openPunch = await _repo.GetOpenPunchByEmployeeId(employeeId);
-                if (openPunch == null || openPunch.PunchIn == null || openPunch.PunchDate.Date != attendanceDate)
-                {
-                    _logger.LogWarning(AttendanceMessages.CannotPunchOutWithoutPunchIn);
-                    return AttendanceMessages.CannotPunchOutWithoutPunchIn;
-                }
-
-                if (openPunch.PunchOut != null)
-                {
-                    _logger.LogWarning(AttendanceMessages.PunchOutAlreadyDone);
-                    return AttendanceMessages.PunchOutAlreadyDone;
-                }
+                _logger.LogWarning(AttendanceMessages.CannotPunchOutWithoutPunchIn);
+                return AttendanceMessages.CannotPunchOutWithoutPunchIn;
             }
 
-            // Upload punch photo if provided.
-            string? imageUrl = null;
-            if (req.image != null)
-                imageUrl = await _blobService.UploadAsync(req.image, employeeId);
-
-            if (locationTrackingEnabled)
+            if (openPunch.PunchOut != null)
             {
-                var sessionDuration = await CalculateCurrentSessionDurationAsync(openPunch!.Id, punchOut);
-                if (!sessionDuration.HasValue)
-                {
-                    _logger.LogWarning(AttendanceMessages.PleasePunchInFirst);
-                    return AttendanceMessages.PleasePunchInFirst;
-                }
-
-                var totalDuration = await CalculateLocationTrackingPunchDurationAsync(openPunch.Id, sessionDuration);
-
-                var tracking = BuildOutTracking(
-                    tenantId,
-                    employeeId,
-                    openPunch.Id,
-                    attendanceDate,
-                    punchOut,
-                    sessionDuration,
-                    employeeId,
-                    coordinateOut: null,
-                    linkOut: null,
-                    imageUrl,
-                    manual: true,
-                    AttendanceMessages.ManualPunchOutReason);
-
-                await _repo.UpdatePunchOutWithTrackingAsync(
-                    openPunch.Id,
-                    punchOut,
-                    totalDuration,
-                    employeeId,
-                    MobileSource,
-                    coordinateOut: null,
-                    linkOut: null,
-                    imageUrl,
-                    manual: true,
-                    AttendanceMessages.ManualPunchOutReason,
-                    tracking);
+                _logger.LogWarning(AttendanceMessages.PunchOutAlreadyDone);
+                return AttendanceMessages.PunchOutAlreadyDone;
             }
-            else
-            {
-                var duration = CalculateDurationInMinutes(openPunch!.PunchIn, punchOut);
 
-                await _repo.UpdatePunchOut(
-                    openPunch.Id,
-                    punchOut,
-                    duration,
-                    MobileSource,
-                    coordinateOut: null,
-                    linkOut: null,
-                    imageUrl: imageUrl,
-                    manual: true,
-                    punchOutReason: AttendanceMessages.ManualPunchOutReason
-                );
-            }
+            // Upload punch-out photo if provided.
+            string? punchOutImage = null;
+            if (req.PunchOutImage != null)
+                punchOutImage = await _blobService.UploadAsync(req.PunchOutImage, employeeId);
+
+            var duration = CalculateDurationInMinutes(openPunch.PunchIn, punchOut);
+
+            await _repo.UpdatePunchOut(
+                openPunch.Id,
+                punchOut,
+                duration,
+                MobileSource,
+                coordinateOut: null,
+                linkOut: null,
+                punchOutImage: punchOutImage
+            );
 
             _logger.LogInformation(LogMessages.Attendance.PunchOutSuccessful, employeeId);
             return AttendanceMessages.PunchOutSuccessful;
@@ -592,14 +431,6 @@ namespace MobileWebApi.Services
         /// Store and use the exact value without server timezone conversion.
         /// </summary>
         private static DateTime PreserveReceivedDateTime(DateTime dateTime) => dateTime;
-
-        private static string? ResolvePunchOutReason(string? punchOutReason, bool isManual)
-        {
-            if (!string.IsNullOrWhiteSpace(punchOutReason))
-                return punchOutReason.Trim();
-
-            return isManual ? AttendanceMessages.ManualPunchOutReason : null;
-        }
 
         private async Task<int> GetEmployeeTenantIdAsync(int employeeId)
         {
@@ -997,57 +828,6 @@ namespace MobileWebApi.Services
             return Math.Round(diff.TotalMinutes, 2);
         }
 
-        /// <summary>
-        /// Calculates duration for the current IN–OUT session using the latest unmatched IN record.
-        /// </summary>
-        private async Task<double?> CalculateCurrentSessionDurationAsync(int punchId, DateTime punchOut)
-        {
-            var lastIn = await _repo.GetLastUnmatchedPunchInAsync(punchId);
-            if (lastIn?.PunchIn == null)
-            {
-                _logger.LogWarning(
-                    "No unmatched punch-in found for PunchId {PunchId} when calculating session duration",
-                    punchId);
-                return null;
-            }
-
-            var sessionDuration = CalculateDurationInMinutes(lastIn.PunchIn, punchOut);
-
-            _logger.LogInformation(
-                "Current session duration - PunchId: {PunchId}, LastIn: {LastIn}, PunchOut: {PunchOut}, SessionDuration: {SessionDuration} min",
-                punchId,
-                lastIn.PunchIn,
-                punchOut,
-                sessionDuration);
-
-            return sessionDuration;
-        }
-
-        /// <summary>
-        /// When location tracking is enabled, Punch.Duration is the sum of all completed
-        /// PunchTracking session durations plus the session being closed now.
-        /// Gaps between auto punch-out and re-punch are excluded.
-        /// </summary>
-        private async Task<double?> CalculateLocationTrackingPunchDurationAsync(
-            int punchId,
-            double? currentSessionDurationMinutes)
-        {
-            var completedSum = await _repo.GetCompletedPunchTrackingDurationSumAsync(punchId);
-
-            _logger.LogInformation(
-                "Location tracking duration calculation - PunchId: {PunchId}, CompletedSessionsSum: {CompletedSum} min, CurrentSession: {CurrentSession} min",
-                punchId,
-                completedSum,
-                currentSessionDurationMinutes);
-
-            if (!currentSessionDurationMinutes.HasValue && completedSum <= 0)
-            {
-                return null;
-            }
-
-            return Math.Round(completedSum + (currentSessionDurationMinutes ?? 0), 2);
-        }
-
         public string GenerateGoogleMapLink(double? lat, double? lng)
         {
             if (!lat.HasValue || !lng.HasValue)
@@ -1171,6 +951,7 @@ namespace MobileWebApi.Services
                 // Fetch attendance data from repository
                 var attendanceData = await _repo.GetAttendanceReportAsync(repoRequest);
                 var attendanceList = attendanceData.ToList();
+                EnsurePunchIds(attendanceList);
 
                 // Calculate totals
                 var totalWorkingHours = attendanceList
@@ -1229,6 +1010,7 @@ namespace MobileWebApi.Services
                 
                 var attendanceData = await _repo.GetEmployeeAttendanceReportAsync(employeeId.Value, dateFrom, dateTo);
                 var attendanceList = attendanceData.ToList();
+                EnsurePunchIds(attendanceList);
 
                 var totalWorkingHours = attendanceList
                     .Where(a => a.WorkingDuration.HasValue)
@@ -1395,7 +1177,9 @@ namespace MobileWebApi.Services
 
                 // Get attendance data for the month
                 var attendanceData = await _repo.GetAttendanceByCalendarAsync(employeeId.Value, month, year);
-                var attendanceDict = attendanceData.ToDictionary(a => a.CalendarDate.Date, a => a);
+                var attendanceList = attendanceData.ToList();
+                EnsurePunchIds(attendanceList);
+                var attendanceDict = attendanceList.ToDictionary(a => a.CalendarDate.Date, a => a);
 
                 var weeklyOffDays = await GetTenantWeeklyOffDaysAsync(employee.OrganisationId);
 
@@ -1469,6 +1253,7 @@ namespace MobileWebApi.Services
                     }
                     else if (attendanceDict.TryGetValue(currentDate, out var attendance))
                     {
+                        dayAttendance.PunchId = attendance.PunchId ?? (attendance.Id > 0 ? attendance.Id : null);
                         dayAttendance.PunchIn = attendance.PunchIn;
                         dayAttendance.PunchOut = attendance.PunchOut;
                         dayAttendance.WorkingHours = attendance.WorkingDuration;
@@ -1478,7 +1263,8 @@ namespace MobileWebApi.Services
                         dayAttendance.CoordinateOut = attendance.CoordinateOut;
                         dayAttendance.LinkIn = attendance.LinkIn;
                         dayAttendance.LinkOut = attendance.LinkOut;
-                        dayAttendance.ImageUrl = attendance.ImageUrl;
+                        dayAttendance.PunchInImage = attendance.PunchInImage;
+                        dayAttendance.PunchOutImage = attendance.PunchOutImage;
 
                         var hasPunchIn = attendance.PunchIn.HasValue;
                         var hasPunchOut = attendance.PunchOut.HasValue;
@@ -1599,7 +1385,9 @@ namespace MobileWebApi.Services
 
                 // Get attendance data for the date range
                 var attendanceData = await _repo.GetEmployeeAttendanceReportAsync(employeeId.Value, fromDate, toDate);
-                var attendanceDict = attendanceData.ToDictionary(a => a.CalendarDate.Date, a => a);
+                var attendanceListForSummary = attendanceData.ToList();
+                EnsurePunchIds(attendanceListForSummary);
+                var attendanceDict = attendanceListForSummary.ToDictionary(a => a.CalendarDate.Date, a => a);
 
                 var weeklyOffDays = await GetTenantWeeklyOffDaysAsync(employee.OrganisationId);
 
@@ -1632,6 +1420,7 @@ namespace MobileWebApi.Services
                     }
                     else if (attendanceDict.TryGetValue(date, out var attendance))
                     {
+                        detail.PunchId = attendance.PunchId ?? (attendance.Id > 0 ? attendance.Id : null);
                         detail.PunchIn = attendance.PunchIn;
                         detail.PunchOut = attendance.PunchOut;
                         detail.WorkingHours = attendance.WorkingDuration;
@@ -1641,6 +1430,8 @@ namespace MobileWebApi.Services
                         detail.CoordinateOut = attendance.CoordinateOut;
                         detail.LinkIn = attendance.LinkIn;
                         detail.LinkOut = attendance.LinkOut;
+                        detail.PunchInImage = attendance.PunchInImage;
+                        detail.PunchOutImage = attendance.PunchOutImage;
                         detail.Status = "Present";
                         presentDays++;
                         
@@ -1722,6 +1513,7 @@ namespace MobileWebApi.Services
                 // Fetch attendance data from repository
                 var attendanceData = await _repo.GetAttendanceReportsByOrganisationAsync(organisationId, dateFrom, dateTo);
                 var attendanceList = attendanceData.ToList();
+                EnsurePunchIds(attendanceList);
 
                 // Calculate totals
                 var totalWorkingHours = attendanceList
@@ -1757,7 +1549,7 @@ namespace MobileWebApi.Services
         }
 
         /// <summary>
-        /// Deletes an attendance (Punch) record and all related PunchTracking rows.
+        /// Deletes an attendance (Punch) record.
         /// </summary>
         public async Task<AttendanceDeleteResponse> DeleteAttendanceAsync(int id, int tenantId)
         {
@@ -1861,8 +1653,6 @@ namespace MobileWebApi.Services
                     };
                 }
 
-                var locationTrackingEnabled = await IsLocationTrackingEnabledAsync(tenantId);
-
                 // Get punch record with tenant filter
                 var punch = await _repo.GetPunchByEmployeeAndDateWithTenant(employeeId.Value, date, tenantId);
 
@@ -1873,6 +1663,7 @@ namespace MobileWebApi.Services
 
                 if (punch != null)
                 {
+                    statusData.PunchId = punch.Id > 0 ? punch.Id : null;
                     statusData.isMarked = punch.PunchIn.HasValue;
                     statusData.inSource = punch.InSource;
                     statusData.outSource = punch.OutSource;
@@ -1880,29 +1671,15 @@ namespace MobileWebApi.Services
                     statusData.coordinateOut = punch.CoordinateOut;
                     statusData.linkIn = punch.LinkIn;
                     statusData.linkOut = punch.LinkOut;
+                    statusData.punchInImage = punch.PunchInImage;
+                    statusData.punchOutImage = punch.PunchOutImage;
                     statusData.punchIn = punch.PunchIn;
                     statusData.punchOut = punch.PunchOut;
                     statusData.duration = punch.Duration;
-
-                    if (locationTrackingEnabled)
-                    {
-                        var lastTracking = await _repo.GetLastPunchTrackingAsync(
-                            employeeId.Value,
-                            tenantId,
-                            date.Date);
-
-                        statusData.isAlreadyMarked = lastTracking != null
-                            && string.Equals(lastTracking.Direction, DirectionIn, StringComparison.OrdinalIgnoreCase);
-
-                        statusData.status = punch.PunchIn.HasValue ? "Present" : "Absent";
-                    }
-                    else
-                    {
-                        statusData.isAlreadyMarked = punch.PunchIn.HasValue;
-                        statusData.status = punch.PunchIn.HasValue
-                            ? (punch.PunchOut.HasValue ? "Present" : "Present")
-                            : "Absent";
-                    }
+                    statusData.isAlreadyMarked = punch.PunchIn.HasValue;
+                    statusData.status = punch.PunchIn.HasValue
+                        ? (punch.PunchOut.HasValue ? "Present" : "Present")
+                        : "Absent";
                 }
                 else
                 {

@@ -12,18 +12,15 @@ namespace MobileWebApi.Repositories
         private readonly DapperContext _context;
         private readonly ILogger<AttendanceRepository> _logger;
         private readonly QueryProvider _queryProvider;
-        private readonly IPunchTrackingRepository _punchTrackingRepository;
 
         public AttendanceRepository(
             DapperContext context,
             ILogger<AttendanceRepository> logger,
-            QueryProvider queryProvider,
-            IPunchTrackingRepository punchTrackingRepository)
+            QueryProvider queryProvider)
         {
             _context = context;
             _logger = logger;
             _queryProvider = queryProvider;
-            _punchTrackingRepository = punchTrackingRepository;
         }
 
         public async Task<Punch?> GetPunchByEmployeeAndDate(int employeeId, DateTime punchDate)
@@ -62,7 +59,7 @@ namespace MobileWebApi.Repositories
             string inSource,
             string? coordinateIn,
             string? linkIn,
-            string? imageUrl)
+            string? punchInImage)
         {
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("InsertPunchIn");
@@ -83,7 +80,7 @@ namespace MobileWebApi.Repositories
                     InSource = inSource,
                     CoordinateIn = coordinateIn,
                     LinkIn = linkIn,
-                    ImageUrl = imageUrl
+                    PunchInImage = punchInImage
                 });
 
             _logger.LogInformation(
@@ -100,22 +97,19 @@ namespace MobileWebApi.Repositories
             string outSource,
             string? coordinateOut,
             string? linkOut,
-            string? imageUrl,
-            bool manual,
-            string? punchOutReason,
-            int userId = 0)
+            string? punchOutImage,
+            int userId = 0,
+            string? punchOutReason = null)
         {
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("UpdatePunchOut");
 
             _logger.LogInformation(
-                "UpdatePunchOut before database save - PunchId: {PunchId}, PunchOut: {PunchOut} (Kind: {PunchOutKind}), Duration: {Duration}, Manual: {Manual}, PunchOutReason: {PunchOutReason}",
+                "UpdatePunchOut before database save - PunchId: {PunchId}, PunchOut: {PunchOut} (Kind: {PunchOutKind}), Duration: {Duration}",
                 punchId,
                 punchOut,
                 punchOut.Kind,
-                duration,
-                manual,
-                punchOutReason);
+                duration);
 
             await conn.ExecuteAsync(query,
                 new
@@ -127,48 +121,13 @@ namespace MobileWebApi.Repositories
                     OutSource = outSource,
                     CoordinateOut = coordinateOut,
                     LinkOut = linkOut,
-                    ImageUrl = imageUrl,
-                    Manual = manual,
+                    PunchOutImage = punchOutImage,
                     PunchOutReason = punchOutReason
                 });
 
             _logger.LogInformation(
                 "UpdatePunchOut after database save - PunchId: {PunchId}",
                 punchId);
-        }
-
-        /// <inheritdoc />
-        public async Task<Punch?> GetTodayPunchAsync(int employeeId, int tenantId, DateTime punchDate)
-        {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetTodayPunch");
-
-            return await conn.QueryFirstOrDefaultAsync<Punch>(query,
-                new { EmployeeId = employeeId, TenantId = tenantId, PunchDate = punchDate.Date });
-        }
-
-        /// <inheritdoc />
-        public async Task<PunchTracking?> GetLastPunchTrackingAsync(int employeeId, int tenantId, DateTime punchDate)
-        {
-            return await _punchTrackingRepository.GetLastPunchTrackingAsync(employeeId, tenantId, punchDate);
-        }
-
-        /// <inheritdoc />
-        public async Task<double> GetCompletedPunchTrackingDurationSumAsync(int punchId)
-        {
-            return await _punchTrackingRepository.GetCompletedSessionDurationSumAsync(punchId);
-        }
-
-        /// <inheritdoc />
-        public async Task<PunchTracking?> GetLastUnmatchedPunchInAsync(int punchId)
-        {
-            return await _punchTrackingRepository.GetLastUnmatchedPunchInAsync(punchId);
-        }
-
-        /// <inheritdoc />
-        public async Task InsertPunchTrackingAsync(PunchTracking tracking)
-        {
-            await _punchTrackingRepository.InsertPunchTrackingAsync(tracking);
         }
 
         /// <inheritdoc />
@@ -180,9 +139,8 @@ namespace MobileWebApi.Repositories
             string outSource,
             string? coordinateOut,
             string? linkOut,
-            string? imageUrl,
-            bool manual,
-            string? punchOutReason)
+            string? punchOutImage,
+            string? punchOutReason = null)
         {
             await UpdatePunchOut(
                 punchId,
@@ -191,134 +149,9 @@ namespace MobileWebApi.Repositories
                 outSource,
                 coordinateOut,
                 linkOut,
-                imageUrl,
-                manual,
-                punchOutReason,
-                userId);
-        }
-
-        /// <inheritdoc />
-        public async Task<int> InsertPunchInWithTrackingAsync(
-            int employeeId,
-            int tenantId,
-            DateTime punchIn,
-            DateTime punchDate,
-            string inSource,
-            string? coordinateIn,
-            string? linkIn,
-            string? imageUrl,
-            int userId,
-            PunchTracking tracking)
-        {
-            using var conn = _context.CreateConnection();
-            conn.Open();
-            using var transaction = conn.BeginTransaction();
-            try
-            {
-                var insertPunchQuery = _queryProvider.Get("InsertPunchIn");
-                var punchId = await conn.ExecuteScalarAsync<int>(insertPunchQuery,
-                    new
-                    {
-                        EmployeeId = employeeId,
-                        PunchDate = punchDate.Date,
-                        PunchIn = punchIn,
-                        InSource = inSource,
-                        CoordinateIn = coordinateIn,
-                        LinkIn = linkIn,
-                        ImageUrl = imageUrl
-                    },
-                    transaction);
-
-                tracking.PunchId = punchId;
-                tracking.TenantId = tenantId;
-                tracking.EmployeeId = employeeId;
-                tracking.PunchDate = punchDate.Date;
-                tracking.Direction = "IN";
-                tracking.PunchIn = punchIn;
-                tracking.PunchOut = null;
-                tracking.InsertUserId = userId;
-                tracking.InSource = inSource;
-                tracking.CoordinateIn = coordinateIn;
-                tracking.LinkIn = linkIn;
-                tracking.ImageUrl = imageUrl;
-
-                await _punchTrackingRepository.InsertPunchTrackingAsync(tracking, conn, transaction);
-
-                transaction.Commit();
-                return punchId;
-            }
-            catch (Exception ex)
-            {
-                transaction.Rollback();
-                _logger.LogError(ex, "Failed to insert punch-in with tracking for employee {EmployeeId}", employeeId);
-                throw;
-            }
-        }
-
-        /// <inheritdoc />
-        public async Task UpdatePunchOutWithTrackingAsync(
-            int punchId,
-            DateTime punchOut,
-            double? totalPunchDuration,
-            int userId,
-            string outSource,
-            string? coordinateOut,
-            string? linkOut,
-            string? imageUrl,
-            bool manual,
-            string? punchOutReason,
-            PunchTracking tracking)
-        {
-            using var conn = _context.CreateConnection();
-            conn.Open();
-            using var transaction = conn.BeginTransaction();
-            try
-            {
-                tracking.PunchId = punchId;
-                tracking.Direction = "OUT";
-                tracking.PunchOut = punchOut;
-                tracking.PunchIn = null;
-                tracking.InsertUserId = userId;
-                tracking.OutSource = outSource;
-                tracking.CoordinateOut = coordinateOut;
-                tracking.LinkOut = linkOut;
-                tracking.ImageUrl = imageUrl;
-                tracking.Manual = manual;
-                tracking.PunchOutReason = punchOutReason;
-
-                _logger.LogInformation(
-                    "UpdatePunchOutWithTracking - PunchId: {PunchId}, SessionDuration: {SessionDuration} min, TotalPunchDuration: {TotalPunchDuration} min",
-                    punchId,
-                    tracking.Duration,
-                    totalPunchDuration);
-
-                await _punchTrackingRepository.InsertPunchTrackingAsync(tracking, conn, transaction);
-
-                var updatePunchQuery = _queryProvider.Get("UpdatePunchOut");
-                await conn.ExecuteAsync(updatePunchQuery,
-                    new
-                    {
-                        PunchId = punchId,
-                        PunchOut = punchOut,
-                        Duration = totalPunchDuration,
-                        UserId = userId,
-                        OutSource = outSource,
-                        CoordinateOut = coordinateOut,
-                        LinkOut = linkOut,
-                        ImageUrl = imageUrl,
-                        Manual = manual,
-                        PunchOutReason = punchOutReason
-                    },
-                    transaction);
-
-                transaction.Commit();
-            }
-            catch (Exception ex)
-            {
-                transaction.Rollback();
-                _logger.LogError(ex, "Failed to update punch-out with tracking for PunchId {PunchId}", punchId);
-                throw;
-            }
+                punchOutImage,
+                userId,
+                punchOutReason);
         }
 
         public async Task<List<DateTime>> GetHolidayDatesAsync(int tenantId, DateTime fromDate, DateTime toDate)
@@ -532,36 +365,15 @@ namespace MobileWebApi.Repositories
         }
 
         /// <summary>
-        /// Deletes related PunchTracking rows, then the Punch record, in a single transaction.
+        /// Deletes the Punch record.
         /// </summary>
         public async Task<bool> DeletePunchAsync(int id, int tenantId)
         {
             using var conn = _context.CreateConnection();
-            conn.Open();
-            using var transaction = conn.BeginTransaction();
-            try
-            {
-                var deleteTrackingQuery = _queryProvider.Get("DeletePunchTrackingByPunchId");
-                await conn.ExecuteAsync(
-                    deleteTrackingQuery,
-                    new { PunchId = id, TenantId = tenantId },
-                    transaction);
+            string query = _queryProvider.Get("DeletePunch");
 
-                var deletePunchQuery = _queryProvider.Get("DeletePunch");
-                var rowsAffected = await conn.ExecuteAsync(
-                    deletePunchQuery,
-                    new { Id = id, TenantId = tenantId },
-                    transaction);
-
-                transaction.Commit();
-                return rowsAffected > 0;
-            }
-            catch (Exception ex)
-            {
-                transaction.Rollback();
-                _logger.LogError(ex, "Failed to delete attendance for PunchId {PunchId}, TenantId {TenantId}", id, tenantId);
-                throw;
-            }
+            var rowsAffected = await conn.ExecuteAsync(query, new { Id = id, TenantId = tenantId });
+            return rowsAffected > 0;
         }
 
         /// <summary>

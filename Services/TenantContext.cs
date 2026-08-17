@@ -54,6 +54,17 @@ namespace MobileWebApi.Services
             }
         }
 
+        public int? BranchId
+        {
+            get
+            {
+                var claim = User?.FindFirst("BranchId")?.Value;
+                if (int.TryParse(claim, out int branchId) && branchId > 0)
+                    return branchId;
+                return null;
+            }
+        }
+
         public int? UserId
         {
             get
@@ -96,6 +107,17 @@ namespace MobileWebApi.Services
                 throw new TenantAccessException("User is not authenticated or organisation information is missing");
             }
             return orgId.Value;
+        }
+
+        public int GetRequiredBranchId()
+        {
+            var branchId = BranchId;
+            if (!branchId.HasValue)
+            {
+                _logger.LogWarning(LogMessages.TenantContext.AttemptedToGetBranchIdNotAuthenticated, Username ?? "Unknown");
+                throw new TenantAccessException("User is not authenticated or branch information is missing");
+            }
+            return branchId.Value;
         }
 
         public void ValidateTenantAccess(int requestedOrganisationId)

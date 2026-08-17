@@ -97,6 +97,7 @@ namespace MobileWebApi.Services
                 Username = user.Username,
                 WorkRoleName = user.WorkRoleName ?? "User",
                 OrganisationId = user.OrganisationId,
+                BranchId = user.BranchId,
                 IsHrUser = user.IsHrUser,
                 IsTenantAdmin = user.IsTenantAdmin,
                 JwtId = jti,
@@ -151,6 +152,7 @@ namespace MobileWebApi.Services
                     Username = storedToken.Username,
                     WorkRoleName = storedToken.WorkRoleName,
                     OrganisationId = storedToken.OrganisationId,
+                    BranchId = storedToken.BranchId,
                     IsHrUser = storedToken.IsHrUser,
                     IsTenantAdmin = storedToken.IsTenantAdmin
                 };
@@ -297,6 +299,7 @@ namespace MobileWebApi.Services
                 new Claim(ClaimTypes.Role, user.WorkRoleName ?? "User"),
                 new Claim("UserId", user.UserId.ToString()),
                 new Claim("OrganisationId", user.OrganisationId.ToString()),
+                new Claim("BranchId", user.BranchId.ToString()),
                 new Claim("IsHrUser", user.IsHrUser.ToString()),
                 new Claim("IsTenantAdmin", user.IsTenantAdmin.ToString()),
                 new Claim(JwtRegisteredClaimNames.Jti, jti)
@@ -373,6 +376,7 @@ namespace MobileWebApi.Services
             public string Username { get; set; } = string.Empty;
             public string WorkRoleName { get; set; } = "User";
             public int OrganisationId { get; set; }
+            public int BranchId { get; set; }
             public bool IsHrUser { get; set; }
             public bool IsTenantAdmin { get; set; }
             public string JwtId { get; set; } = string.Empty;

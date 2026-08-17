@@ -15,6 +15,7 @@ namespace MobileWebApi.Services
 		private readonly ILeaveService? _leaveService;
 		private readonly ILeaveRepository? _leaveRepository;
 		private readonly IApprovalRepository? _approvalRepository;
+		private readonly IDisputeService? _disputeService;
 		private readonly ILogger<AlertService> _logger;
 
 		public AlertService(
@@ -23,7 +24,8 @@ namespace MobileWebApi.Services
 			ILogger<AlertService> logger,
 			ILeaveService? leaveService = null,
 			ILeaveRepository? leaveRepository = null,
-			IApprovalRepository? approvalRepository = null)
+			IApprovalRepository? approvalRepository = null,
+			IDisputeService? disputeService = null)
 		{
 			_repo = repo;
 			_employeeRepository = employeeRepository;
@@ -31,6 +33,7 @@ namespace MobileWebApi.Services
 			_leaveService = leaveService;
 			_leaveRepository = leaveRepository;
 			_approvalRepository = approvalRepository;
+			_disputeService = disputeService;
 		}
 
 		public async Task<AlertResponse> GetAlertByIdAsync(int id)
@@ -617,6 +620,34 @@ namespace MobileWebApi.Services
 		}
 
 		/// <summary>
+		/// Resolve display name / email for approvedBy EventData field (matches Web username usage).
+		/// </summary>
+		private async Task<string> ResolveApproverDisplayNameAsync(int userId)
+		{
+			if (_approvalRepository == null || userId <= 0)
+				return userId > 0 ? userId.ToString() : StringConstants.EmptyString;
+
+			try
+			{
+				var employee = await _approvalRepository.GetEmployeeByUserIdAsync(userId);
+				if (employee == null)
+					return userId.ToString();
+
+				if (!string.IsNullOrWhiteSpace(employee.Email))
+					return employee.Email;
+
+				if (!string.IsNullOrWhiteSpace(employee.Name))
+					return employee.Name;
+
+				return userId.ToString();
+			}
+			catch
+			{
+				return userId.ToString();
+			}
+		}
+
+		/// <summary>
 		/// Extract request ID from EventData JSON based on event type
 		/// </summary>
 		private int? ExtractRequestIdFromEventData(string? eventData, string eventName)
@@ -656,6 +687,12 @@ namespace MobileWebApi.Services
 				{
 					idKey = StringConstants.JsonKeyOvertimeId;
 				}
+				else if (eventNameLower.Contains(EventNameConstants.RegularizationRequestLower) ||
+					eventNameLower.Contains(StringConstants.EventNameRegularizationRequest.ToLower()))
+				{
+					// Web uses dispute_id; Mobile also stores employee_dispute_id
+					idKey = StringConstants.JsonKeyDisputeId;
+				}
 
 				JsonElement idElement = default;
 				bool found = false;
@@ -665,7 +702,18 @@ namespace MobileWebApi.Services
 				{
 					found = true;
 				}
-				else
+				else if (eventNameLower.Contains(EventNameConstants.RegularizationRequestLower) ||
+					eventNameLower.Contains(StringConstants.EventNameRegularizationRequest.ToLower()))
+				{
+					if (eventDataDict.TryGetValue(StringConstants.JsonKeyEmployeeDisputeId, out idElement)
+						|| eventDataDict.TryGetValue(StringConstants.JsonKeyEmployeeDisputeIdAlt, out idElement)
+						|| eventDataDict.TryGetValue(StringConstants.JsonKeyDisputeIdAlt, out idElement))
+					{
+						found = true;
+					}
+				}
+
+				if (!found)
 				{
 					// Try common alternative keys if specific key not found
 					var alternativeKeys = new[] { StringConstants.JsonKeyId, StringConstants.JsonKeyRequestId, $"{eventNameLower.Replace(StringConstants.SpaceSeparator, "_")}_id" };
@@ -706,24 +754,24 @@ namespace MobileWebApi.Services
 
 		/// <summary>
 		/// Build token values from EventData for template replacement
-		/// Extracts details from database tables similar to web application
+		/// Extracts details from database tables similar to web application ExtractEventDetails
 		/// </summary>
 		private async Task<Dictionary<string, string>> BuildTokenValuesForNotificationAsync(
 			Event eventRecord,
 			string eventName,
 			int requesterUserId,
 			int organisationId,
-			string? reason = null)
+			string? reason = null,
+			string? approverName = null)
 		{
 			var tokenValues = new Dictionary<string, string>();
 
 			// Get requester employee info
 			var requesterEmployee = await _approvalRepository?.GetEmployeeByUserIdAsync(requesterUserId);
-			if (requesterEmployee != null)
-			{
-				tokenValues[StringConstants.TokenUsername] = requesterEmployee.Name ?? StringConstants.DefaultEmployeeName;
-				tokenValues[StringConstants.TokenEmployeeName] = requesterEmployee.Name ?? StringConstants.DefaultEmployeeName;
-			}
+			NotificationTokenHelper.AddPersonNameTokens(
+				tokenValues,
+				employeeName: requesterEmployee?.Name ?? StringConstants.DefaultEmployeeName,
+				approverName: approverName);
 
 			// Get tenant name
 			if (_approvalRepository != null)
@@ -788,6 +836,11 @@ namespace MobileWebApi.Services
 							tokenValues[StringConstants.TokenPayrollYear] = parts[parts.Length - 1];
 						}
 					}
+
+					NotificationTokenHelper.AddRegularizationTokens(
+						tokenValues,
+						eventDetails.RegularizationDetails,
+						string.IsNullOrEmpty(eventDetails.DisputeDate) ? null : eventDetails.DisputeDate);
 				}
 				catch (Exception ex)
 				{
@@ -811,9 +864,25 @@ namespace MobileWebApi.Services
 							tokenValues[StringConstants.TokenReasonAlt] = reasonFromData;
 						}
 
+						// Fall back: build RegularizationDetails from EventData when DB extraction returned empty
+						if (!tokenValues.ContainsKey(StringConstants.TokenRegularizationDetails)
+							|| string.IsNullOrEmpty(tokenValues[StringConstants.TokenRegularizationDetails]))
+						{
+							var eventNameLower = eventName.ToLower();
+							if (eventNameLower.Contains(EventNameConstants.RegularizationRequestLower)
+								|| eventNameLower.Contains(StringConstants.EventNameRegularizationRequest.ToLower())
+								|| eventData.ContainsKey(StringConstants.JsonKeyEmployeeDisputeId)
+								|| eventData.ContainsKey(StringConstants.JsonKeyDisputeDate))
+							{
+								using var doc = JsonDocument.Parse(eventRecord.EventData);
+								var details = NotificationTokenHelper.BuildRegularizationDetailsFromEventData(doc.RootElement);
+								NotificationTokenHelper.AddRegularizationTokens(tokenValues, details);
+							}
+						}
+
 						// Extract payment_date for payroll if available
-						var eventNameLower = eventName.ToLower();
-						if (eventNameLower.Contains(StringConstants.PayrollSubmissionKeyword))
+						var eventNameLowerForPayroll = eventName.ToLower();
+						if (eventNameLowerForPayroll.Contains(StringConstants.PayrollSubmissionKeyword))
 						{
 							if (eventData.TryGetValue(StringConstants.JsonKeyPaymentDate, out var paymentDate))
 							{
@@ -843,16 +912,7 @@ namespace MobileWebApi.Services
 		/// Supports both {Token} and [Token] formats
 		/// </summary>
 		private string ReplaceTokens(string template, Dictionary<string, string> tokenValues)
-		{
-			if (string.IsNullOrEmpty(template)) return template;
-
-			foreach (var token in tokenValues)
-			{
-				template = template.Replace(token.Key, token.Value);
-			}
-
-			return template;
-		}
+			=> NotificationTokenHelper.ReplaceTokens(template, tokenValues);
 
 		/// <summary>
 		/// Get notification template from database and replace parameters
@@ -949,20 +1009,34 @@ namespace MobileWebApi.Services
 					eventRecord = await _approvalRepository.GetEventByIdAsync(eventId, organisationId);
 				}
 
-				// Update Event table
+				// Update Event table (and EventData approval fields for regularization / all events)
 				var state = isApproval ? EventStateConstants.Approved : EventStateConstants.Rejected;
 				var status = isApproval ? EventStateConstants.ApprovedByManager : EventStateConstants.RejectedByManager;
+
+				var approvedBy = await ResolveApproverDisplayNameAsync(approverUserId);
+				var updatedEventData = NotificationTokenHelper.ApplyApprovalFieldsToEventDataJson(
+					eventRecord?.EventData,
+					approverUserId,
+					approvedBy,
+					state);
 
 				var eventUpdated = await _approvalRepository.UpdateEventStatusAsync(
 					eventId,
 					state,
 					status,
 					approverUserId,
-					organisationId);
+					organisationId,
+					updatedEventData);
 
 				if (!eventUpdated)
 				{
 					_logger.LogWarning(LogMessages.Alert.FailedToUpdateEventStatus, eventId);
+				}
+				else if (eventRecord != null)
+				{
+					eventRecord.EventData = updatedEventData;
+					eventRecord.State = state;
+					eventRecord.Status = status;
 				}
 
 				// Get Approvals for this event and update the approval status
@@ -1005,6 +1079,45 @@ namespace MobileWebApi.Services
 				_logger.LogInformation(
 					isApproval ? AlertWorkflowMessages.NotificationCreatedForApproval : AlertWorkflowMessages.NotificationCreatedForRejection,
 					notificationId, requesterUserId, eventId);
+
+				// Queue EmailNotification for the requester (same templates/tokens as Web)
+				try
+				{
+					var actionType = isApproval
+						? StringConstants.ActionTypeManagerApproval
+						: StringConstants.ActionTypeManagerRejection;
+
+					var emailTemplate = await _approvalRepository.GetEmailTemplateAsync(
+						eventName, actionType, organisationId);
+
+					var requesterEmployee = await _approvalRepository.GetEmployeeByUserIdAsync(requesterUserId);
+					if (emailTemplate != null && !string.IsNullOrWhiteSpace(requesterEmployee?.Email))
+					{
+						var tokenValues = await BuildTokenValuesForNotificationAsync(
+							eventRecord,
+							eventName,
+							requesterUserId,
+							organisationId);
+
+						var emailSubject = NotificationTokenHelper.ReplaceTokens(
+							emailTemplate.Subject ?? title, tokenValues);
+						var emailBody = NotificationTokenHelper.ReplaceTokens(
+							emailTemplate.Body ?? message, tokenValues);
+
+						await _approvalRepository.InsertEmailNotificationAsync(
+							requesterEmployee.Email,
+							emailSubject,
+							emailBody,
+							organisationId,
+							approverUserId);
+
+						_logger.LogInformation(LogMessages.ApprovalWorkflow.EmailNotificationQueued, requesterEmployee.Email);
+					}
+				}
+				catch (Exception emailEx)
+				{
+					_logger.LogWarning(emailEx, LogMessages.ApprovalWorkflow.FailedToSendEmailNotification, $"userId:{requesterUserId}");
+				}
 
 				return true;
 			}
@@ -1171,16 +1284,60 @@ namespace MobileWebApi.Services
 				}
 				else
 				{
-					// For other event types (PayrollSubmission, ResignationRequest, OvertimeRequest, ReimbursementRequest)
-					// For PayrollSubmission specifically, also update payroll approval status in Payroll table
-					if (eventNameLower.Contains(StringConstants.PayrollSubmissionKeyword) && requestId.HasValue && _approvalRepository != null)
+					// RegularizationRequest (EmployeeDispute): final approval applies punch correction
+					if (eventNameLower.Contains(EventNameConstants.RegularizationRequestLower) ||
+						eventNameLower.Contains(StringConstants.EventNameRegularizationRequest.ToLower()))
 					{
-						await _approvalRepository.UpdatePayrollApprovalStatusAsync(requestId.Value, true, alert.OrganisationId);
-					}
+						if (!requestId.HasValue)
+						{
+							return new AlertResponse
+							{
+								Success = false,
+								Message = DisputeMessages.DisputeNotFound,
+								Data = null
+							};
+						}
 
-					// Update event status only (business logic for other types may be handled by web application)
-					_logger.LogInformation(StringConstants.LogHandlingEventUpdatingStatus, eventName);
-					requestApproved = true; // We'll update the event status regardless
+						if (_disputeService == null)
+						{
+							return new AlertResponse
+							{
+								Success = false,
+								Message = DisputeMessages.FailedToApproveDispute,
+								Data = null
+							};
+						}
+
+						var disputeResult = await _disputeService.ApproveDisputeAsync(
+							requestId.Value,
+							alert.OrganisationId,
+							approverUserId);
+
+						if (!disputeResult.Success)
+						{
+							return new AlertResponse
+							{
+								Success = false,
+								Message = disputeResult.Message ?? DisputeMessages.FailedToApproveDispute,
+								Data = null
+							};
+						}
+
+						requestApproved = true;
+					}
+					else
+					{
+						// For other event types (PayrollSubmission, ResignationRequest, OvertimeRequest, ReimbursementRequest)
+						// For PayrollSubmission specifically, also update payroll approval status in Payroll table
+						if (eventNameLower.Contains(StringConstants.PayrollSubmissionKeyword) && requestId.HasValue && _approvalRepository != null)
+						{
+							await _approvalRepository.UpdatePayrollApprovalStatusAsync(requestId.Value, true, alert.OrganisationId);
+						}
+
+						// Update event status only (business logic for other types may be handled by web application)
+						_logger.LogInformation(StringConstants.LogHandlingEventUpdatingStatus, eventName);
+						requestApproved = true; // We'll update the event status regardless
+					}
 				}
 
 				// Update Event and Approval status, and send notification (common for all event types)
@@ -1244,17 +1401,31 @@ namespace MobileWebApi.Services
 					eventRecord = await _approvalRepository.GetEventByIdAsync(eventId, organisationId);
 				}
 
-				// Update Event table
+				// Update Event table + EventData approval fields
+				var approvedBy = await ResolveApproverDisplayNameAsync(rejecterUserId);
+				var updatedEventData = NotificationTokenHelper.ApplyApprovalFieldsToEventDataJson(
+					eventRecord?.EventData,
+					rejecterUserId,
+					approvedBy,
+					EventStateConstants.Rejected);
+
 				var eventUpdated = await _approvalRepository.UpdateEventStatusAsync(
 					eventId,
 					EventStateConstants.Rejected,
 					EventStateConstants.RejectedByManager,
 					rejecterUserId,
-					organisationId);
+					organisationId,
+					updatedEventData);
 
 				if (!eventUpdated)
 				{
 					_logger.LogWarning(LogMessages.Alert.FailedToUpdateEventStatus, eventId);
+				}
+				else if (eventRecord != null)
+				{
+					eventRecord.EventData = updatedEventData;
+					eventRecord.State = EventStateConstants.Rejected;
+					eventRecord.Status = EventStateConstants.RejectedByManager;
 				}
 
 				// Get Approvals for this event and update the approval status
@@ -1449,10 +1620,53 @@ namespace MobileWebApi.Services
 				}
 				else
 				{
-					// For other event types (PayrollSubmission, ResignationRequest, OvertimeRequest, ReimbursementRequest)
-					// Update event status only (business logic may be handled by web application)
-					_logger.LogInformation(StringConstants.LogHandlingEventRejectionUpdatingStatus, eventName);
-					requestRejected = true; // We'll update the event status regardless
+					// RegularizationRequest: mark EmployeeDispute Rejected (no punch changes)
+					if (eventNameLower.Contains(EventNameConstants.RegularizationRequestLower) ||
+						eventNameLower.Contains(StringConstants.EventNameRegularizationRequest.ToLower()))
+					{
+						if (!requestId.HasValue)
+						{
+							return new AlertResponse
+							{
+								Success = false,
+								Message = DisputeMessages.DisputeNotFound,
+								Data = null
+							};
+						}
+
+						if (_disputeService == null)
+						{
+							return new AlertResponse
+							{
+								Success = false,
+								Message = DisputeMessages.FailedToRejectDispute,
+								Data = null
+							};
+						}
+
+						var disputeResult = await _disputeService.RejectDisputeAsync(
+							requestId.Value,
+							alert.OrganisationId);
+
+						if (!disputeResult.Success)
+						{
+							return new AlertResponse
+							{
+								Success = false,
+								Message = disputeResult.Message ?? DisputeMessages.FailedToRejectDispute,
+								Data = null
+							};
+						}
+
+						requestRejected = true;
+					}
+					else
+					{
+						// For other event types (PayrollSubmission, ResignationRequest, OvertimeRequest, ReimbursementRequest)
+						// Update event status only (business logic may be handled by web application)
+						_logger.LogInformation(StringConstants.LogHandlingEventRejectionUpdatingStatus, eventName);
+						requestRejected = true; // We'll update the event status regardless
+					}
 				}
 
 				// Update Event and Approval status, and send notification (common for all event types)

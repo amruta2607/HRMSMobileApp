@@ -141,9 +141,6 @@ namespace MobileWebApi.Controllers
         private static bool IsPunchValidationError(string result)
         {
             return result == AttendanceMessages.PunchInAlreadyDone
-                || result == AttendanceMessages.AlreadyPunchedIn
-                || result == AttendanceMessages.AlreadyPunchedOut
-                || result == AttendanceMessages.PleasePunchInFirst
                 || result == AttendanceMessages.CannotPunchOutWithoutPunchIn
                 || result == AttendanceMessages.PunchOutAlreadyDone
                 || result == AttendanceMessages.PunchInFailed;
@@ -695,7 +692,7 @@ namespace MobileWebApi.Controllers
         //}
 
         /// <summary>
-        /// Delete attendance record (Punch + related PunchTracking).
+        /// Delete attendance record (Punch).
         /// DELETE: attendance/delete-attendance?id={punchId}
         /// </summary>
         [HttpDelete("delete-attendance")]

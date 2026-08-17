@@ -492,7 +492,10 @@ namespace MobileWebApi.Controllers
                 // Use Employee data if available, otherwise use User data
                 int employeeId = employee?.Id ?? 0;
                 int tenantId = employee?.OrganisationId ?? user.OrganisationId;
-                int branchId = employee.BranchId;
+                int branchId = employee?.BranchId > 0 ? employee.BranchId : user.BranchId;
+
+                if (branchId > 0)
+                    user.BranchId = branchId;
 
                 string name = employee?.Name ??
                               (!string.IsNullOrEmpty(employee?.FirstName)
@@ -979,9 +982,6 @@ namespace MobileWebApi.Controllers
             IReadOnlyList<string>? workRoles = null)
         {
             var attendanceEnabled = mobileTenantConfig?.IsAttendanceEnabled ?? false;
-            var tenantLocationTrackingEnabled = mobileTenantConfig?.EnableLocationTracking ?? false;
-            var enableEmployeeLevelLocationTracking = mobileTenantConfig?.EnableEmployeeLevelLocationTracking ?? false;
-            var employeeLocationTracking = employee?.EnableLocationTracking;
 
             var locationTracking = LocationTrackingSettingsHelper.Resolve(
                 attendanceEnabled,

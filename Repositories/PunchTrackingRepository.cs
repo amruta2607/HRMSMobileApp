@@ -74,8 +74,8 @@ namespace MobileWebApi.Repositories
                     tracking.PunchId,
                     PunchDate = tracking.PunchDate.Date,
                     tracking.Direction,
-                    PunchIn = tracking.PunchIn,
-                    PunchOut = tracking.PunchOut,
+                    PunchIn = ToSqlTime(tracking.PunchIn),
+                    PunchOut = ToSqlTime(tracking.PunchOut),
                     Duration = ToSqlTimeDuration(tracking.Duration),
                     tracking.InsertUserId,
                     tracking.InSource,
@@ -90,6 +90,12 @@ namespace MobileWebApi.Repositories
                 },
                 transaction);
         }
+
+        /// <summary>
+        /// Maps punch clock time to SQL time column.
+        /// </summary>
+        private static TimeSpan? ToSqlTime(DateTime? dateTime) =>
+            dateTime?.TimeOfDay;
 
         /// <summary>
         /// Maps duration in minutes to SQL time column.
@@ -109,24 +115,6 @@ namespace MobileWebApi.Repositories
                 TenantId = tenantId,
                 PunchDate = punchDate.Date
             });
-        }
-
-        /// <inheritdoc />
-        public async Task<double> GetCompletedSessionDurationSumAsync(int punchId)
-        {
-            using var connection = _context.CreateConnection();
-            var query = _queryProvider.Get("GetCompletedPunchTrackingDurationSum");
-
-            return await connection.ExecuteScalarAsync<double>(query, new { PunchId = punchId });
-        }
-
-        /// <inheritdoc />
-        public async Task<PunchTracking?> GetLastUnmatchedPunchInAsync(int punchId)
-        {
-            using var connection = _context.CreateConnection();
-            var query = _queryProvider.Get("GetLastUnmatchedPunchIn");
-
-            return await connection.QueryFirstOrDefaultAsync<PunchTracking>(query, new { PunchId = punchId });
         }
 
         /// <inheritdoc />

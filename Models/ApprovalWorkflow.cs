@@ -150,6 +150,7 @@ namespace MobileWebApi.Models
     public static class EventConstants
     {
         public const string LeaveEvent = "LeaveRequest";
+        public const string RegularizationEvent = "RegularizationRequest";
         
         public const string ApprovalStatusPending = "Pending";
         public const string ApprovalStatusApproved = "Approved";

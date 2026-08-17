@@ -29,7 +29,13 @@ namespace MobileWebApi.Swagger
 			"CalendarDate",
 			"FromDate",
 			"ToDate",
-			"date"
+			"date",
+			"disputeDate",
+			"DisputeDate",
+			"requestedPunchInTime",
+			"RequestedPunchInTime",
+			"requestedPunchOutTime",
+			"RequestedPunchOutTime"
 		};
 
 		public void Apply(OpenApiSchema schema, SchemaFilterContext context)
@@ -68,7 +74,8 @@ namespace MobileWebApi.Swagger
 
 			var name = type.Name;
 			return name.Contains("Punch", StringComparison.OrdinalIgnoreCase) ||
-			       name.Contains("Attendance", StringComparison.OrdinalIgnoreCase);
+			       name.Contains("Attendance", StringComparison.OrdinalIgnoreCase) ||
+			       name.Contains("Dispute", StringComparison.OrdinalIgnoreCase);
 		}
 	}
 }

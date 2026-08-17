@@ -137,9 +137,6 @@ namespace MobileWebApi.Constants
         public const string PunchInFailed = "Punch In Failed";
         public const string CannotPunchOutWithoutPunchIn = "Cannot Punch Out — Punch In not done.";
         public const string PunchOutAlreadyDone = "Punch Out already done.";
-        public const string AlreadyPunchedIn = "Already punched in.";
-        public const string AlreadyPunchedOut = "Already punched out.";
-        public const string PleasePunchInFirst = "Please Punch In first.";
         public const string CalendarDateRequiredForDaily = "CalendarDate is required for daily attendance report.";
         public const string DateRangeRequiredForMonthly = "DateFrom and DateTo are required for monthly attendance report.";
         public const string EmployeeIdRequired = "Employee ID is required.";
@@ -456,6 +453,8 @@ namespace MobileWebApi.Constants
         // Notification messages
         public const string LeaveRequestPendingApproval = "New Leave Request Pending Approval";
         public const string LeaveRequestRequiresApproval = "A new leave request requires your approval.";
+        public const string RegularizationRequestPendingApproval = "New Regularization Request Pending Approval";
+        public const string RegularizationRequestRequiresApproval = "A new regularization request requires your approval.";
 
         // Error templates
         public const string ErrorInitiatingWorkflow = "Error initiating approval workflow: {0}";
@@ -504,10 +503,25 @@ namespace MobileWebApi.Constants
         public const string InvalidDisputeDate = "Invalid dispute date. Please provide a valid date (e.g., 2026-03-03).";
         public const string DisputeDateCannotBeFuture = "Dispute date cannot be a future date.";
         public const string DescriptionRequired = "Description is required.";
+        public const string EmployeeIdRequired = "EmployeeId is required.";
+        public const string DisputeCategoryIdRequired = "DisputeCategoryId is required.";
+        public const string InvalidRequestedPunchTimes = "RequestedPunchInTime must be less than or equal to RequestedPunchOutTime.";
+        public const string InvalidPunchId = "PunchId is invalid or does not belong to the employee.";
         public const string EmployeeNotFound = "Employee not found.";
-        public const string OnlyOneDisputePerDay = "Only one dispute can be submitted per day. A dispute for this date already exists.";
+        public const string OnlyOneDisputePerCategoryDate = "A regularization request for this dispute category already exists for the selected date.";
         public const string DisputeSubmittedSuccessfully = "Dispute submitted successfully.";
         public const string FailedToSubmitDispute = "Failed to submit dispute.";
+        public const string NoReportingManagerAssigned = "No reporting manager is assigned to this employee. Please contact the administrator.";
+        public const string ReportingManagerUserNotFound = "Reporting manager user account was not found. Please contact the administrator.";
+        public const string DisputeNotFound = "Regularization / dispute record not found.";
+        public const string DisputeAlreadyProcessed = "This regularization request has already been processed.";
+        public const string PunchRecordNotFound = "Punch record not found for the regularization request.";
+        public const string InvalidApprovedPunchTimes = "Requested punch times are invalid: punch out must be after punch in.";
+        public const string DisputeApprovedSuccessfully = "Regularization request approved successfully.";
+        public const string DisputeRejectedSuccessfully = "Regularization request rejected successfully.";
+        public const string FailedToApproveDispute = "Failed to approve regularization request.";
+        public const string FailedToRejectDispute = "Failed to reject regularization request.";
+        public const string PunchUpdatedOnApproval = "Punch record updated after regularization approval. PunchId: {0}, Duration: {1}";
     }
 
     /// <summary>
@@ -547,6 +561,8 @@ namespace MobileWebApi.Constants
         public const string ResignationRequest = "ResignationRequest";
         public const string OvertimeRequest = "OvertimeRequest";
         public const string CancelLeave = "CancelLeave";
+        public const string RegularizationRequest = "RegularizationRequest";
+        public const string RegularizationRequestLower = "regularizationrequest";
         public const string Request = "Request";
     }
 
@@ -584,63 +600,6 @@ namespace MobileWebApi.Constants
         public const string EventApprovedMessage = "Your {0} has been approved.";
         public const string EventRejectedMessage = "Your {0} has been rejected. Reason: {1}";
         public const string EventRejectedMessageNoReason = "Your {0} has been rejected.";
-    }
-
-    /// <summary>
-    /// Location tracking related messages
-    /// </summary>
-    public static class LocationTrackingMessages
-    {
-        public const string LocationRecordedSuccessfully = "Location recorded successfully.";
-        public const string UserIdRequired = "User ID is required.";
-        public const string LatitudeRequired = "Latitude is required.";
-        public const string LongitudeRequired = "Longitude is required.";
-        public const string InvalidLatitude = "Latitude must be between -90 and 90.";
-        public const string InvalidLongitude = "Longitude must be between -180 and 180.";
-        public const string TrackingDateTimeRequired = "Tracking date and time is required.";
-        public const string EmployeeNotFound = "Employee not found.";
-        public const string TenantNotFound = "Tenant not found.";
-        public const string EmployeeDoesNotBelongToTenant = "Employee does not belong to the specified tenant.";
-        public const string EmployeeNotPunchedIn = "Employee is not currently punched in.";
-        public const string LocationTrackingDisabled = "Location tracking is disabled.";
-        public const string FailedToRecordLocation = "Failed to record location.";
-        public const string LocationsRequired = "At least one location record is required.";
-        public const string BatchProcessedSuccessfully = "Location batch processed successfully.";
-        public const string BatchPartiallyProcessed = "Location batch processed with some invalid records skipped.";
-        public const string BatchAllRecordsInvalid = "All location records in the batch are invalid.";
-        public const string FailedToRecordLocationBatch = "Failed to record location batch.";
-    }
-
-    /// <summary>
-    /// Location tracking issue API messages
-    /// </summary>
-    public static class LocationTrackingIssueMessages
-    {
-        public const string IssueLoggedSuccessfully = "Location tracking issue logged successfully.";
-        public const string InvalidIssueType = "Invalid Issue Type.";
-        public const string IssueTypeRequired = "Issue type is required.";
-        public const string IssueDescriptionRequired = "Issue description is required.";
-        public const string TimestampRequired = "Timestamp is required.";
-        public const string EmployeeNotFound = "Employee not found.";
-        public const string TenantNotFound = "Tenant not found.";
-        public const string EmployeeDoesNotBelongToTenant = "Employee does not belong to the specified tenant.";
-        public const string FailedToLogIssue = "Failed to log location tracking issue.";
-        public const string ViolationNotificationTitle = "Location Tracking Violation";
-        public const string ViolationNotificationMessage = "Employee {0} triggered a {1} violation.";
-        public const string UnknownEmployeeName = "Unknown Employee";
-    }
-
-    /// <summary>
-    /// Location tracking configuration API messages
-    /// </summary>
-    public static class LocationTrackingConfigurationMessages
-    {
-        public const string ConfigurationFetchedSuccessfully = "Location tracking configuration fetched successfully.";
-        public const string EmployeeNotFound = "Employee not found.";
-        public const string TenantNotFound = "Tenant not found.";
-        public const string TenantConfigurationNotFound = "Tenant configuration not found.";
-        public const string LocationTrackingConfigurationNotFound = "Location tracking configuration not found.";
-        public const string EmployeeDoesNotBelongToTenant = "Employee does not belong to the specified tenant.";
     }
 
     /// <summary>

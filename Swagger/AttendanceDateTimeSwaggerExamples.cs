@@ -54,6 +54,20 @@ namespace MobileWebApi.Swagger
 				return PunchOutTime;
 			}
 
+			if (propertyName.Equals("disputeDate", StringComparison.OrdinalIgnoreCase) ||
+			    propertyName.Equals("DisputeDate", StringComparison.OrdinalIgnoreCase) ||
+			    propertyName.Equals("requestedPunchOutTime", StringComparison.OrdinalIgnoreCase) ||
+			    propertyName.Equals("RequestedPunchOutTime", StringComparison.OrdinalIgnoreCase))
+			{
+				return PunchOutTime;
+			}
+
+			if (propertyName.Equals("requestedPunchInTime", StringComparison.OrdinalIgnoreCase) ||
+			    propertyName.Equals("RequestedPunchInTime", StringComparison.OrdinalIgnoreCase))
+			{
+				return "2026-07-22T09:00:00";
+			}
+
 			return GenericDateTime;
 		}
 
