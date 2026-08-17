@@ -1,0 +1,13 @@
+.vs/
+bin/
+obj/
+publish/
+_build_*/
+**/_build_*/
+
+# User/machine-specific publish profiles
+Properties/PublishProfiles/*.pubxml.user
+
+# Local config overrides (keep appsettings.json as template)
+appsettings.Development.json
+publish/appsettings.Development.json

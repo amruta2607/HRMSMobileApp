@@ -1,0 +1,54 @@
+namespace MobileWebApi.Models
+{
+    /// <summary>
+    /// Response model for attendance summary API
+    /// </summary>
+    public class AttendanceSummaryResponse
+    {
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+        public int OrganizationId { get; set; }
+        public string? EmployeeName { get; set; }
+        public string? EmployeeNumber { get; set; }
+        public DateTime FromDate { get; set; }
+        public DateTime ToDate { get; set; }
+        public int TotalDays { get; set; }
+        public int WorkingDays { get; set; }
+        public int PresentDays { get; set; }
+        public int AbsentDays { get; set; }
+        public int LeaveDays { get; set; }
+        public int HolidayDays { get; set; }
+        public int WeekendDays { get; set; }
+        public double TotalWorkingHours { get; set; }
+        public double AverageWorkingHours { get; set; }
+        public List<AttendanceSummaryDetail>? AttendanceDetails { get; set; }
+    }
+
+    /// <summary>
+    /// Attendance detail for each day
+    /// </summary>
+    public class AttendanceSummaryDetail
+    {
+        public DateTime Date { get; set; }
+        public string? DayName { get; set; }
+
+        /// <summary>
+        /// Punch table primary key when a punch exists for this day.
+        /// </summary>
+        public int? PunchId { get; set; }
+
+        public DateTime? PunchIn { get; set; }
+        public DateTime? PunchOut { get; set; }
+        public double? WorkingHours { get; set; }
+        public string? Status { get; set; } // "Present", "Absent", "Leave", "Holiday", "Weekend"
+        public string? InSource { get; set; }
+        public string? OutSource { get; set; }
+        public string? CoordinateIn { get; set; }
+        public string? CoordinateOut { get; set; }
+        public string? LinkIn { get; set; }
+        public string? LinkOut { get; set; }
+        public string? PunchInImage { get; set; }
+        public string? PunchOutImage { get; set; }
+    }
+}
+
