@@ -1,9 +1,9 @@
 class BaseUrls {
 
-  // static const String base = "http://20.44.57.126:82"; //development
+     static const String base = "http://20.44.57.126:82"; //development
 
 
-    static const String base = "http://103.123.74.159:5005"; //production
+     // static const String base = "http://103.123.74.159:5005"; //production
 
   // AUTH
   static const String loginWithEmail = "$base/api/Auth/login-email";
@@ -66,6 +66,12 @@ static const String leaveHistory = "$base/api/Leave/history";
   static const String holidays = "$base/apipunch/holidays/get-holidays";
   // Holidays
   static const String upcoming = "$base/api/mobile/holidays";
+
+  //Up Next
+  static const String upEvent = "$base/api/mobile/events";
+  static const String upBirthday = "$base/api/dashboard/birthdays";
+  static const String upWorkAnniversaries = "$base/api/dashboard/work-anniversaries";
+  static const String upAwards = "$base/api/dashboard/awards";
 
   // Alerts
   static const String alerts = "$base/api/Alert/user";

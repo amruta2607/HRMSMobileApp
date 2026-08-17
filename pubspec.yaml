@@ -17,7 +17,6 @@ dependencies:
   intl: ^0.19.0
   permission_handler: ^11.3.1
   app_settings: ^5.1.1
-  font_awesome_flutter: ^10.7.0
   http: ^1.1.0
   shared_preferences:
   image_picker: ^1.0.7
