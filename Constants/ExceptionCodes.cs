@@ -361,6 +361,9 @@ namespace MobileWebApi.Constants
         public static class Dashboard
         {
             public const string GetDashboard = "DASH-001";
+            public const string GetBirthdays = "DASH-002";
+            public const string GetWorkAnniversaries = "DASH-003";
+            public const string GetAwards = "DASH-004";
         }
 
         // Asset list (AssetRepository)

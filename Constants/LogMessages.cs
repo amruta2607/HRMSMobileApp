@@ -415,6 +415,9 @@ namespace MobileWebApi.Constants
         public static class Dashboard
         {
             public const string StatsLoaded = "Dashboard stats loaded for UserId {UserId}, TenantId {TenantId}, EffectiveWorkRole {EffectiveWorkRole} in {ElapsedMs}ms.";
+            public const string ErrorFetchingBirthdays = "Error fetching upcoming birthdays for organisation {OrganisationId}.";
+            public const string ErrorFetchingWorkAnniversaries = "Error fetching upcoming work anniversaries for organisation {OrganisationId}.";
+            public const string ErrorFetchingAwards = "Error fetching upcoming awards for organisation {OrganisationId}.";
         }
 
         // Asset list logs

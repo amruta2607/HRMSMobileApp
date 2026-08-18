@@ -97,6 +97,8 @@ builder.Services.AddScoped<ITenantWeekOffRepository, TenantWeekOffRepository>();
 builder.Services.AddScoped<ITenantWeekOffService, TenantWeekOffService>();
 
 builder.Services.AddScoped<IMobileDashboardService, MobileDashboardService>();
+builder.Services.AddScoped<IDashboardRepository, DashboardRepository>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<IOtpService, OtpService>();
