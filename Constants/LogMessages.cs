@@ -485,6 +485,9 @@ namespace MobileWebApi.Constants
             public const string HandoverDeleted = "Asset handover deleted. HandoverId={HandoverId}, Number={HandoverNumber}, AssetId={AssetId}, DeletedByUserId={UserId}, TenantId={TenantId}, IpAddress={IpAddress}, DeletedAtUtc={Timestamp}.";
             public const string ErrorDeletingHandover = "Error deleting asset handover {HandoverId} for organisation {OrganisationId}.";
             public const string DeleteForbidden = "User {UserId} attempted to delete asset handover {HandoverId} without Admin/SuperAdmin role.";
+            public const string FetchingTimeline = "Fetching asset handover timeline for asset {AssetId} by user {UserId} in organisation {OrganisationId}.";
+            public const string TimelineFetched = "Fetched {Count} asset handover timeline records for asset {AssetId} in organisation {TenantId}.";
+            public const string ErrorFetchingTimeline = "Error fetching asset handover timeline for asset {AssetId} in organisation {OrganisationId}.";
         }
 
 		// Asset maintenance logs

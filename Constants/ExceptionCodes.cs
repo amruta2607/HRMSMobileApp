@@ -405,6 +405,7 @@ namespace MobileWebApi.Constants
             public const string Update = "ASSET-007";
             public const string GetLookups = "ASSET-009";
             public const string Delete = "ASSET-011";
+            public const string GetTimeline = "ASSET-023";
         }
 
 		// Asset maintenance (AssetMaintenanceRepository / AssetMaintenanceService)

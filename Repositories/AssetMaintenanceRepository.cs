@@ -472,7 +472,7 @@ namespace MobileWebApi.Repositories
 
 		private static AssetMaintenanceDto MapToDto(AssetMaintenanceRow row) => new()
 		{
-			Id = row.Id,
+			HistoryId = row.HistoryId,
 			AssetId = row.AssetId,
 			Cost = row.Cost,
 			Attachment = AttachmentJsonHelper.Deserialize(row.Attachment),
@@ -495,7 +495,7 @@ namespace MobileWebApi.Repositories
 		/// </summary>
 		private sealed class AssetMaintenanceRow
 		{
-			public int Id { get; set; }
+			public int HistoryId { get; set; }
 			public int AssetId { get; set; }
 			public decimal? Cost { get; set; }
 			public string? Attachment { get; set; }

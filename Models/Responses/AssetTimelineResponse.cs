@@ -2,6 +2,7 @@ namespace MobileWebApi.Models.Responses
 {
     /// <summary>
     /// Represents a single AssetHistory row returned by the timeline query.
+    /// Mapped from HistoryId, ActionType, and ActionUserId via SQL aliases.
     /// </summary>
     public class AssetTimelineResponse
     {
