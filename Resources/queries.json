@@ -300,7 +300,7 @@
     "MobileDashboard_GetLatestHolidays": "SELECT TOP 5 Id, Name, Description, Date FROM Holiday WHERE TenantId = @TenantId AND Date >= CAST(GETDATE() AS DATE) ORDER BY Date ASC",
     "MarkScreenNotificationsReadByLeaveRequestId": "UPDATE sn SET sn.IsRead = 1, sn.Status = 'Read', sn.UpdateDate = GETDATE(), sn.UpdateUserId = @UpdateUserId FROM ScreenNotification sn INNER JOIN Events e ON sn.EventId = e.EventId WHERE sn.TenantId = @TenantId AND sn.IsActive = 1 AND sn.Status = 'Unread' AND e.TenantId = @TenantId AND (CAST(JSON_VALUE(e.EventData, '$.leave_request_id') AS INT) = @LeaveRequestId OR CAST(JSON_VALUE(e.EventData, '$.leaveRequestId') AS INT) = @LeaveRequestId)",
 
-    "Asset_GetList": "SELECT a.Id, a.Number, a.AssetCode, a.QRCodePath, ISNULL(a.QRCodeText, '') AS QRCodeText, a.AssetName, ISNULL(s.[Name], '') AS AssetStatus, ISNULL(a.Owner, '') AS Owner, ISNULL(c.[Name], '') AS AssetCategory, ISNULL(d.[Name], '') AS Department, ISNULL(b.[Name], '') AS Branch, ISNULL(bu.[Name], '') AS BusinessUnit, a.PurchaseDate, a.PurchasePrice, a.ActualValue, a.Manufacturer, a.Model, a.ProductionYear, a.QRCodeGeneratedDate FROM [dbo].[Asset] a LEFT JOIN [dbo].[AssetStatus] s ON s.Id = a.AssetStatusId LEFT JOIN [dbo].[Asset Category] c ON c.Id = a.AssetCategoryId LEFT JOIN [dbo].[Department] d ON d.Id = a.DepartmentId LEFT JOIN [dbo].[Branch] b ON b.Id = a.BranchId LEFT JOIN [dbo].[BusinessUnit] bu ON bu.Id = a.BusinessUnitId WHERE a.TenantId = @TenantId ORDER BY a.Number DESC",
+    "Asset_GetList": "SELECT a.Id, a.Number, a.AssetCode, a.QRCodePath, a.QRCodeText, a.QRCodeGeneratedDate, a.AssetName, a.Description, a.AssetStatusId, s.[Name] AS AssetStatus, a.AssetCategoryId, c.[Name] AS AssetCategory, a.AssetTypeId, at.TypeName AS AssetType, a.DepartmentId, d.[Name] AS Department, a.BranchId, b.[Name] AS Branch, a.BusinessUnitId, bu.[Name] AS BusinessUnit, a.Owner, a.Location, a.PurchaseDate, a.PurchasePrice, a.ActualValue, a.PurchaseOrderNumber, a.PurchaseOrderBill, a.Manufacturer, a.Model, a.SerialNumber, a.ProductionYear, a.SupportCenter, a.AssetTagNumber, a.WarrantyExpiryDate, a.MaintenanceDueDate, a.DepreciationPercentage, a.Images, a.InsertDate, a.InsertUserId, a.UpdateDate, a.UpdateUserId FROM [dbo].[Asset] a LEFT JOIN [dbo].[AssetStatus] s ON s.Id = a.AssetStatusId LEFT JOIN [dbo].[Asset Category] c ON c.Id = a.AssetCategoryId LEFT JOIN [dbo].[AssetType] at ON at.Id = a.AssetTypeId LEFT JOIN [dbo].[Department] d ON d.Id = a.DepartmentId LEFT JOIN [dbo].[Branch] b ON b.Id = a.BranchId LEFT JOIN [dbo].[BusinessUnit] bu ON bu.Id = a.BusinessUnitId WHERE a.TenantId = @TenantId ORDER BY a.Number DESC",
 
     "Asset_Insert": "INSERT INTO [dbo].[Asset] (Number, Description, PurchaseDate, PurchasePrice, PurchaseOrderNumber, PurchaseOrderBill, SupportCenter, Manufacturer, Model, SerialNumber, ProductionYear, Images, AssetTagNumber, InsertDate, InsertUserId, UpdateDate, UpdateUserId, TenantId, AssetStatusId, CategoryId, DepartmentId, AssetName, AssetCategoryId, ActualValue, WarrantyExpiryDate, MaintenanceDueDate, DepreciationPercentage, BranchId, AssetCode, QRCodePath, QRCodeText, QRCodeGenerated, QRCodeGeneratedDate, BusinessUnitId, Location, Owner, AssetTypeId) VALUES (@Number, @Description, @PurchaseDate, @PurchasePrice, @PurchaseOrderNumber, @PurchaseOrderBill, @SupportCenter, @Manufacturer, @Model, @SerialNumber, @ProductionYear, @Images, @AssetTagNumber, GETDATE(), @InsertUserId, NULL, NULL, @TenantId, @AssetStatusId, @CategoryId, @DepartmentId, @AssetName, @AssetCategoryId, @ActualValue, @WarrantyExpiryDate, @MaintenanceDueDate, @DepreciationPercentage, @BranchId, @AssetCode, NULL, NULL, 0, NULL, @BusinessUnitId, @Location, @Owner, @AssetTypeId); SELECT CAST(SCOPE_IDENTITY() AS INT);",
 
@@ -332,7 +332,10 @@
 
     "Asset_GetForQrCode": "SELECT Id, AssetCode, QRCodePath, QRCodeText, QRCodeGenerated, QRCodeGeneratedDate FROM [dbo].[Asset] WHERE Id = @AssetId AND TenantId = @TenantId",
 
+    "Asset_GetQrCodeById": "SELECT a.Id, a.AssetName, a.AssetTagNumber, a.AssetCode, a.QRCodePath, a.QRCodeText, a.QRCodeGenerated FROM [dbo].[Asset] a WHERE a.Id = @AssetId AND a.TenantId = @TenantId",
+
     "Asset_UpdateQrCode": "UPDATE [dbo].[Asset] SET AssetCode = @AssetCode, QRCodePath = @QRCodePath, QRCodeText = @QRCodeText, QRCodeGenerated = 1, QRCodeGeneratedDate = @QRCodeGeneratedDate WHERE Id = @AssetId AND TenantId = @TenantId",
+
 
     "AssetDashboard_GetKpiMetrics": "SELECT COUNT(*) AS TotalCount, SUM(CASE WHEN a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS TotalPrevCount, SUM(CASE WHEN {IN_USE} THEN 1 ELSE 0 END) AS InUseCount, SUM(CASE WHEN {IN_USE} AND a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS InUsePrevCount, SUM(CASE WHEN {MAINTENANCE} THEN 1 ELSE 0 END) AS MaintenanceCount, SUM(CASE WHEN {MAINTENANCE} AND a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS MaintenancePrevCount, SUM(CASE WHEN {OUT_OF_SERVICE} THEN 1 ELSE 0 END) AS OutOfServiceCount, SUM(CASE WHEN {OUT_OF_SERVICE} AND a.InsertDate < @StartOfMonth THEN 1 ELSE 0 END) AS OutOfServicePrevCount FROM [dbo].[Asset] a LEFT JOIN [dbo].[AssetStatus] s ON s.Id = a.AssetStatusId WHERE a.TenantId = @TenantId",
 
@@ -378,6 +381,34 @@
 
     "AssetHandOver_Update": "UPDATE [dbo].[AssetHandOver] SET Description = @Description, HandOverDate = @HandOverDate, HandOverToId = @HandOverToId, Location = @Location, UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE Id = @Id AND TenantId = @TenantId",
 
+    "AssetMaintenance_ExistsAsset": "SELECT 1 FROM [dbo].[Asset] WHERE Id = @AssetId AND TenantId = @TenantId",
+
+    "AssetMaintenance_Insert": "INSERT INTO [dbo].[AssetMaintenance] (AssetId, Cost, Attachment, Date, ResponsiblePerson, AssetNumber, AssetName, AssetDescription, InsertDate, InsertUserId, UpdateDate, UpdateUserId, TenantId) VALUES (@AssetId, @Cost, @Attachment, @Date, @ResponsiblePerson, @AssetNumber, @AssetName, @AssetDescription, GETDATE(), @InsertUserId, NULL, NULL, @TenantId); SELECT CAST(SCOPE_IDENTITY() AS INT);",
+
+    "AssetMaintenance_GetById": "SELECT Id, AssetId, Cost, Attachment, Date, ResponsiblePerson, AssetNumber, AssetName, AssetDescription FROM [dbo].[AssetMaintenance] WHERE Id = @Id AND TenantId = @TenantId",
+
+    "AssetMaintenance_GetForDelete": "SELECT Id, AssetId FROM [dbo].[AssetMaintenance] WHERE Id = @Id AND TenantId = @TenantId",
+
+    "AssetMaintenance_Update": "UPDATE [dbo].[AssetMaintenance] SET AssetId = @AssetId, Cost = @Cost, Attachment = COALESCE(@Attachment, Attachment), Date = @Date, ResponsiblePerson = @ResponsiblePerson, AssetNumber = @AssetNumber, AssetName = @AssetName, AssetDescription = @AssetDescription, UpdateDate = GETDATE(), UpdateUserId = @UpdateUserId WHERE Id = @Id AND TenantId = @TenantId",
+
+    "AssetMaintenance_GetByAssetId": "SELECT Id, AssetId, AssetNumber, AssetName, AssetDescription, Cost, Attachment, Date, ResponsiblePerson FROM [dbo].[AssetMaintenance] WHERE AssetId = @AssetId AND TenantId = @TenantId ORDER BY Date DESC, InsertDate DESC",
+
+    "AssetMaintenance_GetCount": "SELECT COUNT(1) FROM [dbo].[AssetMaintenance] WHERE TenantId = @TenantId AND (@Search IS NULL OR AssetNumber LIKE @Search OR AssetName LIKE @Search OR ResponsiblePerson LIKE @Search OR AssetDescription LIKE @Search)",
+
+    "AssetMaintenance_GetPaged": "SELECT Id, AssetId, Cost, Attachment, Date, ResponsiblePerson, AssetNumber, AssetName, AssetDescription FROM [dbo].[AssetMaintenance] WHERE TenantId = @TenantId AND (@Search IS NULL OR AssetNumber LIKE @Search OR AssetName LIKE @Search OR ResponsiblePerson LIKE @Search OR AssetDescription LIKE @Search) ORDER BY {ORDER_BY} OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY",
+
+    "AssetMaintenance_DeleteById": "DELETE FROM [dbo].[AssetMaintenance] WHERE Id = @Id AND TenantId = @TenantId",
+
+    "AssetMaintenance_LookupAssets": "SELECT a.Id, a.Number AS AssetNumber, a.AssetName, ISNULL(a.AssetCode, '') AS AssetCode, ISNULL(a.AssetTagNumber, '') AS AssetTagNumber FROM [dbo].[Asset] a LEFT JOIN [dbo].[AssetStatus] s ON s.Id = a.AssetStatusId WHERE a.TenantId = @TenantId AND NOT (LOWER(ISNULL(s.[Name], '')) LIKE '%disposed%' OR LOWER(ISNULL(s.[Name], '')) LIKE '%lost%' OR LOWER(ISNULL(s.[Name], '')) LIKE '%retired%' OR LOWER(ISNULL(s.[Name], '')) LIKE '%scrapped%' OR LOWER(ISNULL(s.[Name], '')) LIKE '%scrap%') ORDER BY a.AssetName",
+
+    "AssetMaintenance_LookupResponsiblePersons": "SELECT Id, EmployeeNumber AS EmployeeCode, Name AS EmployeeName FROM [dbo].[Employee] WHERE TenantId = @TenantId AND IsEmployeeActive = 1 ORDER BY Name",
+
+    "Asset_GetTimeline": "SELECT * FROM [dbo].[AssetHistory] WHERE TenantId = @TenantId AND AssetId = @AssetId AND SourceTable = 'Asset' ORDER BY ActionDate DESC",
+
+    "AssetHandOver_GetTimeline": "SELECT * FROM [dbo].[AssetHistory] WHERE TenantId = @TenantId AND AssetId = @AssetId AND SourceTable = 'AssetHandOver' ORDER BY ActionDate DESC",
+
+    "AssetMaintenance_GetTimeline": "SELECT * FROM [dbo].[AssetHistory] WHERE TenantId = @TenantId AND AssetId = @AssetId AND SourceTable = 'AssetMaintenance' ORDER BY ActionDate DESC",
+
     "GetTemplates": "SELECT Id, TemplateName FROM [dbo].[Template] WHERE IsActive = 1 AND TenantId = @TenantId AND ActionType='Submission' ORDER BY TemplateName",
 
     "Asset_LookupAssetStatuses": "SELECT Id, [Name] FROM [dbo].[AssetStatus] WHERE TenantId = @TenantId OR TenantId IS NULL ORDER BY [Name]",
@@ -414,7 +445,13 @@
 
     "Me_GetCurrentUser": "SELECT u.UserId, u.Username, ISNULL(u.DisplayName, '') AS DisplayName, ISNULL(u.Email, '') AS Email, ISNULL(u.MobileNumber, '') AS MobileNumber FROM [dbo].[Users] u WHERE u.UserId = @UserId",
 
-    "Me_GetActiveWorkRolesByUserId": "SELECT DISTINCT w.WorkRoleId AS Id, w.WorkRoleName AS Name FROM (SELECT uwg.WorkRoleId FROM [dbo].[UserWorkroleGroup] uwg WHERE uwg.UserId = @UserId UNION SELECT TRY_CAST(s.value AS INT) AS WorkRoleId FROM [dbo].[Users] u CROSS APPLY STRING_SPLIT(CAST(u.WorkRoleId AS NVARCHAR(MAX)), ',') s WHERE u.UserId = @UserId) assigned INNER JOIN [dbo].[WorkRole] w ON w.WorkRoleId = assigned.WorkRoleId WHERE w.WorkRoleName IS NOT NULL AND LTRIM(RTRIM(w.WorkRoleName)) <> '' ORDER BY w.WorkRoleName"
+    "Me_GetActiveWorkRolesByUserId": "SELECT DISTINCT w.WorkRoleId AS Id, w.WorkRoleName AS Name FROM (SELECT uwg.WorkRoleId FROM [dbo].[UserWorkroleGroup] uwg WHERE uwg.UserId = @UserId UNION SELECT TRY_CAST(s.value AS INT) AS WorkRoleId FROM [dbo].[Users] u CROSS APPLY STRING_SPLIT(CAST(u.WorkRoleId AS NVARCHAR(MAX)), ',') s WHERE u.UserId = @UserId) assigned INNER JOIN [dbo].[WorkRole] w ON w.WorkRoleId = assigned.WorkRoleId WHERE w.WorkRoleName IS NOT NULL AND LTRIM(RTRIM(w.WorkRoleName)) <> '' ORDER BY w.WorkRoleName",
+
+    "Dashboard_GetUpcomingBirthdays": "SELECT e.Id AS EmployeeId, e.EmployeeNumber, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(LTRIM(RTRIM(e.FirstName)), ''), NULLIF(LTRIM(RTRIM(e.MiddleName)), ''), NULLIF(LTRIM(RTRIM(e.LastName)), '')), ''), NULLIF(LTRIM(RTRIM(e.Name)), '')) AS EmployeeName, e.DateOfBirth, occ.OccurrenceDate AS BirthdayDate, e.Picture, e.DepartmentId, e.BranchId FROM [dbo].[Employee] e CROSS APPLY (SELECT CAST(CASE WHEN CAST(DATEADD(YEAR, DATEDIFF(YEAR, e.DateOfBirth, @Today), e.DateOfBirth) AS DATE) >= CAST(@Today AS DATE) THEN DATEADD(YEAR, DATEDIFF(YEAR, e.DateOfBirth, @Today), e.DateOfBirth) ELSE DATEADD(YEAR, DATEDIFF(YEAR, e.DateOfBirth, @Today) + 1, e.DateOfBirth) END AS DATE) AS OccurrenceDate) occ WHERE e.TenantId = @TenantId AND e.IsEmployeeActive = 1 AND e.DateOfBirth IS NOT NULL AND occ.OccurrenceDate >= CAST(@Today AS DATE) AND occ.OccurrenceDate <= CAST(@EndDate AS DATE) ORDER BY occ.OccurrenceDate, EmployeeName, e.Id",
+
+    "Dashboard_GetUpcomingWorkAnniversaries": "SELECT e.Id AS EmployeeId, e.EmployeeNumber, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(LTRIM(RTRIM(e.FirstName)), ''), NULLIF(LTRIM(RTRIM(e.MiddleName)), ''), NULLIF(LTRIM(RTRIM(e.LastName)), '')), ''), NULLIF(LTRIM(RTRIM(e.Name)), '')) AS EmployeeName, e.DateOfJoining, occ.OccurrenceDate AS AnniversaryDate, YEAR(occ.OccurrenceDate) - YEAR(e.DateOfJoining) AS ServiceYears, e.Picture, e.DepartmentId, e.BranchId FROM [dbo].[Employee] e CROSS APPLY (SELECT CAST(CASE WHEN CAST(DATEADD(YEAR, DATEDIFF(YEAR, e.DateOfJoining, @Today), e.DateOfJoining) AS DATE) >= CAST(@Today AS DATE) THEN DATEADD(YEAR, DATEDIFF(YEAR, e.DateOfJoining, @Today), e.DateOfJoining) ELSE DATEADD(YEAR, DATEDIFF(YEAR, e.DateOfJoining, @Today) + 1, e.DateOfJoining) END AS DATE) AS OccurrenceDate) occ WHERE e.TenantId = @TenantId AND e.IsEmployeeActive = 1 AND e.DateOfJoining IS NOT NULL AND occ.OccurrenceDate >= CAST(@Today AS DATE) AND occ.OccurrenceDate <= CAST(@EndDate AS DATE) ORDER BY occ.OccurrenceDate, EmployeeName, e.Id",
+
+    "Dashboard_GetUpcomingAwards": "SELECT a.Id, a.Name, CAST(a.[Date] AS DATE) AS [Date], a.Description, a.Reward, a.Achievement, a.AwardeeId, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(LTRIM(RTRIM(e.FirstName)), ''), NULLIF(LTRIM(RTRIM(e.MiddleName)), ''), NULLIF(LTRIM(RTRIM(e.LastName)), '')), ''), NULLIF(LTRIM(RTRIM(e.Name)), '')) AS EmployeeName, e.EmployeeNumber, e.Picture, a.BranchId, a.DepartmentId FROM [dbo].[Award] a LEFT JOIN [dbo].[Employee] e ON e.Id = a.AwardeeId AND e.TenantId = @TenantId WHERE a.TenantId = @TenantId AND a.[Date] IS NOT NULL AND a.[Date] >= CAST(@Today AS DATE) AND a.[Date] < DATEADD(DAY, 1, CAST(@EndDate AS DATE)) AND (a.AwardeeId IS NULL OR (e.Id IS NOT NULL AND e.IsEmployeeActive = 1)) ORDER BY CAST(a.[Date] AS DATE), a.Name, a.Id"
 
   }
 }
