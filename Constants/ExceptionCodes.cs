@@ -66,16 +66,16 @@ namespace MobileWebApi.Constants
             public const string ApprovalGetTenantNameDatabaseError = "REP050";
             public const string ApprovalGetEmployeeByUserIdDatabaseError = "REP051";
 
-            public const string DisputeGetDisputeCategoriesDatabaseError = "REP052";
-            public const string DisputeGetEmployeeByIdDatabaseError = "REP053";
-            public const string DisputeGetExistingDisputeDatabaseError = "REP054";
-            public const string DisputeInsertDisputeDatabaseError = "REP055";
-            public const string DisputeGetByIdDatabaseError = "REP056";
-            public const string DisputeUpdateStatusDatabaseError = "REP057";
-            public const string DisputeApplyPunchCorrectionDatabaseError = "REP058";
-            public const string DisputeApproveDatabaseError = "REP059";
+			public const string DisputeGetDisputeCategoriesDatabaseError = "REP052";
+			public const string DisputeGetEmployeeByIdDatabaseError = "REP053";
+			public const string DisputeGetExistingDisputeDatabaseError = "REP054";
+			public const string DisputeInsertDisputeDatabaseError = "REP055";
+			public const string DisputeGetByIdDatabaseError = "REP056";
+			public const string DisputeUpdateStatusDatabaseError = "REP057";
+			public const string DisputeApplyPunchCorrectionDatabaseError = "REP058";
+			public const string DisputeApproveDatabaseError = "REP059";
 
-            public const string HolidayCreateHolidayDatabaseError = "REP056";
+			public const string HolidayCreateHolidayDatabaseError = "REP056";
             public const string HolidayGetHolidayByIdDatabaseError = "REP057";
             public const string HolidayGetAllHolidaysDatabaseError = "REP058";
             public const string HolidayGetHolidaysWithFiltersDatabaseError = "REP059";
@@ -284,17 +284,21 @@ namespace MobileWebApi.Constants
             public const string GetOverview = "SHIFT-020";
         }
 
-        // Mobile dashboard (MobileDashboardService)
-        public static class MobileDashboard
-        {
-            public const string GetLatestTrainings = "MOBD-001";
-            public const string GetLatestAnnouncements = "MOBD-002";
-            public const string GetLatestEvents = "MOBD-003";
-            public const string GetLatestHolidays = "MOBD-004";
-        }
+		// Mobile dashboard (MobileDashboardService)
+		public static class MobileDashboard
+		{
+			public const string GetLatestTrainings = "MOBD-001";
+			public const string GetLatestAnnouncements = "MOBD-002";
+			public const string GetLatestEvents = "MOBD-003";
+			public const string GetLatestHolidays = "MOBD-004";
+			public const string GetBirthdays = "MOBD-005";
+			public const string GetWorkAnniversaries = "MOBD-006";
+			public const string GetAwards = "MOBD-007";
+		}
 
-        // Mobile events (MobileEventController)
-        public static class MobileEvent
+
+		// Mobile events (MobileEventController)
+		public static class MobileEvent
         {
             public const string GetEvents = "MOBE-001";
         }
@@ -303,6 +307,20 @@ namespace MobileWebApi.Constants
         public static class GeoFencing
         {
             public const string GetTenantGeofence = "GEOF-001";
+        }
+
+        // Location tracking (LocationTrackingController)
+        public static class LocationTracking
+        {
+            public const string RecordLocation = "LOCT-001";
+            public const string RecordLocationBatch = "LOCT-002";
+            public const string AddIssue = "LOCT-004";
+        }
+
+        // Location tracking configuration (MobileLocationTrackingConfigurationController)
+        public static class LocationTrackingConfiguration
+        {
+            public const string GetConfiguration = "LOCT-003";
         }
 
         // Personal details (PersonalDetailsController)
@@ -360,24 +378,27 @@ namespace MobileWebApi.Constants
         // Role-based dashboard (DashboardRepository / DashboardController)
         public static class Dashboard
         {
-            public const string GetDashboard = "DASH-001";
-            public const string GetBirthdays = "DASH-002";
-            public const string GetWorkAnniversaries = "DASH-003";
-            public const string GetAwards = "DASH-004";
-        }
+			public const string GetDashboard = "DASH-001";
+			public const string GetBirthdays = "DASH-002";
+			public const string GetWorkAnniversaries = "DASH-003";
+			public const string GetAwards = "DASH-004";
+		}
 
-        // Asset list (AssetRepository)
-        public static class Asset
-        {
-            public const string GetList = "ASSET-002";
-            public const string Create = "ASSET-003";
-            public const string Update = "ASSET-005";
-            public const string GetLookups = "ASSET-008";
-            public const string Delete = "ASSET-010";
-        }
 
-        // Asset hand over list (AssetHandOverRepository)
-        public static class AssetHandOver
+		// Asset list (AssetRepository)
+		public static class Asset
+		{
+			public const string GetList = "ASSET-002";
+			public const string Create = "ASSET-003";
+			public const string Update = "ASSET-005";
+			public const string GetLookups = "ASSET-008";
+			public const string Delete = "ASSET-010";
+			public const string GetQrCode = "ASSET-012";
+			public const string GetTimeline = "ASSET-022";
+		}
+
+		// Asset hand over list (AssetHandOverRepository)
+		public static class AssetHandOver
         {
             public const string GetList = "ASSET-004";
             public const string Handover = "ASSET-006";
@@ -386,8 +407,22 @@ namespace MobileWebApi.Constants
             public const string Delete = "ASSET-011";
         }
 
-        // Scanner (ScannerRepository)
-        public static class Scanner
+		// Asset maintenance (AssetMaintenanceRepository / AssetMaintenanceService)
+		public static class AssetMaintenance
+		{
+			public const string Create = "ASSET-013";
+			public const string GetById = "ASSET-014";
+			public const string GetList = "ASSET-015";
+			public const string Delete = "ASSET-016";
+			public const string Update = "ASSET-017";
+			public const string GetByAsset = "ASSET-018";
+			public const string AttachmentUpload = "ASSET-019";
+			public const string GetLookups = "ASSET-020";
+			public const string GetTimeline = "ASSET-021";
+		}
+
+		// Scanner (ScannerRepository)
+		public static class Scanner
         {
             public const string GetAsset = "SCAN-001";
         }

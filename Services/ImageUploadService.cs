@@ -12,6 +12,10 @@ public class ImageUploadService : IImageUploadService
 	private static readonly string[] AllowedExtensions = { ".jpg", ".png" };
 	private static readonly string[] AllowedContentTypes = { "image/jpeg", "image/jpg", "image/png" };
 
+	private const long MaxAttachmentFileSize = 10 * 1024 * 1024; // 10MB
+	private static readonly string[] AllowedAttachmentExtensions =
+		{ ".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx", ".xls", ".xlsx" };
+
 	public ImageUploadService(IConfiguration configuration, ILogger<ImageUploadService> logger)
 	{
 		_configuration = configuration;
@@ -66,6 +70,49 @@ public class ImageUploadService : IImageUploadService
 
 		// Return relative path for DB
 		return $"Image/Employee/{folderName}/{fileName}";
+	}
+
+	public (bool IsValid, string ErrorMessage) ValidateAttachment(IFormFile file)
+	{
+		if (file == null || file.Length == 0)
+			return (false, "Attachment file is required.");
+
+		if (file.Length > MaxAttachmentFileSize)
+			return (false, "Attachment size must be less than 10 MB.");
+
+		var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+		if (string.IsNullOrEmpty(ext) || !AllowedAttachmentExtensions.Contains(ext))
+			return (false, "Unsupported attachment type. Allowed: pdf, jpg, jpeg, png, doc, docx, xls, xlsx.");
+
+		return (true, string.Empty);
+	}
+
+	public async Task<string> SaveAssetDocumentAsync(IFormFile file, int tenantId)
+	{
+		var validation = ValidateAttachment(file);
+		if (!validation.IsValid)
+			throw new ArgumentException(validation.ErrorMessage);
+
+		var uploadRoot = Path.GetFullPath(_configuration["UploadSettings:Path"]);
+
+		// Folder structure: AssetDocument/00000
+		var folderName = (tenantId / 1000).ToString("D5");
+		var uploadDir = Path.Combine(uploadRoot, "AssetDocument", folderName);
+		Directory.CreateDirectory(uploadDir);
+
+		var random = GenerateRandomString(15);
+		var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+		var fileName = $"{tenantId:D8}_{random}{extension}";
+
+		var fullPath = Path.Combine(uploadDir, fileName);
+
+		using (var fs = new FileStream(fullPath, FileMode.Create))
+			await file.CopyToAsync(fs);
+
+		_logger.LogInformation(LogMessages.ImageUpload.ImageSavedSuccessfully, fullPath);
+
+		// Return relative path (forward slashes) for DB
+		return $"AssetDocument/{folderName}/{fileName}";
 	}
 
 	private void CreateThumbnail(string sourcePath, string thumbPath)
