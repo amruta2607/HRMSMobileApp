@@ -8,7 +8,7 @@ namespace MobileWebApi.Models.Responses
         /// <summary>
         /// Asset identifier.
         /// </summary>
-        public int HistoryId { get; set; }
+        public int Id { get; set; }
 
         /// <summary>
         /// Asset number.
