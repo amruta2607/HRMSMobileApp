@@ -8,6 +8,10 @@ using MobileWebApi.Services;
 
 namespace MobileWebApi.Controllers
 {
+    /// <summary>
+    /// Tenant-scoped HR dashboard widgets: recent birthdays, work anniversaries, and awards.
+    /// </summary>
+    [ApiController]
     [Route("api/dashboard")]
     [ApiController]
     [Authorize]
@@ -31,6 +35,7 @@ namespace MobileWebApi.Controllers
         [HttpGet("birthdays")]
         [ProducesResponseType(typeof(IEnumerable<DashboardBirthdayDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetBirthdays()
         {
@@ -66,6 +71,7 @@ namespace MobileWebApi.Controllers
         [HttpGet("work-anniversaries")]
         [ProducesResponseType(typeof(IEnumerable<DashboardWorkAnniversaryDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetWorkAnniversaries()
         {
@@ -100,6 +106,7 @@ namespace MobileWebApi.Controllers
         [HttpGet("awards")]
         [ProducesResponseType(typeof(IEnumerable<DashboardAwardDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetAwards()
         {

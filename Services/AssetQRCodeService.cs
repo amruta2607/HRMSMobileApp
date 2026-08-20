@@ -1,5 +1,6 @@
 using Dapper;
 using Microsoft.Extensions.Configuration;
+using MobileWebApi.Constants;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Resources;
 using QRCoder;
@@ -61,7 +62,7 @@ namespace MobileWebApi.Services
                 transaction);
 
             if (asset == null)
-                throw new AssetValidationException("Asset was not found for QR code generation.");
+                throw new AssetValidationException(AssetMessages.NotFoundForQrCodeGeneration);
 
             var assetCode = string.IsNullOrWhiteSpace(asset.AssetCode)
                 ? GenerateAssetCode(connection, tenantId, transaction)
@@ -113,10 +114,7 @@ namespace MobileWebApi.Services
 
         private string SaveQRCode(byte[] pngBytes, int tenantId, string assetCode)
         {
-            var webRoot = _environment.WebRootPath;
-            if (string.IsNullOrEmpty(webRoot))
-                webRoot = Path.Combine(_environment.ContentRootPath, "wwwroot");
-
+            var webRoot = GetWebRootPath();
             var absoluteDir = Path.Combine(webRoot, "Upload", "AssetQR",
                 tenantId.ToString(CultureInfo.InvariantCulture));
             Directory.CreateDirectory(absoluteDir);
@@ -125,6 +123,14 @@ namespace MobileWebApi.Services
             File.WriteAllBytes(Path.Combine(absoluteDir, fileName), pngBytes);
 
             return $"Upload/AssetQR/{tenantId}/{fileName}";
+        }
+
+        private string GetWebRootPath()
+        {
+            var webRoot = _environment.WebRootPath;
+            if (string.IsNullOrEmpty(webRoot))
+                webRoot = Path.Combine(_environment.ContentRootPath, "wwwroot");
+            return webRoot;
         }
 
         private sealed class AssetQrRow

@@ -172,7 +172,19 @@ namespace MobileWebApi.Swagger
 
             var underlying = Nullable.GetUnderlyingType(modelType) ?? modelType;
 
-            if (underlying == typeof(IFormFile) || underlying == typeof(IFormFile[]))
+            if (IsFormFileCollection(underlying))
+            {
+                properties[name] = new OpenApiSchema
+                {
+                    Type = "array",
+                    Items = new OpenApiSchema { Type = "string", Format = "binary" },
+                    Description = "One or more files to upload."
+                };
+                encoding[name] = new OpenApiEncoding { Style = ParameterStyle.Form };
+                return;
+            }
+
+            if (underlying == typeof(IFormFile))
             {
                 properties[name] = new OpenApiSchema
                 {
@@ -212,6 +224,20 @@ namespace MobileWebApi.Swagger
                 Example = AttendanceDateTimeSwaggerExamples.ToOpenApiString(propertyName),
                 Description = $"Format: {AttendanceDateTimeSwaggerExamples.FormatHint}. Example: {example}"
             };
+        }
+
+        private static bool IsFormFileCollection(Type type)
+        {
+            if (type == typeof(IFormFileCollection))
+                return true;
+
+            if (type.IsArray)
+                return type.GetElementType() == typeof(IFormFile);
+
+            if (type.IsGenericType)
+                return type.GetGenericArguments().FirstOrDefault() == typeof(IFormFile);
+
+            return false;
         }
 
         private static bool ConsumesMultipart(OperationFilterContext context)

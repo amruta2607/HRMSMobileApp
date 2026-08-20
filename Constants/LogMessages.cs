@@ -429,6 +429,9 @@ namespace MobileWebApi.Constants
             public const string ErrorFetchingLatestAnnouncements = "Error fetching latest announcements for mobile dashboard.";
             public const string ErrorFetchingLatestHolidays = "Error fetching latest holidays for mobile dashboard.";
             public const string ErrorFetchingLatestTrainings = "Error fetching latest trainings for mobile dashboard.";
+            public const string ErrorFetchingBirthdays = "Error fetching birthdays for dashboard.";
+            public const string ErrorFetchingWorkAnniversaries = "Error fetching work anniversaries for dashboard.";
+            public const string ErrorFetchingAwards = "Error fetching awards for dashboard.";
         }
 
         // Asset dashboard logs
@@ -724,6 +727,12 @@ namespace MobileWebApi.Constants
             public const string FoundEmployeeNumberForUserId = "Found employee number {EmployeeNumber} for user ID {UserId}";
             public const string EmployeeNotFoundWithEmployeeNumber = "Employee not found with employee number: {EmployeeNumber}";
             public const string UsingEmployeeIdFromEmployeeNumber = "Using employee ID {EmployeeId} (empId) from employee number {EmployeeNumber}";
+
+            // Non-employee (system user) personal details
+            public const string NoEmployeeFallingBackToUser = "No employee found for user ID {UserId}; loading personal details from Users/WorkRole";
+            public const string RetrievedNonEmployeePersonalDetails = "Retrieved non-employee personal details for user ID {UserId} with designation {Designation}";
+            public const string UserNotFoundForPersonalDetails = "Neither employee nor user found for user ID: {UserId}";
+            public const string ErrorRetrievingPersonalDetailsByUserId = "Error retrieving personal details for user ID {UserId}";
             
             // Request validation
             public const string InvalidRequestOrUserId = "Invalid request or UserId";

@@ -1,7 +1,7 @@
 namespace MobileWebApi.Models.Responses
 {
     /// <summary>
-    /// Represents a single asset record for the mobile asset list.
+    /// Complete asset record for the mobile asset list / update pre-populate screen.
     /// </summary>
     public class AssetDto
     {
@@ -10,94 +10,55 @@ namespace MobileWebApi.Models.Responses
         /// </summary>
         public int HistoryId { get; set; }
 
-        /// <summary>
-        /// Asset number.
-        /// </summary>
-        public string Number { get; set; } = string.Empty;
+        // Status & lookups
+        public int? AssetStatusId { get; set; }
+        public string? AssetStatus { get; set; }
+        public int? AssetCategoryId { get; set; }
+        public string? AssetCategory { get; set; }
+        public int? AssetTypeId { get; set; }
+        public string? AssetType { get; set; }
+        public int? DepartmentId { get; set; }
+        public string? Department { get; set; }
+        public int? BranchId { get; set; }
+        public string? Branch { get; set; }
+        public int? BusinessUnitId { get; set; }
+        public string? BusinessUnit { get; set; }
 
-        /// <summary>
-        /// Asset code.
-        /// </summary>
-        public string AssetCode { get; set; } = string.Empty;
+        // Ownership
+        public string? Owner { get; set; }
+        public string? Location { get; set; }
 
-        /// <summary>
-        /// QR code file path.
-        /// </summary>
-        public string QRCodePath { get; set; } = string.Empty;
-
-        /// <summary>
-        /// URL encoded inside the QR image.
-        /// </summary>
-        public string QRCodeText { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Asset display name.
-        /// </summary>
-        public string AssetName { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Current asset status name.
-        /// </summary>
-        public string AssetStatus { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Asset owner.
-        /// </summary>
-        public string Owner { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Asset category name.
-        /// </summary>
-        public string AssetCategory { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Department name.
-        /// </summary>
-        public string Department { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Branch name.
-        /// </summary>
-        public string Branch { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Business unit name.
-        /// </summary>
-        public string BusinessUnit { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Asset purchase date.
-        /// </summary>
+        // Purchase
         public DateTime? PurchaseDate { get; set; }
-
-        /// <summary>
-        /// Asset purchase price.
-        /// </summary>
         public decimal? PurchasePrice { get; set; }
-
-        /// <summary>
-        /// Current actual value of the asset.
-        /// </summary>
         public decimal? ActualValue { get; set; }
+        public string? PurchaseOrderNumber { get; set; }
+        public string? PurchaseOrderBill { get; set; }
 
-        /// <summary>
-        /// Asset manufacturer.
-        /// </summary>
-        public string Manufacturer { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Asset model.
-        /// </summary>
-        public string Model { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Year of production.
-        /// </summary>
+        // Manufacturer
+        public string? Manufacturer { get; set; }
+        public string? Model { get; set; }
+        public string? SerialNumber { get; set; }
         public int? ProductionYear { get; set; }
 
-        /// <summary>
-        /// Date when the QR code was generated.
-        /// </summary>
-        public DateTime? QRCodeGeneratedDate { get; set; }
+        // Support
+        public string? SupportCenter { get; set; }
+
+        // Asset details
+        public string? AssetTagNumber { get; set; }
+
+        // Warranty & maintenance
+        public DateTime? WarrantyExpiryDate { get; set; }
+        public DateTime? MaintenanceDueDate { get; set; }
+        public decimal? DepreciationPercentage { get; set; }
+
+        // Media
+        public string? Images { get; set; }
+
+        // Audit
+        public DateTime? InsertDate { get; set; }
+        public int? InsertUserId { get; set; }
+        public DateTime? UpdateDate { get; set; }
+        public int? UpdateUserId { get; set; }
     }
 }
