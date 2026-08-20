@@ -13,7 +13,6 @@ namespace MobileWebApi.Controllers
     /// </summary>
     [ApiController]
     [Route("api/dashboard")]
-    [ApiController]
     [Authorize]
     public class DashboardController : TenantBaseController
     {

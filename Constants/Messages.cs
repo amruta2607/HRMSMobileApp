@@ -134,6 +134,9 @@ namespace MobileWebApi.Constants
 
         // Error messages
         public const string PunchInAlreadyDone = "Punch In already done for today.";
+        public const string AlreadyPunchedIn = "Already punched in.";
+        public const string AlreadyPunchedOut = "Already punched out.";
+        public const string PleasePunchInFirst = "Please Punch In first.";
         public const string PunchInFailed = "Punch In Failed";
         public const string CannotPunchOutWithoutPunchIn = "Cannot Punch Out — Punch In not done.";
         public const string PunchOutAlreadyDone = "Punch Out already done.";
@@ -603,6 +606,19 @@ namespace MobileWebApi.Constants
         public const string EventApprovedMessage = "Your {0} has been approved.";
         public const string EventRejectedMessage = "Your {0} has been rejected. Reason: {1}";
         public const string EventRejectedMessageNoReason = "Your {0} has been rejected.";
+    }
+
+    /// <summary>
+    /// Location tracking configuration API messages
+    /// </summary>
+    public static class LocationTrackingConfigurationMessages
+    {
+        public const string ConfigurationFetchedSuccessfully = "Location tracking configuration fetched successfully.";
+        public const string EmployeeNotFound = "Employee not found.";
+        public const string TenantNotFound = "Tenant not found.";
+        public const string TenantConfigurationNotFound = "Tenant configuration not found.";
+        public const string LocationTrackingConfigurationNotFound = "Location tracking configuration not found.";
+        public const string EmployeeDoesNotBelongToTenant = "Employee does not belong to the specified tenant.";
     }
 
     /// <summary>

@@ -982,6 +982,9 @@ namespace MobileWebApi.Controllers
             IReadOnlyList<string>? workRoles = null)
         {
             var attendanceEnabled = mobileTenantConfig?.IsAttendanceEnabled ?? false;
+            var tenantLocationTrackingEnabled = mobileTenantConfig?.EnableLocationTracking ?? false;
+            var enableEmployeeLevelLocationTracking = mobileTenantConfig?.EnableEmployeeLevelLocationTracking ?? false;
+            var employeeLocationTracking = employee?.EnableLocationTracking;
 
             var locationTracking = LocationTrackingSettingsHelper.Resolve(
                 attendanceEnabled,
