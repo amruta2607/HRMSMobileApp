@@ -26,7 +26,7 @@ namespace MobileWebApi.Models
         public string? LinkOut { get; set; }
 		public string? PunchInImage { get; set; }
 		public string? PunchOutImage { get; set; }
-		public bool? Manual { get; set; }
+        public bool? Manual { get; set; }
         public string? PunchOutReason { get; set; }
     }
 }

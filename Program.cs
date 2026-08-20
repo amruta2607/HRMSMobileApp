@@ -91,11 +91,13 @@ builder.Services.AddScoped<ITemplateRepository, TemplateRepository>();
 builder.Services.AddScoped<ITenantConfigurationRepository, TenantConfigurationRepository>();
 builder.Services.AddScoped<IGeoTenantLocationRepository, GeoTenantLocationRepository>();
 builder.Services.AddScoped<IMobileTenantConfigurationRepository, MobileTenantConfigurationRepository>();
-builder.Services.AddScoped<IPunchTrackingRepository, PunchTrackingRepository>();
 builder.Services.AddScoped<ILocationTrackingRepository, LocationTrackingRepository>();
 builder.Services.AddScoped<ILocationTrackingService, LocationTrackingService>();
 builder.Services.AddScoped<ILocationTrackingConfigurationRepository, LocationTrackingConfigurationRepository>();
 builder.Services.AddScoped<ILocationTrackingConfigurationService, LocationTrackingConfigurationService>();
+builder.Services.AddScoped<ILocationTrackingIssueRepository, LocationTrackingIssueRepository>();
+builder.Services.AddScoped<ILocationTrackingIssueService, LocationTrackingIssueService>();
+builder.Services.AddScoped<IPunchTrackingRepository, PunchTrackingRepository>();
 builder.Services.AddScoped<IMobileModuleAccessService, MobileModuleAccessService>();
 
 builder.Services.AddSingleton<ISqlConnections, MobileWebApi.Data.DefaultSqlConnections>();
@@ -163,6 +165,7 @@ builder.Services.AddSwaggerGen(c =>
 	c.OperationFilter<AttendanceDateTimeOperationFilter>();
 	c.OperationFilter<LoginRequestOperationFilter>();
 	c.SchemaFilter<AttendanceDateTimeSchemaFilter>();
+	c.SchemaFilter<LocationTrackingTimestampSchemaFilter>();
 	c.SchemaFilter<DisputeSubmitRequestSchemaFilter>();
 	c.SchemaFilter<LoginRequestSchemaFilter>();
 	c.SchemaFilter<AssetRequestSchemaFilter>();

@@ -18,6 +18,8 @@ namespace MobileWebApi.Services
         private readonly ITenantWeekOffRepository _tenantWeekOffRepository;
         private readonly ITenantConfigurationRepository _tenantConfigurationRepository;
         private readonly IPunchTrackingRepository _punchTrackingRepository;
+        private readonly ILocationTrackingRepository _locationTrackingRepository;
+        private readonly IMobileTenantConfigurationRepository _mobileTenantConfigurationRepository;
         private readonly ILogger<AttendanceService> _logger;
 
         public AttendanceService(
@@ -30,6 +32,8 @@ namespace MobileWebApi.Services
             ITenantWeekOffRepository tenantWeekOffRepository,
             ITenantConfigurationRepository tenantConfigurationRepository,
             IPunchTrackingRepository punchTrackingRepository,
+            ILocationTrackingRepository locationTrackingRepository,
+            IMobileTenantConfigurationRepository mobileTenantConfigurationRepository,
             ILogger<AttendanceService> logger)
         {
             _repo = repo;
@@ -41,12 +45,16 @@ namespace MobileWebApi.Services
             _tenantWeekOffRepository = tenantWeekOffRepository;
             _tenantConfigurationRepository = tenantConfigurationRepository;
             _punchTrackingRepository = punchTrackingRepository;
+            _locationTrackingRepository = locationTrackingRepository;
+            _mobileTenantConfigurationRepository = mobileTenantConfigurationRepository;
             _logger = logger;
         }
 
         private const string MobileSource = "Mobile";
         private const string DirectionIn = "IN";
         private const string DirectionOut = "OUT";
+        private const string PunchInLocationFrom = "PunchIn";
+        private const string PunchOutLocationFrom = "PunchOut";
 
         /// <summary>
         /// Resolves EmployeeId from UserId by joining Users and Employee tables
@@ -96,8 +104,20 @@ namespace MobileWebApi.Services
 					LogMessages.Attendance.ProcessingPunchIn,
 					employeeId.Value);
 
+				var tenantId = await GetEmployeeTenantIdAsync(employeeId.Value);
 				var punchIn = PreserveReceivedDateTime(req.punch_in_time);
 				var attendanceDate = PreserveReceivedDateTime(req.attendance_date).Date;
+
+				if (await IsLocationTrackingEnabledAsync(tenantId))
+				{
+					return await PunchInMultipleAsync(
+						employeeId.Value,
+						tenantId,
+						req.userId,
+						punchIn,
+						attendanceDate,
+						req);
+				}
 
 				_logger.LogInformation(
 					"PunchInAsync before save - EmployeeId: {EmployeeId}, PunchIn: {PunchIn} (Kind: {PunchInKind}), PunchDate: {PunchDate}",
@@ -221,7 +241,19 @@ namespace MobileWebApi.Services
 					LogMessages.Attendance.ProcessingPunchOut,
 					employeeId.Value);
 
+				var tenantId = await GetEmployeeTenantIdAsync(employeeId.Value);
 				var punchOut = PreserveReceivedDateTime(req.punch_out_time);
+
+				if (await IsLocationTrackingEnabledAsync(tenantId))
+				{
+					return await PunchOutMultipleAsync(
+						employeeId.Value,
+						tenantId,
+						req.userId,
+						punchOut,
+						PreserveReceivedDateTime(req.attendance_date).Date,
+						req);
+				}
 
 				_logger.LogInformation(
 					"PunchOutAsync before save - EmployeeId: {EmployeeId}, PunchOut: {PunchOut} (Kind: {PunchOutKind})",
@@ -564,6 +596,23 @@ namespace MobileWebApi.Services
             return isManual ? AttendanceMessages.ManualPunchOutReason : null;
         }
 
+        private async Task<double?> CalculateCurrentSessionDurationAsync(int punchId, DateTime punchOut)
+        {
+            var lastIn = await _punchTrackingRepository.GetLastUnmatchedPunchInAsync(punchId);
+            if (lastIn?.PunchIn == null)
+            {
+                return null;
+            }
+
+            return CalculateDurationInMinutes(lastIn.PunchIn, punchOut);
+        }
+
+        private async Task<double?> CalculateLocationTrackingPunchDurationAsync(int punchId, double? sessionDuration)
+        {
+            var completedMinutes = await _punchTrackingRepository.GetCompletedPunchTrackingDurationSumAsync(punchId);
+            return Math.Round(completedMinutes + (sessionDuration ?? 0), 2);
+        }
+
         private async Task<int> GetEmployeeTenantIdAsync(int employeeId)
         {
             var employee = await _repo.GetEmployeeByIdAsync(employeeId);
@@ -668,9 +717,9 @@ namespace MobileWebApi.Services
             }
 
             string? imageUrl = null;
-            if (req.image != null && req.image.Length > 0)
+            if (req.PunchInImage != null && req.PunchInImage.Length > 0)
             {
-                imageUrl = await _blobService.UploadAsync(req.image, employeeId);
+                imageUrl = await _blobService.UploadAsync(req.PunchInImage, employeeId);
                 _logger.LogInformation("Punch-in image uploaded for employee {EmployeeId}", employeeId);
             }
 
@@ -761,16 +810,17 @@ namespace MobileWebApi.Services
             double? segmentDuration = CalculateDurationInMinutes(lastTracking.PunchIn, punchOut);
 
             string? imageUrl = null;
-            if (req.image != null && req.image.Length > 0)
+            var punchOutImage = req.PunchOutImage;
+            if (punchOutImage != null && punchOutImage.Length > 0)
             {
-                imageUrl = await _blobService.UploadAsync(req.image, employeeId);
+                imageUrl = await _blobService.UploadAsync(punchOutImage, employeeId);
                 _logger.LogInformation("Punch-out image uploaded for employee {EmployeeId}", employeeId);
             }
 
             var coordinateOut = BuildCoordinate(req.latitude, req.longitude);
             var linkOut = GenerateGoogleMapLink(req.latitude, req.longitude);
             var isManual = req.Manual ?? true;
-            var punchOutReason = ResolvePunchOutReason(req.PunchOutReason, isManual);
+            var punchOutReason = ResolvePunchOutReason(req.PunchOutReason ?? req.punchOutReason, isManual);
 
             var tracking = BuildOutTracking(
                 tenantId,

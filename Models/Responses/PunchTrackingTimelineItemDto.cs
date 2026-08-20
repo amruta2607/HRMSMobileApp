@@ -13,7 +13,7 @@ namespace MobileWebApi.Models.Responses
         public string? Address { get; set; }
 		public string? PunchInImage { get; set; }
 		public string? PunchOutImage { get; set; }
-		public bool? Manual { get; set; }
+        public bool? Manual { get; set; }
         public string? Remarks { get; set; }
     }
 }

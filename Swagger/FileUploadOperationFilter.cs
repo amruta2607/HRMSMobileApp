@@ -23,10 +23,9 @@ namespace MobileWebApi.Swagger
             if (!ConsumesMultipart(context))
                 return;
 
-            // When a complex [FromForm] model contains an IFormFile, ApiExplorer flattens it:
-            // scalar properties are described with BindingSource.Form, but the IFormFile
-            // property is described with BindingSource.FormFile. Both must be collected,
-            // otherwise the file field is silently dropped and no upload control is rendered.
+            // IFormFile properties on a [FromForm] model are reported by the ApiExplorer
+            // with BindingSource.FormFile (not BindingSource.Form), so both must be included
+            // or the file upload field is dropped from the generated schema.
             var formParameters = context.ApiDescription.ParameterDescriptions
                 .Where(p => p.Source == BindingSource.Form || p.Source == BindingSource.FormFile)
                 .ToList();
@@ -44,7 +43,16 @@ namespace MobileWebApi.Swagger
                 var underlying = Nullable.GetUnderlyingType(modelType) ?? modelType;
 
                 // Expand complex [FromForm] models (e.g. PunchInRequest) into form fields.
-                if (IsComplexFormModel(underlying, modelMetadata))
+                // IFormFile and IFormFile collections must NOT be expanded (a List<IFormFile>
+                // otherwise leaks its Capacity/Count properties instead of a file field).
+                if (modelMetadata?.Properties is { Count: > 0 } children &&
+                    underlying != typeof(IFormFile) &&
+                    !IsFormFileCollection(underlying) &&
+                    underlying != typeof(string) &&
+                    !underlying.IsPrimitive &&
+                    underlying != typeof(decimal) &&
+                    underlying != typeof(DateTime) &&
+                    underlying != typeof(Guid))
                 {
                     ExpandComplexFormModel(properties, encoding, underlying, modelMetadata);
                     continue;
@@ -80,9 +88,14 @@ namespace MobileWebApi.Swagger
                 }
             };
 
-            // Clear media-type Example so Swagger UI renders all form fields (including files).
-            operation.RequestBody.Content["multipart/form-data"].Example = null;
-            operation.Parameters?.Clear();
+            // Keep path/header parameters (e.g. the PUT {id} route value); only the
+            // query/form parameters are replaced by the multipart request body above.
+            if (operation.Parameters != null)
+            {
+                operation.Parameters = operation.Parameters
+                    .Where(p => p.In == ParameterLocation.Path || p.In == ParameterLocation.Header)
+                    .ToList();
+            }
         }
 
         private static bool IsComplexFormModel(Type underlying, ModelMetadata? modelMetadata)

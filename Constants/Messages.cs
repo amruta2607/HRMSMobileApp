@@ -140,6 +140,9 @@ namespace MobileWebApi.Constants
         public const string PunchInFailed = "Punch In Failed";
         public const string CannotPunchOutWithoutPunchIn = "Cannot Punch Out — Punch In not done.";
         public const string PunchOutAlreadyDone = "Punch Out already done.";
+        public const string AlreadyPunchedIn = "Already punched in.";
+        public const string AlreadyPunchedOut = "Already punched out.";
+        public const string PleasePunchInFirst = "Please Punch In first.";
         public const string CalendarDateRequiredForDaily = "CalendarDate is required for daily attendance report.";
         public const string DateRangeRequiredForMonthly = "DateFrom and DateTo are required for monthly attendance report.";
         public const string EmployeeIdRequired = "Employee ID is required.";
@@ -613,12 +616,43 @@ namespace MobileWebApi.Constants
     /// </summary>
     public static class LocationTrackingMessages
     {
+        public const string LocationRecordedSuccessfully = "Location recorded successfully.";
         public const string UserIdRequired = "User ID is required.";
-        public const string InvalidUserId = "User ID must be a positive integer.";
-        public const string UserNotFound = "User not found.";
-        public const string EmployeeNotFoundForUser = "No employee is associated with the specified user.";
+        public const string LatitudeRequired = "Latitude is required.";
+        public const string LongitudeRequired = "Longitude is required.";
+        public const string InvalidLatitude = "Latitude must be between -90 and 90.";
+        public const string InvalidLongitude = "Longitude must be between -180 and 180.";
+        public const string TrackingDateTimeRequired = "Tracking date and time is required.";
+        public const string EmployeeNotFound = "Employee not found.";
+        public const string TenantNotFound = "Tenant not found.";
         public const string EmployeeDoesNotBelongToTenant = "Employee does not belong to the specified tenant.";
-        public const string TodayPathFetchedSuccessfully = "Today's location tracking path fetched successfully.";
+        public const string EmployeeNotPunchedIn = "Employee is not currently punched in.";
+        public const string LocationTrackingDisabled = "Location tracking is disabled.";
+        public const string FailedToRecordLocation = "Failed to record location.";
+        public const string LocationsRequired = "At least one location record is required.";
+        public const string BatchProcessedSuccessfully = "Location batch processed successfully.";
+        public const string BatchPartiallyProcessed = "Location batch processed with some invalid records skipped.";
+        public const string BatchAllRecordsInvalid = "All location records in the batch are invalid.";
+        public const string FailedToRecordLocationBatch = "Failed to record location batch.";
+    }
+
+    /// <summary>
+    /// Location tracking issue API messages
+    /// </summary>
+    public static class LocationTrackingIssueMessages
+    {
+        public const string IssueLoggedSuccessfully = "Location tracking issue logged successfully.";
+        public const string InvalidIssueType = "Invalid Issue Type.";
+        public const string IssueTypeRequired = "Issue type is required.";
+        public const string IssueDescriptionRequired = "Issue description is required.";
+        public const string TimestampRequired = "Timestamp is required.";
+        public const string EmployeeNotFound = "Employee not found.";
+        public const string TenantNotFound = "Tenant not found.";
+        public const string EmployeeDoesNotBelongToTenant = "Employee does not belong to the specified tenant.";
+        public const string FailedToLogIssue = "Failed to log location tracking issue.";
+        public const string ViolationNotificationTitle = "Location Tracking Violation";
+        public const string ViolationNotificationMessage = "Employee {0} triggered a {1} violation.";
+        public const string UnknownEmployeeName = "Unknown Employee";
     }
 
     /// <summary>
