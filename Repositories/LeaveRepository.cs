@@ -55,27 +55,31 @@ namespace MobileWebApi.Repositories
             return await conn.QueryFirstOrDefaultAsync<LeaveRequest>(query, new { Id = id });
         }
 
-        /// <summary>
-        /// Get leave requests with filters
-        /// </summary>
-        public async Task<IEnumerable<LeaveRequest>> GetLeaveRequestsAsync(int? organisationId, int? employeeId, int? leaveTypeId, string? status)
-        {
-            using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetLeaveRequests");
+		/// <summary>
+		/// Get leave requests with filters
+		/// </summary>
+		public async Task<IEnumerable<LeaveRequest>> GetLeaveRequestsAsync(
+	int? organisationId,
+	int? employeeId,
+	int? leaveTypeId
+)
+		{
+			using var conn = _context.CreateConnection();
+			string query = _queryProvider.Get("GetLeaveRequests");
 
-            return await conn.QueryAsync<LeaveRequest>(query, new
-            {
-                OrganisationId = organisationId,
-                EmployeeId = employeeId,
-                LeaveTypeId = leaveTypeId,
-                Status = status
-            });
-        }
+			return await conn.QueryAsync<LeaveRequest>(query, new
+			{
+				OrganisationId = organisationId,
+				EmployeeId = employeeId,
+				LeaveTypeId = leaveTypeId
+			});
+		}
 
-        /// <summary>
-        /// Get leave requests by employee ID
-        /// </summary>
-        public async Task<IEnumerable<LeaveRequest>> GetLeaveRequestsByEmployeeIdAsync(int employeeId)
+
+		/// <summary>
+		/// Get leave requests by employee ID
+		/// </summary>
+		public async Task<IEnumerable<LeaveRequest>> GetLeaveRequestsByEmployeeIdAsync(int employeeId)
         {
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("GetLeaveRequestsByEmployeeId");
@@ -207,28 +211,62 @@ namespace MobileWebApi.Repositories
         public async Task<string?> GenerateLeaveRequestNumberAsync(int organisationId)
         {
             using var conn = _context.CreateConnection();
-            string query = _queryProvider.Get("GetNextLeaveRequestNumber");
+            string query = _queryProvider.Get("GetLastLeaveRequestNumber");
 
-            var lastNumber = await conn.QueryFirstOrDefaultAsync<string>(query, new { OrganisationId = organisationId });
-
-            // Generate next number (format: LR-YYYYMMDD-0001)
             var today = DateTime.Now.ToString("yyyyMMdd");
-            var prefix = $"LR-{today}-";
+            var prefix = $"LVR/{today}";
 
-            if (string.IsNullOrEmpty(lastNumber) || !lastNumber.Contains(today))
+            var lastNumber = await conn.QueryFirstOrDefaultAsync<string>(query, new { TenantId = organisationId, Today = today });
+
+            // Required format: LVR/YYYYMMDD#### (sequence resets daily)
+            if (string.IsNullOrWhiteSpace(lastNumber) || !lastNumber.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {
                 return $"{prefix}0001";
             }
 
-            // Extract and increment the sequence number
-            var parts = lastNumber.Split('-');
-            if (parts.Length >= 3 && int.TryParse(parts[2], out int seq))
-            {
+            var seqPart = lastNumber.Substring(prefix.Length);
+            if (seqPart.Length == 4 && int.TryParse(seqPart, out var seq))
                 return $"{prefix}{(seq + 1):D4}";
-            }
 
             return $"{prefix}0001";
         }
-    }
+		/// <summary>
+		/// Get configured week offs (DayOffId) for a tenant/organization
+		/// </summary>
+		public async Task<List<int>> GetTenantDayOffsAsync(int organisationId)
+		{
+			using var conn = _context.CreateConnection();
+			string query = _queryProvider.Get("GetTenantDayOffsByTenantId");
+
+			var result = await conn.QueryAsync<int>(query, new { TenantId = organisationId });
+			return result.ToList();
+		}
+		/// <summary>
+		/// Get holidays for a tenant between given dates
+		/// </summary>
+		public async Task<List<Holiday>> GetHolidaysAsync(int organisationId, DateTime fromDate, DateTime toDate)
+		{
+			using var conn = _context.CreateConnection();
+			string query = _queryProvider.Get("GetHolidaysByTenantIdAndDateRange");
+
+			var result = await conn.QueryAsync<Holiday>(query, new
+			{
+				TenantId = organisationId,
+				FromDate = fromDate,
+				ToDate = toDate
+			});
+
+			return result.ToList();
+		}
+
+		public async Task<int> GetTotalLeaveAllocationForEmployeeAsync(int employeeId)
+		{
+			using var conn = _context.CreateConnection();
+			string query = _queryProvider.Get("GetTotalLeaveAllocationForEmployee");
+
+			var total = await conn.ExecuteScalarAsync<int?>(query, new { EmployeeId = employeeId });
+			return total ?? 0;
+		}
+	}
 }
 

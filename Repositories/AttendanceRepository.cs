@@ -1,4 +1,4 @@
-﻿using Dapper;
+using Dapper;
 using MobileWebApi.Data;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
@@ -13,7 +13,10 @@ namespace MobileWebApi.Repositories
         private readonly ILogger<AttendanceRepository> _logger;
         private readonly QueryProvider _queryProvider;
 
-        public AttendanceRepository(DapperContext context, ILogger<AttendanceRepository> logger, QueryProvider queryProvider)
+        public AttendanceRepository(
+            DapperContext context,
+            ILogger<AttendanceRepository> logger,
+            QueryProvider queryProvider)
         {
             _context = context;
             _logger = logger;
@@ -41,36 +44,138 @@ namespace MobileWebApi.Repositories
                 new { EmployeeId = employeeId, PunchDate = punchDate.Date, TenantId = tenantId });
         }
 
-        public async Task<int> InsertPunchIn(int employeeId, DateTime punchIn, DateTime punchDate)
+        public async Task<Punch?> GetOpenPunchByEmployeeId(int employeeId)
+        {
+            using var conn = _context.CreateConnection();
+            string query = _queryProvider.Get("GetOpenPunchByEmployeeId");
+
+            return await conn.QueryFirstOrDefaultAsync<Punch>(query, new { EmployeeId = employeeId });
+        }
+
+        public async Task<int> InsertPunchIn(
+            int employeeId,
+            DateTime punchIn,
+            DateTime punchDate,
+            string inSource,
+            string? coordinateIn,
+            string? linkIn,
+            string? punchInImage)
         {
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("InsertPunchIn");
 
-            return await conn.ExecuteScalarAsync<int>(query,
+            _logger.LogInformation(
+                "InsertPunchIn before database save - EmployeeId: {EmployeeId}, PunchIn: {PunchIn} (Kind: {PunchInKind}), PunchDate: {PunchDate}",
+                employeeId,
+                punchIn,
+                punchIn.Kind,
+                punchDate.Date);
+
+            var punchId = await conn.ExecuteScalarAsync<int>(query,
                 new 
                 { 
                     EmployeeId = employeeId, 
                     PunchDate = punchDate.Date, 
-                    PunchIn = punchIn
-                  
-                   
+                    PunchIn = punchIn,
+                    InSource = inSource,
+                    CoordinateIn = coordinateIn,
+                    LinkIn = linkIn,
+                    PunchInImage = punchInImage
                 });
+
+            _logger.LogInformation(
+                "InsertPunchIn after database save - PunchId: {PunchId}",
+                punchId);
+
+            return punchId;
         }
 
-        public async Task UpdatePunchOut(int employeeId, DateTime punchOut, DateTime punchDate, double? duration)
+        public async Task UpdatePunchOut(
+            int punchId,
+            DateTime punchOut,
+            double? duration,
+            string outSource,
+            string? coordinateOut,
+            string? linkOut,
+            string? punchOutImage,
+            int userId = 0,
+            string? punchOutReason = null)
         {
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("UpdatePunchOut");
 
+            _logger.LogInformation(
+                "UpdatePunchOut before database save - PunchId: {PunchId}, PunchOut: {PunchOut} (Kind: {PunchOutKind}), Duration: {Duration}",
+                punchId,
+                punchOut,
+                punchOut.Kind,
+                duration);
+
             await conn.ExecuteAsync(query,
-                new 
-                { 
-                    EmployeeId = employeeId, 
-                    PunchDate = punchDate.Date, 
-                    PunchOut = punchOut, 
-                    Duration = duration
-                  
+                new
+                {
+                    PunchId = punchId,
+                    PunchOut = punchOut,
+                    Duration = duration,
+                    UserId = userId,
+                    OutSource = outSource,
+                    CoordinateOut = coordinateOut,
+                    LinkOut = linkOut,
+                    PunchOutImage = punchOutImage,
+                    PunchOutReason = punchOutReason
                 });
+
+            _logger.LogInformation(
+                "UpdatePunchOut after database save - PunchId: {PunchId}",
+                punchId);
+        }
+
+        /// <inheritdoc />
+        public async Task UpdatePunchOutAsync(
+            int punchId,
+            DateTime punchOut,
+            double? duration,
+            int userId,
+            string outSource,
+            string? coordinateOut,
+            string? linkOut,
+            string? punchOutImage,
+            string? punchOutReason = null)
+        {
+            await UpdatePunchOut(
+                punchId,
+                punchOut,
+                duration,
+                outSource,
+                coordinateOut,
+                linkOut,
+                punchOutImage,
+                userId,
+                punchOutReason);
+        }
+
+        public async Task<List<DateTime>> GetHolidayDatesAsync(int tenantId, DateTime fromDate, DateTime toDate)
+        {
+            using var conn = _context.CreateConnection();
+            string query = _queryProvider.Get("GetHolidaysByTenantIdAndDateRange");
+
+            var rows = await conn.QueryAsync<Holiday>(query, new { TenantId = tenantId, FromDate = fromDate.Date, ToDate = toDate.Date });
+            return rows.Select(h => h.Date.Date).Distinct().ToList();
+        }
+
+        private sealed class LeaveDateRangeRow
+        {
+            public DateTime FromDate { get; set; }
+            public DateTime ToDate { get; set; }
+        }
+
+        public async Task<List<(DateTime FromDate, DateTime ToDate)>> GetApprovedLeaveDateRangesAsync(int employeeId, DateTime fromDate, DateTime toDate)
+        {
+            using var conn = _context.CreateConnection();
+            string query = _queryProvider.Get("GetApprovedLeaveDateRangesByEmployeeAndDateRange");
+
+            var rows = await conn.QueryAsync<LeaveDateRangeRow>(query, new { EmployeeId = employeeId, FromDate = fromDate.Date, ToDate = toDate.Date });
+            return rows.Select(r => (r.FromDate.Date, r.ToDate.Date)).ToList();
         }
 
         /// <summary>
@@ -260,17 +365,46 @@ namespace MobileWebApi.Repositories
         }
 
         /// <summary>
-        /// Delete a punch record
+        /// Deletes the Punch record.
         /// </summary>
         public async Task<bool> DeletePunchAsync(int id, int tenantId)
         {
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("DeletePunch");
 
-            var rowsAffected = await conn.ExecuteAsync(query,
-                new { Id = id, TenantId = tenantId });
-
+            var rowsAffected = await conn.ExecuteAsync(query, new { Id = id, TenantId = tenantId });
             return rowsAffected > 0;
+        }
+
+        /// <summary>
+        /// Get today's punch in/out logs from DeviceLog for a biometric number.
+        /// </summary>
+        public async Task<IEnumerable<TodayPunchLogItem>> GetTodayPunchLogsAsync(string biometricNumber, DateTime date)
+        {
+            using var conn = _context.CreateConnection();
+            string query = _queryProvider.Get("GetTodayPunchLogs");
+
+            return await conn.QueryAsync<TodayPunchLogItem>(query, new
+            {
+                BiometricNumber = biometricNumber,
+                LogDate = date.Date
+            });
+        }
+
+        /// <summary>
+        /// Get today's punch in/out logs from Punch table for an employee.
+        /// </summary>
+        public async Task<IEnumerable<TodayPunchLogItem>> GetTodayPunchLogsFromPunchAsync(int employeeId, int tenantId, DateTime date)
+        {
+            using var conn = _context.CreateConnection();
+            string query = _queryProvider.Get("GetTodayPunchLogsFromPunch");
+
+            return await conn.QueryAsync<TodayPunchLogItem>(query, new
+            {
+                EmployeeId = employeeId,
+                TenantId = tenantId,
+                LogDate = date.Date
+            });
         }
     }
 }

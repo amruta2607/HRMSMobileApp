@@ -23,11 +23,25 @@ namespace MobileWebApi.Models
         public bool IsAbsent { get; set; }
         public bool IsLeave { get; set; }
         public bool IsHoliday { get; set; }
+
+        /// <summary>
+        /// Punch table primary key when a punch exists for this day.
+        /// </summary>
+        public int? PunchId { get; set; }
+
         public DateTime? PunchIn { get; set; }
         public DateTime? PunchOut { get; set; }
         public double? WorkingHours { get; set; }
-        public string? Status { get; set; } // "Present", "Absent", "Leave", "Holiday", "Weekend", "Future"
+        public string? Status { get; set; } // "Present", "Absent", "Leave", "Holiday", "Week Off", "Future"
         public string? Remarks { get; set; }
+        public string? InSource { get; set; }
+        public string? OutSource { get; set; }
+        public string? CoordinateIn { get; set; }
+        public string? CoordinateOut { get; set; }
+        public string? LinkIn { get; set; }
+        public string? LinkOut { get; set; }
+        public string? PunchInImage { get; set; }
+        public string? PunchOutImage { get; set; }
     }
 
     /// <summary>

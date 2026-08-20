@@ -31,10 +31,24 @@ namespace MobileWebApi.Models
     {
         public DateTime Date { get; set; }
         public string? DayName { get; set; }
+
+        /// <summary>
+        /// Punch table primary key when a punch exists for this day.
+        /// </summary>
+        public int? PunchId { get; set; }
+
         public DateTime? PunchIn { get; set; }
         public DateTime? PunchOut { get; set; }
         public double? WorkingHours { get; set; }
         public string? Status { get; set; } // "Present", "Absent", "Leave", "Holiday", "Weekend"
+        public string? InSource { get; set; }
+        public string? OutSource { get; set; }
+        public string? CoordinateIn { get; set; }
+        public string? CoordinateOut { get; set; }
+        public string? LinkIn { get; set; }
+        public string? LinkOut { get; set; }
+        public string? PunchInImage { get; set; }
+        public string? PunchOutImage { get; set; }
     }
 }
 

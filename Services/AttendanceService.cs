@@ -1,6 +1,9 @@
-﻿using MobileWebApi.Interfaces;
+using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using MobileWebApi.Constants;
+using MobileWebApi.Helper;
+using System.Globalization;
+using System.Text.Json;
 
 namespace MobileWebApi.Services
 {
@@ -9,19 +12,45 @@ namespace MobileWebApi.Services
         private readonly IAttendanceRepository _repo;
         private readonly IEmployeeRepository _employeeRepository;
         private readonly IEmployeeService _employeeService;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IConfiguration _configuration;
+        private readonly BlobService _blobService;
+        private readonly ITenantWeekOffRepository _tenantWeekOffRepository;
         private readonly ILogger<AttendanceService> _logger;
 
         public AttendanceService(
             IAttendanceRepository repo, 
             IEmployeeRepository employeeRepository, 
             IEmployeeService employeeService,
+            IHttpClientFactory httpClientFactory,
+            IConfiguration configuration,
+            BlobService blobService,
+            ITenantWeekOffRepository tenantWeekOffRepository,
             ILogger<AttendanceService> logger)
         {
             _repo = repo;
             _employeeRepository = employeeRepository;
             _employeeService = employeeService;
+            _httpClientFactory = httpClientFactory;
+            _configuration = configuration;
+            _blobService = blobService;
+            _tenantWeekOffRepository = tenantWeekOffRepository;
             _logger = logger;
         }
+
+        /// <summary>
+        /// Ensures PunchId is populated from Punch.Id when SQL only mapped Id.
+        /// </summary>
+        private static void EnsurePunchIds(IEnumerable<AttendanceReport> records)
+        {
+            foreach (var record in records)
+            {
+                if (!record.PunchId.HasValue && record.Id > 0)
+                    record.PunchId = record.Id;
+            }
+        }
+
+        private const string MobileSource = "Mobile";
 
         /// <summary>
         /// Resolves EmployeeId from UserId by joining Users and Employee tables
@@ -45,104 +74,399 @@ namespace MobileWebApi.Services
             }
         }
 
-        public async Task<string> PunchInAsync(PunchInRequest req)
+		public async Task<string> PunchInAsync(PunchInRequest req)
+		{
+			try
+			{
+				_logger.LogInformation(
+					"PunchInAsync entry - punch_in_time: {PunchInTime} (Kind: {PunchInKind}), attendance_date: {AttendanceDate} (Kind: {AttendanceDateKind})",
+					req.punch_in_time,
+					req.punch_in_time.Kind,
+					req.attendance_date,
+					req.attendance_date.Kind);
+
+				var employeeId = await ResolveEmployeeIdFromUserIdAsync(req.userId);
+
+				if (!employeeId.HasValue)
+				{
+					_logger.LogWarning(
+						LogMessages.EmployeeResolution.NoEmployeeFoundForUserId,
+						req.userId);
+
+					return "No employee found for the specified UserId.";
+				}
+
+				_logger.LogInformation(
+					LogMessages.Attendance.ProcessingPunchIn,
+					employeeId.Value);
+
+				var punchIn = PreserveReceivedDateTime(req.punch_in_time);
+				var attendanceDate = PreserveReceivedDateTime(req.attendance_date).Date;
+
+				_logger.LogInformation(
+					"PunchInAsync before save - EmployeeId: {EmployeeId}, PunchIn: {PunchIn} (Kind: {PunchInKind}), PunchDate: {PunchDate}",
+					employeeId.Value,
+					punchIn,
+					punchIn.Kind,
+					attendanceDate);
+
+				// Prevent duplicate punch in
+				var existingPunch = await _repo.GetPunchByEmployeeAndDate(
+					employeeId.Value,
+					attendanceDate);
+
+				if (existingPunch != null && existingPunch.PunchIn != null)
+				{
+					_logger.LogWarning(AttendanceMessages.PunchInAlreadyDone);
+
+					return AttendanceMessages.PunchInAlreadyDone;
+				}
+
+				// Upload Punch In image to Azure Blob, then persist blob URL only in Punch.PunchInImage
+				string? punchInImage = null;
+				if (req.PunchInImage != null && req.PunchInImage.Length > 0)
+				{
+					punchInImage = await _blobService.UploadAsync(req.PunchInImage, employeeId.Value);
+					_logger.LogInformation("Punch-in image uploaded for employee {EmployeeId}", employeeId.Value);
+				}
+
+				// Location
+				var coordinateIn = BuildCoordinate(
+					req.latitude,
+					req.longitude);
+
+				var linkIn = GenerateGoogleMapLink(
+					req.latitude,
+					req.longitude);
+
+				_ = await TryGetReverseGeocodedAddressAsync(
+					req.latitude,
+					req.longitude);
+
+				// Insert attendance
+				var punchId = await _repo.InsertPunchIn(
+					employeeId.Value,
+					punchIn,
+					attendanceDate,
+					MobileSource,
+					coordinateIn,
+					linkIn,
+					punchInImage
+				);
+
+				if (punchId > 0)
+				{
+					var savedPunch = await _repo.GetPunchByIdAsync(punchId, await GetEmployeeTenantIdAsync(employeeId.Value));
+					_logger.LogInformation(
+						"PunchInAsync after save - PunchId: {PunchId}, Stored PunchIn: {StoredPunchIn}, Stored PunchDate: {StoredPunchDate}",
+						punchId,
+						savedPunch?.PunchIn,
+						savedPunch?.PunchDate);
+
+					_logger.LogInformation(
+						LogMessages.Attendance.PunchInSuccessful,
+						employeeId.Value);
+
+					return AttendanceMessages.PunchInSuccessful;
+				}
+
+				_logger.LogWarning(AttendanceMessages.PunchInFailed);
+
+				return AttendanceMessages.PunchInFailed;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error while processing punch in");
+
+				return "Error while processing punch in.";
+			}
+		}
+
+		/// <summary>
+		/// Punch Out
+		/// Supports image upload + geo location
+		/// Supports overnight shifts
+		/// </summary>
+		public async Task<string> PunchOutAsync(PunchOutRequest req)
+		{
+			try
+			{
+				_logger.LogInformation(
+					"PunchOutAsync entry - punch_out_time: {PunchOutTime} (Kind: {PunchOutKind})",
+					req.punch_out_time,
+					req.punch_out_time.Kind);
+
+				var employeeId = await ResolveEmployeeIdFromUserIdAsync(req.userId);
+
+				if (!employeeId.HasValue)
+				{
+					_logger.LogWarning(
+						LogMessages.EmployeeResolution.NoEmployeeFoundForUserId,
+						req.userId);
+
+					return "No employee found for the specified UserId.";
+				}
+
+				_logger.LogInformation(
+					LogMessages.Attendance.ProcessingPunchOut,
+					employeeId.Value);
+
+				var punchOut = PreserveReceivedDateTime(req.punch_out_time);
+
+				_logger.LogInformation(
+					"PunchOutAsync before save - EmployeeId: {EmployeeId}, PunchOut: {PunchOut} (Kind: {PunchOutKind})",
+					employeeId.Value,
+					punchOut,
+					punchOut.Kind);
+
+				// Get open attendance
+				var punch = await _repo.GetOpenPunchByEmployeeId(
+					employeeId.Value);
+
+				// Cross-day support
+				if (punch == null || punch.PunchIn == null)
+				{
+					_logger.LogWarning(
+						AttendanceMessages.CannotPunchOutWithoutPunchIn);
+
+					return AttendanceMessages.CannotPunchOutWithoutPunchIn;
+				}
+
+				// Prevent duplicate punch out
+				if (punch.PunchOut != null)
+				{
+					_logger.LogWarning(
+						AttendanceMessages.PunchOutAlreadyDone);
+
+					return AttendanceMessages.PunchOutAlreadyDone;
+				}
+
+				// Duration
+				double? duration = CalculateDurationInMinutes(
+					punch.PunchIn,
+					punchOut);
+
+				// Upload Punch Out image to Azure Blob, then persist blob URL only in Punch.PunchOutImage
+				string? punchOutImage = null;
+				if (req.PunchOutImage != null && req.PunchOutImage.Length > 0)
+				{
+					punchOutImage = await _blobService.UploadAsync(req.PunchOutImage, employeeId.Value);
+					_logger.LogInformation("Punch-out image uploaded for employee {EmployeeId}", employeeId.Value);
+				}
+
+				// Location
+				var coordinateOut = BuildCoordinate(
+					req.latitude,
+					req.longitude);
+
+				var linkOut = GenerateGoogleMapLink(
+					req.latitude,
+					req.longitude);
+
+				_ = await TryGetReverseGeocodedAddressAsync(
+					req.latitude,
+					req.longitude);
+
+				// Update punch out — does not modify PunchInImage
+				await _repo.UpdatePunchOut(
+					punch.Id,
+					punchOut,
+					duration,
+					MobileSource,
+					coordinateOut,
+					linkOut,
+					punchOutImage,
+					req.userId,
+					req.punchOutReason
+				);
+
+				var savedPunch = await _repo.GetPunchByIdAsync(punch.Id, await GetEmployeeTenantIdAsync(employeeId.Value));
+				_logger.LogInformation(
+					"PunchOutAsync after save - PunchId: {PunchId}, Stored PunchOut: {StoredPunchOut}, Stored Duration: {StoredDuration}",
+					punch.Id,
+					savedPunch?.PunchOut,
+					savedPunch?.Duration);
+
+				_logger.LogInformation(
+					LogMessages.Attendance.PunchOutSuccessful,
+					employeeId.Value);
+
+				return AttendanceMessages.PunchOutSuccessful;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error while processing punch out");
+
+				return "Error while processing punch out.";
+			}
+		}
+
+		public async Task<string> PunchInWithImageAsync(PunchInImageRequest req)
         {
-            // Resolve EmployeeId from UserId
-            var employeeId = await ResolveEmployeeIdFromUserIdAsync(req.userId);
-            if (!employeeId.HasValue)
-            {
-                _logger.LogWarning(LogMessages.EmployeeResolution.NoEmployeeFoundForUserId, req.userId);
-                return "No employee found for the specified UserId.";
-            }
+            // Punch image APIs are based on EmployeeId (empId) directly.
+            var employeeId = req.empId;
+            if (employeeId <= 0)
+                return "Invalid empId.";
 
-            _logger.LogInformation(LogMessages.Attendance.ProcessingPunchIn, employeeId.Value);
+            _logger.LogInformation(LogMessages.Attendance.ProcessingPunchIn, employeeId);
 
-            // Convert incoming UTC timestamps (from mobile) to server local time for storage
-            // JSON like "2025-12-15T12:11:08.669Z" is UTC; ToLocalTime will convert to local zone (e.g. IST)
-            var punchInLocal = DateTime.SpecifyKind(req.punch_in_time, DateTimeKind.Utc).ToLocalTime();
-            var attendanceDateLocal = DateTime.SpecifyKind(req.attendance_date, DateTimeKind.Utc).ToLocalTime().Date;
+            var punchIn = PreserveReceivedDateTime(req.punchTime);
+            var attendanceDate = punchIn.Date;
 
-            // Check if already punched in for this date (prevent double punch-in)
-            var existingPunch = await _repo.GetPunchByEmployeeAndDate(employeeId.Value, attendanceDateLocal);
-
+            var existingPunch = await _repo.GetPunchByEmployeeAndDate(employeeId, attendanceDate);
             if (existingPunch != null && existingPunch.PunchIn != null)
             {
                 _logger.LogWarning(AttendanceMessages.PunchInAlreadyDone);
                 return AttendanceMessages.PunchInAlreadyDone;
             }
 
-          
+            // Upload punch-in photo if provided.
+            string? punchInImage = null;
+            if (req.PunchInImage != null)
+                punchInImage = await _blobService.UploadAsync(req.PunchInImage, employeeId);
 
-            // Insert punch-in with location data
             var punchId = await _repo.InsertPunchIn(
-                employeeId.Value,
-                punchInLocal,
-                attendanceDateLocal
+                employeeId,
+                punchIn,
+                attendanceDate,
+                MobileSource,
+                coordinateIn: null,
+                linkIn: null,
+                punchInImage: punchInImage
             );
 
             if (punchId > 0)
             {
-                _logger.LogInformation(LogMessages.Attendance.PunchInSuccessful, employeeId.Value);
+                _logger.LogInformation(LogMessages.Attendance.PunchInSuccessful, employeeId);
                 return AttendanceMessages.PunchInSuccessful;
             }
-            
+
             _logger.LogWarning(AttendanceMessages.PunchInFailed);
             return AttendanceMessages.PunchInFailed;
         }
 
-        public async Task<string> PunchOutAsync(PunchOutRequest req)
+        public async Task<string> PunchOutWithImageAsync(PunchOutImageRequest req)
         {
-            // Resolve EmployeeId from UserId
-            var employeeId = await ResolveEmployeeIdFromUserIdAsync(req.userId);
-            if (!employeeId.HasValue)
-            {
-                _logger.LogWarning(LogMessages.EmployeeResolution.NoEmployeeFoundForUserId, req.userId);
-                return "No employee found for the specified UserId.";
-            }
+            var employeeId = req.empId;
+            if (employeeId <= 0)
+                return "Invalid empId.";
 
-            _logger.LogInformation(LogMessages.Attendance.ProcessingPunchOut, employeeId.Value);
+            _logger.LogInformation(LogMessages.Attendance.ProcessingPunchOut, employeeId);
 
-            // Convert incoming UTC timestamps (from mobile) to server local time
-            var punchOutLocal = DateTime.SpecifyKind(req.punch_out_time, DateTimeKind.Utc).ToLocalTime();
-            var attendanceDateLocal = DateTime.SpecifyKind(req.attendance_date, DateTimeKind.Utc).ToLocalTime().Date;
-            
-            // Check if punch-in exists (prevent punch-out without punch-in)
-            var punch = await _repo.GetPunchByEmployeeAndDate(employeeId.Value, attendanceDateLocal);
+            var punchOut = PreserveReceivedDateTime(req.punchTime);
+            var attendanceDate = punchOut.Date;
 
-            if (punch == null || punch.PunchIn == null)
+            var openPunch = await _repo.GetOpenPunchByEmployeeId(employeeId);
+            if (openPunch == null || openPunch.PunchIn == null || openPunch.PunchDate.Date != attendanceDate)
             {
                 _logger.LogWarning(AttendanceMessages.CannotPunchOutWithoutPunchIn);
                 return AttendanceMessages.CannotPunchOutWithoutPunchIn;
             }
 
-            // Check if already punched out (prevent double punch-out)
-            if (punch.PunchOut != null)
+            if (openPunch.PunchOut != null)
             {
                 _logger.LogWarning(AttendanceMessages.PunchOutAlreadyDone);
                 return AttendanceMessages.PunchOutAlreadyDone;
             }
 
-            // Calculate duration in hours
-            double? duration = CalculateDurationInHours(punch.PunchIn, punchOutLocal);
+            // Upload punch-out photo if provided.
+            string? punchOutImage = null;
+            if (req.PunchOutImage != null)
+                punchOutImage = await _blobService.UploadAsync(req.PunchOutImage, employeeId);
 
-            // Update punch-out with location data
+            var duration = CalculateDurationInMinutes(openPunch.PunchIn, punchOut);
+
             await _repo.UpdatePunchOut(
-                employeeId.Value,
-                punchOutLocal,
-                attendanceDateLocal,
-                duration
+                openPunch.Id,
+                punchOut,
+                duration,
+                MobileSource,
+                coordinateOut: null,
+                linkOut: null,
+                punchOutImage: punchOutImage
             );
 
-            _logger.LogInformation(LogMessages.Attendance.PunchOutSuccessful, employeeId.Value);
+            _logger.LogInformation(LogMessages.Attendance.PunchOutSuccessful, employeeId);
             return AttendanceMessages.PunchOutSuccessful;
         }
 
-        private double? CalculateDurationInHours(DateTime? punchIn, DateTime punchOut)
+        /// <summary>
+        /// Mobile sends wall-clock datetimes (typically Kind=Unspecified).
+        /// Store and use the exact value without server timezone conversion.
+        /// </summary>
+        private static DateTime PreserveReceivedDateTime(DateTime dateTime) => dateTime;
+
+        private async Task<int> GetEmployeeTenantIdAsync(int employeeId)
+        {
+            var employee = await _repo.GetEmployeeByIdAsync(employeeId);
+            return employee?.OrganisationId ?? 0;
+        }
+
+        private async Task<List<DayOfWeek>> GetTenantWeeklyOffDaysAsync(int tenantId)
+        {
+            return await _tenantWeekOffRepository.GetTenantWeeklyOffDaysAsync(tenantId);
+        }
+
+        private double? CalculateDurationInMinutes(DateTime? punchIn, DateTime punchOut)
         {
             if (punchIn == null) return null;
 
             var diff = punchOut - punchIn.Value;
-            return Math.Round(diff.TotalHours, 2);
+            return Math.Round(diff.TotalMinutes, 2);
+        }
+
+        public string GenerateGoogleMapLink(double? lat, double? lng)
+        {
+            if (!lat.HasValue || !lng.HasValue)
+                return string.Empty;
+
+            var latText = lat.Value.ToString(CultureInfo.InvariantCulture);
+            var lngText = lng.Value.ToString(CultureInfo.InvariantCulture);
+            return $"https://www.google.com/maps/search/?api=1&query={latText},{lngText}";
+        }
+
+        private static string? BuildCoordinate(double? lat, double? lng)
+        {
+            if (!lat.HasValue || !lng.HasValue)
+                return null;
+
+            var latText = lat.Value.ToString(CultureInfo.InvariantCulture);
+            var lngText = lng.Value.ToString(CultureInfo.InvariantCulture);
+            return $"{latText},{lngText}";
+        }
+
+        private async Task<string?> TryGetReverseGeocodedAddressAsync(double? lat, double? lng)
+        {
+            if (!lat.HasValue || !lng.HasValue)
+                return null;
+
+            var apiKey = _configuration["GoogleMaps:ApiKey"];
+            if (string.IsNullOrWhiteSpace(apiKey))
+                return null;
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                var url = $"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat.Value},{lng.Value}&key={apiKey}";
+                using var response = await client.GetAsync(url);
+                if (!response.IsSuccessStatusCode)
+                    return null;
+
+                using var stream = await response.Content.ReadAsStreamAsync();
+                using var document = await JsonDocument.ParseAsync(stream);
+                if (!document.RootElement.TryGetProperty("results", out var results) || results.GetArrayLength() == 0)
+                    return null;
+
+                if (results[0].TryGetProperty("formatted_address", out var address))
+                    return address.GetString();
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Reverse geocoding failed for coordinates {Latitude},{Longitude}", lat, lng);
+                return null;
+            }
         }
 
         /// <summary>
@@ -214,6 +538,7 @@ namespace MobileWebApi.Services
                 // Fetch attendance data from repository
                 var attendanceData = await _repo.GetAttendanceReportAsync(repoRequest);
                 var attendanceList = attendanceData.ToList();
+                EnsurePunchIds(attendanceList);
 
                 // Calculate totals
                 var totalWorkingHours = attendanceList
@@ -272,6 +597,7 @@ namespace MobileWebApi.Services
                 
                 var attendanceData = await _repo.GetEmployeeAttendanceReportAsync(employeeId.Value, dateFrom, dateTo);
                 var attendanceList = attendanceData.ToList();
+                EnsurePunchIds(attendanceList);
 
                 var totalWorkingHours = attendanceList
                     .Where(a => a.WorkingDuration.HasValue)
@@ -438,7 +764,11 @@ namespace MobileWebApi.Services
 
                 // Get attendance data for the month
                 var attendanceData = await _repo.GetAttendanceByCalendarAsync(employeeId.Value, month, year);
-                var attendanceDict = attendanceData.ToDictionary(a => a.CalendarDate.Date, a => a);
+                var attendanceList = attendanceData.ToList();
+                EnsurePunchIds(attendanceList);
+                var attendanceDict = attendanceList.ToDictionary(a => a.CalendarDate.Date, a => a);
+
+                var weeklyOffDays = await GetTenantWeeklyOffDaysAsync(employee.OrganisationId);
 
                 // Build calendar data
                 var dateFrom = new DateTime(year, month, 1);
@@ -446,10 +776,29 @@ namespace MobileWebApi.Services
                 var totalDays = dateTo.Day;
                 var today = DateTime.Today;
 
-                var calendarData = new List<CalendarDayAttendance>();
+                // Preload holiday dates and approved leave dates for the month
+                var holidayDates = await _repo.GetHolidayDatesAsync(employee.OrganisationId, dateFrom, dateTo);
+                var holidaySet = new HashSet<DateTime>(holidayDates.Select(d => d.Date));
+
+                var leaveRanges = await _repo.GetApprovedLeaveDateRangesAsync(employeeId.Value, dateFrom, dateTo);
+                var leaveSet = new HashSet<DateTime>();
+				foreach (var (from, to) in leaveRanges)
+				{
+					var start = from.Date < dateFrom ? dateFrom : from.Date;
+					var end = to.Date > dateTo ? dateTo : to.Date;
+
+					for (var d = start; d <= end; d = d.AddDays(1))
+					{
+						leaveSet.Add(d);
+					}
+				}
+
+				var calendarData = new List<CalendarDayAttendance>();
                 int presentDays = 0;
                 int absentDays = 0;
                 int weekendDays = 0;
+                int leaveDays = 0;
+                int holidayDays = 0;
                 double totalWorkingHours = 0;
 
                 for (int day = 1; day <= totalDays; day++)
@@ -460,14 +809,29 @@ namespace MobileWebApi.Services
                         Date = currentDate,
                         Day = day,
                         DayName = currentDate.DayOfWeek.ToString(),
-                        IsWeekend = currentDate.DayOfWeek == DayOfWeek.Saturday || currentDate.DayOfWeek == DayOfWeek.Sunday
+                        IsWeekend = weeklyOffDays.Contains(currentDate.DayOfWeek)
                     };
 
-                    if (dayAttendance.IsWeekend)
+                    // Priority: Week Off -> Holiday -> Leave -> Future -> Present -> Absent
+                    if (weeklyOffDays.Contains(currentDate.DayOfWeek))
                     {
-                        dayAttendance.Status = "Weekend";
+                        dayAttendance.Status = "Week Off";
                         dayAttendance.IsAbsent = false;
                         weekendDays++;
+                    }
+                    else if (holidaySet.Contains(currentDate.Date))
+                    {
+                        dayAttendance.IsHoliday = true;
+                        dayAttendance.Status = "Holiday";
+                        dayAttendance.IsAbsent = false;
+                        holidayDays++;
+                    }
+                    else if (leaveSet.Contains(currentDate.Date))
+                    {
+                        dayAttendance.IsLeave = true;
+                        dayAttendance.Status = "Leave";
+                        dayAttendance.IsAbsent = false;
+                        leaveDays++;
                     }
                     else if (currentDate > today)
                     {
@@ -476,16 +840,48 @@ namespace MobileWebApi.Services
                     }
                     else if (attendanceDict.TryGetValue(currentDate, out var attendance))
                     {
-                        dayAttendance.IsPresent = true;
+                        dayAttendance.PunchId = attendance.PunchId ?? (attendance.Id > 0 ? attendance.Id : null);
                         dayAttendance.PunchIn = attendance.PunchIn;
                         dayAttendance.PunchOut = attendance.PunchOut;
                         dayAttendance.WorkingHours = attendance.WorkingDuration;
-                        dayAttendance.Status = "Present";
-                        presentDays++;
-                        
-                        if (attendance.WorkingDuration.HasValue)
+                        dayAttendance.InSource = attendance.InSource;
+                        dayAttendance.OutSource = attendance.OutSource;
+                        dayAttendance.CoordinateIn = attendance.CoordinateIn;
+                        dayAttendance.CoordinateOut = attendance.CoordinateOut;
+                        dayAttendance.LinkIn = attendance.LinkIn;
+                        dayAttendance.LinkOut = attendance.LinkOut;
+                        dayAttendance.PunchInImage = attendance.PunchInImage;
+                        dayAttendance.PunchOutImage = attendance.PunchOutImage;
+
+                        var hasPunchIn = attendance.PunchIn.HasValue;
+                        var hasPunchOut = attendance.PunchOut.HasValue;
+
+                        if (hasPunchIn && hasPunchOut)
                         {
-                            totalWorkingHours += attendance.WorkingDuration.Value;
+                            dayAttendance.IsPresent = true;
+                            dayAttendance.Status = "Present";
+                            presentDays++;
+                            if (attendance.WorkingDuration.HasValue)
+                            {
+                                totalWorkingHours += attendance.WorkingDuration.Value;
+                            }
+                        }
+                        else if (hasPunchIn && !hasPunchOut)
+                        {
+                            dayAttendance.IsPresent = true;
+                            dayAttendance.Status = "Present";
+                            dayAttendance.Remarks = "Missing Punch Out";
+                            presentDays++;
+                            if (attendance.WorkingDuration.HasValue)
+                            {
+                                totalWorkingHours += attendance.WorkingDuration.Value;
+                            }
+                        }
+                        else
+                        {
+                            dayAttendance.IsAbsent = true;
+                            dayAttendance.Status = "Absent";
+                            absentDays++;
                         }
                     }
                     else
@@ -510,12 +906,13 @@ namespace MobileWebApi.Services
                     Month = month,
                     MonthName = monthName,
                     Year = year,
+                    
                     TotalDays = totalDays,
                     WorkingDays = workingDays,
                     PresentDays = presentDays,
                     AbsentDays = absentDays,
-                    LeaveDays = 0, // Can be enhanced to include leave data
-                    HolidayDays = 0, // Can be enhanced to include holiday data
+                    LeaveDays = leaveDays,
+                    HolidayDays = holidayDays,
                     WeekendDays = weekendDays,
                     TotalWorkingHours = Math.Round(totalWorkingHours, 2),
                     CalendarData = calendarData
@@ -575,7 +972,11 @@ namespace MobileWebApi.Services
 
                 // Get attendance data for the date range
                 var attendanceData = await _repo.GetEmployeeAttendanceReportAsync(employeeId.Value, fromDate, toDate);
-                var attendanceDict = attendanceData.ToDictionary(a => a.CalendarDate.Date, a => a);
+                var attendanceListForSummary = attendanceData.ToList();
+                EnsurePunchIds(attendanceListForSummary);
+                var attendanceDict = attendanceListForSummary.ToDictionary(a => a.CalendarDate.Date, a => a);
+
+                var weeklyOffDays = await GetTenantWeeklyOffDaysAsync(employee.OrganisationId);
 
                 // Build summary data
                 var totalDays = (toDate - fromDate).Days + 1;
@@ -595,11 +996,9 @@ namespace MobileWebApi.Services
                         DayName = date.DayOfWeek.ToString()
                     };
 
-                    bool isWeekend = date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday;
-
-                    if (isWeekend)
+                    if (weeklyOffDays.Contains(date.DayOfWeek))
                     {
-                        detail.Status = "Weekend";
+                        detail.Status = "Week Off";
                         weekendDays++;
                     }
                     else if (date > today)
@@ -608,9 +1007,18 @@ namespace MobileWebApi.Services
                     }
                     else if (attendanceDict.TryGetValue(date, out var attendance))
                     {
+                        detail.PunchId = attendance.PunchId ?? (attendance.Id > 0 ? attendance.Id : null);
                         detail.PunchIn = attendance.PunchIn;
                         detail.PunchOut = attendance.PunchOut;
                         detail.WorkingHours = attendance.WorkingDuration;
+                        detail.InSource = attendance.InSource;
+                        detail.OutSource = attendance.OutSource;
+                        detail.CoordinateIn = attendance.CoordinateIn;
+                        detail.CoordinateOut = attendance.CoordinateOut;
+                        detail.LinkIn = attendance.LinkIn;
+                        detail.LinkOut = attendance.LinkOut;
+                        detail.PunchInImage = attendance.PunchInImage;
+                        detail.PunchOutImage = attendance.PunchOutImage;
                         detail.Status = "Present";
                         presentDays++;
                         
@@ -692,6 +1100,7 @@ namespace MobileWebApi.Services
                 // Fetch attendance data from repository
                 var attendanceData = await _repo.GetAttendanceReportsByOrganisationAsync(organisationId, dateFrom, dateTo);
                 var attendanceList = attendanceData.ToList();
+                EnsurePunchIds(attendanceList);
 
                 // Calculate totals
                 var totalWorkingHours = attendanceList
@@ -727,7 +1136,7 @@ namespace MobileWebApi.Services
         }
 
         /// <summary>
-        /// Delete attendance record
+        /// Deletes an attendance (Punch) record.
         /// </summary>
         public async Task<AttendanceDeleteResponse> DeleteAttendanceAsync(int id, int tenantId)
         {
@@ -740,12 +1149,11 @@ namespace MobileWebApi.Services
                     return new AttendanceDeleteResponse
                     {
                         Success = false,
-                        Message = AttendanceMessages.EmployeeIdRequired,
+                        Message = AttendanceMessages.PunchIdRequired,
                         Data = null
                     };
                 }
 
-                // Check if punch record exists
                 var existingPunch = await _repo.GetPunchByIdAsync(id, tenantId);
                 if (existingPunch == null)
                 {
@@ -757,7 +1165,6 @@ namespace MobileWebApi.Services
                     };
                 }
 
-                // Validate that user has access to this employee's data
                 var employee = await _repo.GetEmployeeByIdAsync(existingPunch.EmployeeId);
                 if (employee == null)
                 {
@@ -777,14 +1184,15 @@ namespace MobileWebApi.Services
                     {
                         Success = true,
                         Message = AttendanceMessages.AttendanceDeletedSuccessfully,
-                        Data = new { Id = id }
+                        Data = new { PunchId = id }
                     };
                 }
 
+                // Race: punch was deleted between existence check and delete
                 return new AttendanceDeleteResponse
                 {
                     Success = false,
-                    Message = AttendanceMessages.FailedToDeleteAttendance,
+                    Message = AttendanceMessages.AttendanceNotFound,
                     Data = null
                 };
             }
@@ -794,7 +1202,7 @@ namespace MobileWebApi.Services
                 return new AttendanceDeleteResponse
                 {
                     Success = false,
-                    Message = $"Error deleting attendance record: {ex.Message}",
+                    Message = AttendanceMessages.FailedToDeleteAttendance,
                     Data = null
                 };
             }
@@ -842,28 +1250,23 @@ namespace MobileWebApi.Services
 
                 if (punch != null)
                 {
-                    // Attendance is marked
-                    statusData.isMarked = true;
-                    statusData.isAlreadyMarked = true; // Prevents duplicate punch-in
-
-                    // Determine status based on punch-in/punch-out
-                    if (punch.PunchIn.HasValue && punch.PunchOut.HasValue)
-                    {
-                        statusData.status = "Present";
-                        statusData.punchIn = punch.PunchIn;
-                        statusData.punchOut = punch.PunchOut;
-                        statusData.duration = punch.Duration;
-                    }
-                    else if (punch.PunchIn.HasValue && !punch.PunchOut.HasValue)
-                    {
-                        statusData.status = "Present"; // Present but not punched out yet
-                        statusData.punchIn = punch.PunchIn;
-                        statusData.punchOut = null;
-                    }
-                    else
-                    {
-                        statusData.status = "Absent"; // Record exists but no punch-in
-                    }
+                    statusData.PunchId = punch.Id > 0 ? punch.Id : null;
+                    statusData.isMarked = punch.PunchIn.HasValue;
+                    statusData.inSource = punch.InSource;
+                    statusData.outSource = punch.OutSource;
+                    statusData.coordinateIn = punch.CoordinateIn;
+                    statusData.coordinateOut = punch.CoordinateOut;
+                    statusData.linkIn = punch.LinkIn;
+                    statusData.linkOut = punch.LinkOut;
+                    statusData.punchInImage = punch.PunchInImage;
+                    statusData.punchOutImage = punch.PunchOutImage;
+                    statusData.punchIn = punch.PunchIn;
+                    statusData.punchOut = punch.PunchOut;
+                    statusData.duration = punch.Duration;
+                    statusData.isAlreadyMarked = punch.PunchIn.HasValue;
+                    statusData.status = punch.PunchIn.HasValue
+                        ? (punch.PunchOut.HasValue ? "Present" : "Present")
+                        : "Absent";
                 }
                 else
                 {
@@ -889,6 +1292,66 @@ namespace MobileWebApi.Services
                 {
                     Success = false,
                     Message = $"Error retrieving attendance status: {ex.Message}",
+                    Data = null
+                };
+            }
+        }
+
+        /// <summary>
+        /// Get today's punch in / punch out logs for the current user (merges DeviceLog + Punch table).
+        /// </summary>
+        public async Task<TodayPunchLogsResponse> GetTodayPunchLogsAsync(int userId, int tenantId)
+        {
+            try
+            {
+                var employee = await _employeeRepository.GetEmployeebyUserIdAsync(userId);
+                if (employee == null)
+                {
+                    return new TodayPunchLogsResponse
+                    {
+                        Success = false,
+                        Message = EmployeeMessages.EmployeeNotFoundForUserId,
+                        Data = null
+                    };
+                }
+
+                // Ensure tenant isolation (authenticated user must belong to the requested tenant)
+                if (employee.OrganisationId != tenantId)
+                {
+                    return new TodayPunchLogsResponse
+                    {
+                        Success = false,
+                        Message = TenantAccessMessages.TenantAccessDenied,
+                        Data = null
+                    };
+                }
+
+                _logger.LogInformation(LogMessages.Attendance.FetchingTodayPunchLogs, userId);
+
+                var today = DateTime.Today;
+
+                var deviceLogs = await _repo.GetTodayPunchLogsAsync(employee.BiometricNumber, today);
+                var punchLogs = await _repo.GetTodayPunchLogsFromPunchAsync(employee.Id, tenantId, today);
+
+                var logList = deviceLogs
+                    .Concat(punchLogs)
+                    .OrderBy(l => l.LogDateTime)
+                    .ToList();
+
+                return new TodayPunchLogsResponse
+                {
+                    Success = true,
+                    Message = AttendanceMessages.TodayPunchLogsFetchedSuccessfully,
+                    Data = logList
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ExceptionCodes.Attendance.GetTodayPunchLogs, nameof(GetTodayPunchLogsAsync), ex, userId);
+                return new TodayPunchLogsResponse
+                {
+                    Success = false,
+                    Message = GeneralMessages.SomethingWentWrongContactAdmin,
                     Data = null
                 };
             }

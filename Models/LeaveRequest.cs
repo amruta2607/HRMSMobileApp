@@ -17,14 +17,14 @@ namespace MobileWebApi.Models
         public string? CancellationReason { get; set; }
         public string? CurrentAction { get; set; }
         public int? LeaveRequestStatus { get; set; }
-        public int? DelegatedEmployeeId { get; set; }
+		public string? LeaveRequestStatusText { get; set; }
+		public int? DelegatedEmployeeId { get; set; }
         
         /// <summary>
         /// OrganisationId - maps to TenantId column in database
         /// </summary>
         public int? OrganisationId { get; set; }
-        
-        public int? BranchId { get; set; }
+      
         public DateTime? InsertDate { get; set; }
         public int? InsertUserId { get; set; }
         public DateTime? UpdateDate { get; set; }

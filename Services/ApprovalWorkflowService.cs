@@ -1,6 +1,7 @@
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using MobileWebApi.Constants;
+using MobileWebApi.Helper;
 using System.Text.Json;
 
 namespace MobileWebApi.Services
@@ -72,22 +73,83 @@ namespace MobileWebApi.Services
 
                 _logger.LogInformation(LogMessages.ApprovalWorkflow.EventInsertedSuccessfully, eventId);
 
-                // Insert initial approval stage
-                await InsertInitialApprovalStageAsync(eventId, eventTypeId, userId, tenantId);
+                // Insert initial approval stage and notify approvers
+                await InsertInitialApprovalStageAsync(eventId, eventTypeId, userId, tenantId, EventConstants.LeaveEvent);
 
                 return (true, ApprovalWorkflowMessages.WorkflowInitiatedSuccessfully, eventId);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.ApprovalWorkflow.ErrorInitiatingWorkflow);
-                return (false, string.Format(ApprovalWorkflowMessages.ErrorInitiatingWorkflow, ex.Message), 0);
+                _logger.LogException(ExceptionCodes.ApprovalWorkflow.InitiateLeaveWorkflow, nameof(InitiateLeaveRequestApprovalAsync), ex, userId);
+                return (false, ApprovalWorkflowMessages.ErrorInitiatingWorkflow, 0);
             }
         }
 
         /// <summary>
-        /// Insert the initial approval stage for an event
+        /// Initiates the approval workflow for a regularization (EmployeeDispute) request.
+        /// First-level approval is assigned to the reporting manager (managerUserId).
         /// </summary>
-        public async Task InsertInitialApprovalStageAsync(int eventId, int eventTypeId, int userId, int tenantId)
+        public async Task<(bool Success, string Message, int EventId)> InitiateRegularizationRequestApprovalAsync(
+            EmployeeDispute dispute, int userId, int tenantId, int managerUserId)
+        {
+            try
+            {
+                _logger.LogInformation(LogMessages.ApprovalWorkflow.InitiatingRegularizationApprovalWorkflow, dispute.Id);
+
+                if (managerUserId <= 0)
+                {
+                    return (false, DisputeMessages.NoReportingManagerAssigned, 0);
+                }
+
+                var eventTypeId = await _approvalRepository.GetEventTypeIdAsync(EventConstants.RegularizationEvent, tenantId);
+                if (eventTypeId == 0)
+                {
+                    _logger.LogWarning(LogMessages.ApprovalWorkflow.EventTypeNotFound, EventConstants.RegularizationEvent, tenantId);
+                    return (false, ApprovalWorkflowMessages.EventTypeNotConfigured, 0);
+                }
+
+                var isActive = await _approvalRepository.IsEventTypeActiveAsync(eventTypeId, tenantId);
+                if (!isActive)
+                {
+                    _logger.LogWarning(LogMessages.ApprovalWorkflow.EventTypeNotActive, EventConstants.RegularizationEvent, tenantId);
+                    return (false, ApprovalWorkflowMessages.EventTypeNotActive, 0);
+                }
+
+                // Build EventData identical to Web ApproveHelper + Mobile approval fields.
+                // Must include dispute_id (required by Web approval engine) and full punch/date payload
+                // so approve/reject can resolve RegularizationDetails from EventData alone.
+                var eventDataJson = NotificationTokenHelper.BuildRegularizationEventDataJson(
+                    dispute, userId, managerUserId);
+
+                var eventId = await _approvalRepository.InsertEventAsync(userId, eventTypeId, eventDataJson, "Pending", "Active", tenantId, userId);
+                if (eventId == 0)
+                {
+                    _logger.LogError(LogMessages.ApprovalWorkflow.FailedToInsertRegularizationEvent);
+                    return (false, ApprovalWorkflowMessages.FailedToCreateEvent, 0);
+                }
+
+                _logger.LogInformation(LogMessages.ApprovalWorkflow.EventInsertedSuccessfully, eventId);
+                _logger.LogInformation(LogMessages.ApprovalWorkflow.RoutingToReportingManager, eventId, managerUserId);
+
+                // Assign first approval to the reporting manager and notify via existing Alert framework
+                await InsertInitialApprovalStageAsync(
+                    eventId, eventTypeId, userId, tenantId, EventConstants.RegularizationEvent, managerUserId);
+
+                return (true, ApprovalWorkflowMessages.WorkflowInitiatedSuccessfully, eventId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ExceptionCodes.ApprovalWorkflow.InitiateRegularizationWorkflow, nameof(InitiateRegularizationRequestApprovalAsync), ex, userId);
+                return (false, ApprovalWorkflowMessages.ErrorInitiatingWorkflow, 0);
+            }
+        }
+
+        /// <summary>
+        /// Insert the initial approval stage for an event and create Screen/Email notifications via existing Alert framework.
+        /// When <paramref name="assignedApproverUserId"/> is set, that user is the sole first-level approver.
+        /// </summary>
+        public async Task InsertInitialApprovalStageAsync(
+            int eventId, int eventTypeId, int userId, int tenantId, string eventName, int? assignedApproverUserId = null)
         {
             try
             {
@@ -115,12 +177,24 @@ namespace MobileWebApi.Services
                     return;
                 }
 
-                // Get approvers for this stage
-                var approvers = await _approvalRepository.GetApproversForStageAsync(
-                    stage.Id, 
-                    stage.WorkRoleId, 
-                    stage.ExplicitUserIds, 
-                    tenantId);
+                // Resolve approvers: manager override (regularization) or stage WorkRole / ExplicitUserIds
+                IEnumerable<ApproverInfo> approvers;
+                if (assignedApproverUserId.HasValue && assignedApproverUserId.Value > 0)
+                {
+                    approvers = await _approvalRepository.GetApproversForStageAsync(
+                        stage.Id,
+                        workRoleId: null,
+                        explicitUserIds: assignedApproverUserId.Value.ToString(),
+                        tenantId);
+                }
+                else
+                {
+                    approvers = await _approvalRepository.GetApproversForStageAsync(
+                        stage.Id,
+                        stage.WorkRoleId,
+                        stage.ExplicitUserIds,
+                        tenantId);
+                }
 
                 var approverList = approvers.ToList();
                 if (!approverList.Any())
@@ -129,16 +203,25 @@ namespace MobileWebApi.Services
                     return;
                 }
 
-                // Get notification template from database for screen notifications
+                // Get notification template from database (TemplateName = eventName, ActionType = Submission)
                 var screenNotificationTemplate = await _approvalRepository.GetNotificationTemplateAsync(
-                    EventConstants.LeaveEvent, 
-                    "Screen Notification", 
-                    "Submission", 
+                    eventName, 
+                    StringConstants.TemplateTypeScreenNotification, 
+                    StringConstants.ActionTypeSubmission, 
                     tenantId);
 
                 // Build token values for template replacement
                 var eventRecord = await _approvalRepository.GetEventByIdAsync(eventId, tenantId);
                 var requestingEmployee = await _approvalRepository.GetEmployeeByUserIdAsync(userId);
+                var eventDetails = await _approvalRepository.GetEventDetailsAsync(eventId, tenantId);
+
+                var isLeaveEvent = string.Equals(eventName, EventConstants.LeaveEvent, StringComparison.OrdinalIgnoreCase);
+                string fallbackTitle = isLeaveEvent
+                    ? ApprovalWorkflowMessages.LeaveRequestPendingApproval
+                    : ApprovalWorkflowMessages.RegularizationRequestPendingApproval;
+                string fallbackMessage = isLeaveEvent
+                    ? ApprovalWorkflowMessages.LeaveRequestRequiresApproval
+                    : ApprovalWorkflowMessages.RegularizationRequestRequiresApproval;
 
                 // Insert approval records and send notifications for each approver
                 foreach (var approver in approverList)
@@ -146,11 +229,15 @@ namespace MobileWebApi.Services
                     // Insert approval record
                     await _approvalRepository.InsertApprovalAsync(eventId, stage.Id, approver.UserId, userId, tenantId);
 
-                    // Build token values for this notification
-                    var tokenValues = await BuildTokenValuesAsync(eventId, approver, tenantId);
-                    
-                    // Add additional tokens for screen notification template
-                    tokenValues["{Username}"] = requestingEmployee?.Name ?? "Employee";
+                    // Build token values for this notification (Web-aligned placeholder map)
+                    var tokenValues = await BuildTokenValuesAsync(eventId, approver, tenantId, eventDetails);
+
+                    NotificationTokenHelper.AddPersonNameTokens(
+                        tokenValues,
+                        employeeName: requestingEmployee?.Name ?? StringConstants.DefaultEmployeeName,
+                        approverName: approver.Name ?? "Approver");
+
+                    // Leave dates from EventData (keep existing behaviour)
                     if (eventRecord != null && !string.IsNullOrEmpty(eventRecord.EventData))
                     {
                         try
@@ -167,12 +254,12 @@ namespace MobileWebApi.Services
                     }
 
                     // Get notification title and message from database template or fallback to constants
-                    string notificationTitle = screenNotificationTemplate?.Title ?? ApprovalWorkflowMessages.LeaveRequestPendingApproval;
-                    string notificationMessage = screenNotificationTemplate?.Body ?? ApprovalWorkflowMessages.LeaveRequestRequiresApproval;
+                    string notificationTitle = screenNotificationTemplate?.Title ?? fallbackTitle;
+                    string notificationMessage = screenNotificationTemplate?.Body ?? fallbackMessage;
 
                     // Replace tokens in template
-                    notificationTitle = ReplaceTokens(notificationTitle, tokenValues);
-                    notificationMessage = ReplaceTokens(notificationMessage, tokenValues);
+                    notificationTitle = NotificationTokenHelper.ReplaceTokens(notificationTitle, tokenValues);
+                    notificationMessage = NotificationTokenHelper.ReplaceTokens(notificationMessage, tokenValues);
                     
                     await _approvalRepository.InsertScreenNotificationAsync(
                         approver.UserId, 
@@ -189,15 +276,15 @@ namespace MobileWebApi.Services
                     {
                         try
                         {
-                            // Get email template
-                            var template = await _approvalRepository.GetEmailTemplateAsync(EventConstants.LeaveEvent, "Submission", tenantId);
+                            // Get email template (EventName = eventName, ActionType = Submission)
+                            var template = await _approvalRepository.GetEmailTemplateAsync(eventName, StringConstants.ActionTypeSubmission, tenantId);
                             
                             string emailSubject = template?.Subject ?? notificationTitle;
                             string emailBody = template?.Body ?? notificationMessage;
 
                             // Replace tokens in template
-                            emailSubject = ReplaceTokens(emailSubject, tokenValues);
-                            emailBody = ReplaceTokens(emailBody, tokenValues);
+                            emailSubject = NotificationTokenHelper.ReplaceTokens(emailSubject, tokenValues);
+                            emailBody = NotificationTokenHelper.ReplaceTokens(emailBody, tokenValues);
 
                             // Insert email notification for background processing
                             await _approvalRepository.InsertEmailNotificationAsync(
@@ -229,20 +316,56 @@ namespace MobileWebApi.Services
         #region Helper Methods
 
         /// <summary>
-        /// Build token values for email template
+        /// Build token values for email/screen templates (aligned with Web token map).
         /// </summary>
-        private async Task<Dictionary<string, string>> BuildTokenValuesAsync(int eventId, ApproverInfo approver, int tenantId)
+        private async Task<Dictionary<string, string>> BuildTokenValuesAsync(
+            int eventId,
+            ApproverInfo approver,
+            int tenantId,
+            EventDetails? eventDetails = null)
         {
-            var tokenValues = new Dictionary<string, string>
-            {
-                ["[Approver_Name]"] = approver.Name ?? "Approver"
-            };
+            var tokenValues = new Dictionary<string, string>();
+
+            NotificationTokenHelper.AddPersonNameTokens(
+                tokenValues,
+                approverName: approver.Name ?? "Approver");
 
             // Get tenant name
             var tenantName = await _approvalRepository.GetTenantNameAsync(tenantId);
-            tokenValues["[Company_Name]"] = tenantName ?? "Company";
+            tokenValues[StringConstants.TokenCompanyName] = tenantName ?? StringConstants.DefaultCompanyName;
 
-            // Get event data and extract relevant fields
+            eventDetails ??= await _approvalRepository.GetEventDetailsAsync(eventId, tenantId);
+
+            if (!string.IsNullOrEmpty(eventDetails.LeaveDates))
+            {
+                tokenValues[StringConstants.TokenLeaveDates] = eventDetails.LeaveDates;
+                tokenValues[StringConstants.TokenLeaveDatesAlt] = eventDetails.LeaveDates;
+            }
+
+            if (!string.IsNullOrEmpty(eventDetails.OvertimeDates))
+            {
+                tokenValues[StringConstants.TokenOvertimeDates] = eventDetails.OvertimeDates;
+                tokenValues[StringConstants.TokenOvertimeDatesAlt] = eventDetails.OvertimeDates;
+            }
+
+            if (!string.IsNullOrEmpty(eventDetails.ReimbursementDates))
+            {
+                tokenValues[StringConstants.TokenReimbursementDates] = eventDetails.ReimbursementDates;
+                tokenValues[StringConstants.TokenReimbursementDatesAlt] = eventDetails.ReimbursementDates;
+            }
+
+            if (!string.IsNullOrEmpty(eventDetails.ResignationDates))
+            {
+                tokenValues[StringConstants.TokenResignationDates] = eventDetails.ResignationDates;
+                tokenValues[StringConstants.TokenResignationDatesAlt] = eventDetails.ResignationDates;
+            }
+
+            NotificationTokenHelper.AddRegularizationTokens(
+                tokenValues,
+                eventDetails.RegularizationDetails,
+                string.IsNullOrEmpty(eventDetails.DisputeDate) ? null : eventDetails.DisputeDate);
+
+            // Get event data and extract remaining fields
             var eventRecord = await _approvalRepository.GetEventByIdAsync(eventId, tenantId);
             if (eventRecord != null && !string.IsNullOrEmpty(eventRecord.EventData))
             {
@@ -252,18 +375,41 @@ namespace MobileWebApi.Services
                     if (eventData != null)
                     {
                         if (eventData.TryGetValue("start_date", out var startDate))
-                            tokenValues["[Start_Date]"] = startDate.GetString() ?? "";
-                        
-                        if (eventData.TryGetValue("end_date", out var endDate))
-                            tokenValues["[End_Date]"] = endDate.GetString() ?? "";
-                        
-                        if (eventData.TryGetValue("reason", out var reason))
-                            tokenValues["[Reason]"] = reason.GetString() ?? "";
+                        {
+                            tokenValues[StringConstants.TokenStartDate] = startDate.GetString() ?? "";
+                            tokenValues[StringConstants.TokenStartDateAlt] = startDate.GetString() ?? "";
+                        }
 
-                        if (eventData.TryGetValue("requested_user_id", out var requestedUserId))
+                        if (eventData.TryGetValue("end_date", out var endDate))
+                        {
+                            tokenValues[StringConstants.TokenEndDate] = endDate.GetString() ?? "";
+                            tokenValues[StringConstants.TokenEndDateAlt] = endDate.GetString() ?? "";
+                        }
+
+                        if (eventData.TryGetValue("reason", out var reason))
+                        {
+                            tokenValues[StringConstants.TokenReason] = reason.GetString() ?? "";
+                            tokenValues[StringConstants.TokenReasonAlt] = reason.GetString() ?? "";
+                        }
+
+                        // Build RegularizationDetails from EventData when not already resolved from DB
+                        if (string.IsNullOrEmpty(eventDetails.RegularizationDetails)
+                            && (eventData.ContainsKey(StringConstants.JsonKeyEmployeeDisputeId)
+                                || eventData.ContainsKey(StringConstants.JsonKeyDisputeId)
+                                || eventData.ContainsKey(StringConstants.JsonKeyDisputeDate)))
+                        {
+                            using var doc = JsonDocument.Parse(eventRecord.EventData);
+                            var details = NotificationTokenHelper.BuildRegularizationDetailsFromEventData(doc.RootElement);
+                            NotificationTokenHelper.AddRegularizationTokens(tokenValues, details);
+                        }
+
+                        if (eventData.TryGetValue("requested_user_id", out var requestedUserId)
+                            && requestedUserId.ValueKind == JsonValueKind.Number)
                         {
                             var employee = await _approvalRepository.GetEmployeeByUserIdAsync(requestedUserId.GetInt32());
-                            tokenValues["[Employee_Name]"] = employee?.Name ?? "Employee";
+                            NotificationTokenHelper.AddPersonNameTokens(
+                                tokenValues,
+                                employeeName: employee?.Name ?? StringConstants.DefaultEmployeeName);
                         }
                     }
                 }
@@ -274,22 +420,6 @@ namespace MobileWebApi.Services
             }
 
             return tokenValues;
-        }
-
-        /// <summary>
-        /// Replace tokens in template with actual values
-        /// Supports both {Token} and [Token] formats
-        /// </summary>
-        private string ReplaceTokens(string template, Dictionary<string, string> tokenValues)
-        {
-            if (string.IsNullOrEmpty(template)) return template;
-
-            foreach (var token in tokenValues)
-            {
-                template = template.Replace(token.Key, token.Value);
-            }
-
-            return template;
         }
 
         #endregion

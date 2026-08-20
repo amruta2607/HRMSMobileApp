@@ -26,10 +26,15 @@ namespace MobileWebApi.Constants
             public const string ErrorDeletingUser = "Error deleting user with ID {UserId}";
             public const string ErrorDeactivatingUser = "Error deactivating user with ID {UserId}";
             public const string ErrorFetchingUsersByOrganisationId = "Error fetching users by OrganisationId.";
-        }
 
-        // Employee related logs
-        public static class Employee
+			public const string ErrorFetchingTenantConfigurationByOrganisationId = "Error fetching TenantConfiguration by OrganisationId.";
+			public const string RetrievingCompanyLogoForOrganisation = "Retrieving company logo for organisation: {OrganisationId}";
+
+
+		}
+
+		// Employee related logs
+		public static class Employee
         {
             public const string RetrievingEmployeeById = "Retrieving employee with ID: {Id}";
             public const string RetrievingEmployeeByUserId = "Retrieving employee for user: {UserId}";
@@ -103,6 +108,10 @@ namespace MobileWebApi.Constants
             public const string ErrorGettingAttendanceStatus = "Error getting attendance status for employee {EmployeeId} on date {Date}";
             public const string GettingAttendanceOverview = "Getting attendance overview for employee {EmployeeId}, tenant {TenantId}, from {FromDate} to {ToDate}";
             public const string ErrorFetchingAttendanceOverview = "Error fetching attendance overview for employee {EmployeeId}";
+            public const string InvalidDateForOperation = "Invalid date for {OperationType}: Requested date {RequestDate} does not match today's date {TodayDate}";
+            public const string FetchingTodayPunchLogs = "Fetching today's punch logs for user {UserId}";
+            public const string FetchingTenantWeekOffDays = "Fetching tenant week-off days for tenant {TenantId}";
+            public const string ErrorFetchingTenantWeekOffDays = "Error fetching tenant week-off days for tenant {TenantId}";
         }
 
         // Leave related logs
@@ -112,6 +121,7 @@ namespace MobileWebApi.Constants
             public const string FetchingLeaveRequests = "Fetching leave requests";
             public const string FetchingLeaveRequestById = "Fetching leave request with ID: {Id}";
             public const string FetchingLeaveRequestsByFilter = "Fetching leave requests for user {UserId}, organization {OrganizationId}, status {Status}";
+            public const string FetchingLeaveHistory = "Fetching leave history for user: {UserId}";
             public const string ApprovingLeaveRequest = "Approving leave request with ID: {Id}";
             public const string RejectingLeaveRequest = "Rejecting leave request with ID: {Id}";
             public const string CancellingLeaveRequest = "Cancelling leave request with ID: {Id}";
@@ -223,6 +233,12 @@ namespace MobileWebApi.Constants
             public const string ErrorFetchingPaySlips = "Error fetching pay slips";
             public const string ErrorFetchingPaySlipById = "Error fetching pay slip by ID";
             public const string ErrorDownloadingPaySlip = "Error downloading pay slip";
+            public const string ErrorFetchingProvidentFund = "Error fetching Provident Fund";
+            public const string ErrorFetchingMonthlyPaymentSummary = "Error fetching monthly payment summary";
+            public const string ErrorFetchingLastMonthPayroll = "Error fetching last month payroll";
+            public const string ErrorDownloadingPaySlipByMonthYear = "Error downloading payslip by month/year";
+            public const string ErrorFetchingPaySlipYears = "Error fetching payslip years";
+            public const string ErrorFetchingPaySlipMonthsForYear = "Error fetching payslip months for year {Year}";
         }
 
         // General logs
@@ -284,6 +300,39 @@ namespace MobileWebApi.Constants
             public const string ErrorFetchingLocationsForUserId = "Error fetching locations for UserId={UserId}";
         }
 
+        // Location tracking related logs
+        public static class LocationTracking
+        {
+            public const string RecordingLocation = "Recording location for employee {EmployeeId}, tenant {TenantId}";
+            public const string FailedToRecordLocation = "Failed to record location for employee {EmployeeId}";
+            public const string ProcessingLocationBatch = "Processing location batch for employee {EmployeeId}, tenant {TenantId}, record count {RecordCount}";
+            public const string FailedToRecordLocationBatch = "Failed to record location batch for employee {EmployeeId}";
+            public const string PunchLocationRecorded = "Recorded {Direction} punch location tracking record {RecordId} for employee {EmployeeId}, tenant {TenantId}.";
+            public const string PunchLocationSkipped = "Skipped {Direction} punch location tracking for employee {EmployeeId}, tenant {TenantId}: {Reason}.";
+            public const string FailedToRecordPunchLocation = "Failed to record {Direction} punch location tracking for employee {EmployeeId}, tenant {TenantId}.";
+        }
+
+        public static class LocationTrackingIssue
+        {
+            public const string ApiRequestReceived = "Location tracking issue API request received from user {UserId}";
+            public const string AuthenticatedUser = "Authenticated user {UserId} ({Username}) submitting location tracking issue";
+            public const string ValidationFailed = "Location tracking issue validation failed for user {UserId}: {ValidationMessage}";
+            public const string LoggingIssue = "Logging location tracking issue for employee {EmployeeId}, tenant {TenantId}, issue type {IssueType}, user {UserId}";
+            public const string IssueLoggedSuccessfully = "Location tracking issue {IssueId} logged for employee {EmployeeId}, tenant {TenantId}, user {UserId}";
+            public const string FailedToInsert = "Failed to insert location tracking issue for employee {EmployeeId}, tenant {TenantId}";
+            public const string EmployeeNotFound = "Employee not found for user {UserId} while logging location tracking issue by user {CurrentUserId}";
+            public const string TenantNotFound = "Tenant {TenantId} not found while logging location tracking issue for user {UserId}";
+            public const string EmployeeTenantMismatch = "Employee user {UserId} does not belong to tenant {TenantId} while logging issue by user {CurrentUserId}";
+            public const string NoAdminRecipients = "No active HR or tenant admin users found for tenant {TenantId} to notify about location tracking issue";
+            public const string AdminNotificationsSent = "Sent location tracking issue notifications to {RecipientCount} admin users for issue {IssueId}, tenant {TenantId}";
+            public const string AdminNotificationFailed = "Failed to send admin notifications for location tracking issue {IssueId}, tenant {TenantId}";
+        }
+
+        public static class LocationTrackingConfiguration
+        {
+            public const string FetchingConfiguration = "Fetching location tracking configuration for employee {EmployeeId}, tenant {TenantId}";
+        }
+
         // Transaction related logs
         public static class Transaction
         {
@@ -320,41 +369,46 @@ namespace MobileWebApi.Constants
             public const string ErrorSendingEmail = "Error sending email to {Email}";
         }
 
-        // Approval Workflow related logs
-        public static class ApprovalWorkflow
-        {
-            // Event logs
-            public const string InitiatingApprovalWorkflow = "Initiating approval workflow for LeaveRequest ID: {LeaveRequestId}";
-            public const string EventTypeNotFound = "Event type '{EventName}' not found for tenant {TenantId}";
-            public const string EventTypeNotActive = "Event type '{EventName}' is not active for tenant {TenantId}";
-            public const string EventInsertedSuccessfully = "Event inserted successfully. EventId: {EventId}";
-            public const string FailedToInsertEvent = "Failed to insert event for leave request";
-            public const string ErrorInitiatingWorkflow = "Error initiating leave request approval workflow";
+		// Approval Workflow related logs
+		public static class ApprovalWorkflow
+		{
+			// Event logs
+			public const string InitiatingApprovalWorkflow = "Initiating approval workflow for LeaveRequest ID: {LeaveRequestId}";
+			public const string InitiatingRegularizationApprovalWorkflow = "Initiating approval workflow for RegularizationRequest ID: {DisputeId}";
+			public const string EventTypeNotFound = "Event type '{EventName}' not found for tenant {TenantId}";
+			public const string EventTypeNotActive = "Event type '{EventName}' is not active for tenant {TenantId}";
+			public const string EventInsertedSuccessfully = "Event inserted successfully. EventId: {EventId}";
+			public const string FailedToInsertEvent = "Failed to insert event for leave request";
+			public const string FailedToInsertRegularizationEvent = "Failed to insert event for regularization request";
+			public const string ErrorInitiatingWorkflow = "Error initiating leave request approval workflow";
+			public const string ErrorInitiatingRegularizationWorkflow = "Error initiating regularization request approval workflow";
 
-            // Approval Stage logs
-            public const string NoApprovalLevelsConfigured = "No approval levels configured for event type {EventTypeId}";
-            public const string ApprovalStageNotFound = "Approval stage not found for level '{LevelName}'";
-            public const string ApprovalStageNotActive = "Approval stage {StageId} is not active";
-            public const string NoApproversFound = "No approvers found for stage {StageId}";
-            public const string InitialApprovalStageInserted = "Initial approval stage inserted. EventId: {EventId}, StageId: {StageId}, Approvers: {ApproverCount}";
-            public const string ErrorInsertingApprovalStage = "Error inserting initial approval stage for event {EventId}";
+			// Approval Stage logs
+			public const string NoApprovalLevelsConfigured = "No approval levels configured for event type {EventTypeId}";
+			public const string ApprovalStageNotFound = "Approval stage not found for level '{LevelName}'";
+			public const string ApprovalStageNotActive = "Approval stage {StageId} is not active";
+			public const string NoApproversFound = "No approvers found for stage {StageId}";
+			public const string RoutingToReportingManager = "Assigning approval for event {EventId} to reporting manager UserId {ManagerUserId}";
+			public const string InitialApprovalStageInserted = "Initial approval stage inserted. EventId: {EventId}, StageId: {StageId}, Approvers: {ApproverCount}";
+			public const string ErrorInsertingApprovalStage = "Error inserting initial approval stage for event {EventId}";
 
-            // Notification logs
-            public const string ScreenNotificationCreated = "Screen notification created for approver {ApproverId}";
-            public const string EmailNotificationQueued = "Email notification queued for {Email}";
-            public const string FailedToSendEmailNotification = "Failed to send email to {Email}";
-            public const string ErrorParsingEventData = "Error parsing event data for token replacement";
+			// Notification logs
+			public const string ScreenNotificationCreated = "Screen notification created for approver {ApproverId}";
+			public const string EmailNotificationQueued = "Email notification queued for {Email}";
+			public const string FailedToSendEmailNotification = "Failed to send email to {Email}";
+			public const string ErrorParsingEventData = "Error parsing event data for token replacement";
 
-            // Approval action logs
-            public const string ApprovalWorkflowInitiated = "Approval workflow initiated for leave request {LeaveRequestId}. EventId: {EventId}";
-            public const string FailedToInitiateWorkflow = "Failed to initiate approval workflow for leave request {LeaveRequestId}: {Message}";
-            public const string WorkflowNotConfigured = "Error initiating approval workflow for leave request {LeaveRequestId}. Workflow may not be configured.";
-            public const string ErrorExtractingEventDetails = "Error extracting event details for event {EventId}";
-            public const string ErrorUpdatingPayrollApprovalStatus = "Error updating payroll approval status for PayrollId {PayrollId} and TenantId {TenantId}";
-        }
+			// Approval action logs
+			public const string ApprovalWorkflowInitiated = "Approval workflow initiated for leave request {LeaveRequestId}. EventId: {EventId}";
+			public const string FailedToInitiateWorkflow = "Failed to initiate approval workflow for leave request {LeaveRequestId}: {Message}";
+			public const string WorkflowNotConfigured = "Error initiating approval workflow for leave request {LeaveRequestId}. Workflow may not be configured.";
+			public const string ApprovalWorkflowNotConfigured = "Approval workflow not configured";
+			public const string ErrorExtractingEventDetails = "Error extracting event details for event {EventId}";
+			public const string ErrorUpdatingPayrollApprovalStatus = "Error updating payroll approval status for PayrollId {PayrollId} and TenantId {TenantId}";
+		}
 
-        // Holiday related logs
-        public static class Holiday
+		// Holiday related logs
+		public static class Holiday
         {
             public const string CreatingHoliday = "Creating holiday: {HolidayName}";
             public const string FetchingHolidays = "Fetching holidays for tenant: {TenantId}";
@@ -368,19 +422,141 @@ namespace MobileWebApi.Constants
             public const string ErrorCreatingBulkHolidays = "Error creating bulk holidays";
         }
 
-        // Dispute related logs
-        public static class Dispute
+        // Mobile dashboard (events/announcements/holidays) logs
+        public static class MobileDashboard
         {
-            public const string FetchingDisputeCategories = "Fetching dispute categories";
-            public const string SubmittingDispute = "Submitting dispute for employee {EmployeeId}";
-            public const string DisputeSubmittedSuccessfully = "Dispute submitted successfully with ID {DisputeId}";
-            public const string ErrorFetchingDisputeCategories = "Error fetching dispute categories";
-            public const string ErrorSubmittingDispute = "Error submitting dispute for employee {EmployeeId}";
-            public const string UserAttemptedSubmitDispute = "User {UserId} attempted to submit dispute for employee {EmployeeId}";
+            public const string ErrorFetchingLatestEvents = "Error fetching latest events for mobile dashboard.";
+            public const string ErrorFetchingLatestAnnouncements = "Error fetching latest announcements for mobile dashboard.";
+            public const string ErrorFetchingLatestHolidays = "Error fetching latest holidays for mobile dashboard.";
+            public const string ErrorFetchingLatestTrainings = "Error fetching latest trainings for mobile dashboard.";
         }
 
-        // Image/File Upload related logs
-        public static class ImageUpload
+        // Asset dashboard logs
+        public static class AssetDashboard
+        {
+            public const string ErrorFetchingDashboard = "Error fetching asset dashboard for organisation {OrganisationId}.";
+        }
+
+        // Me API logs
+        public static class Me
+        {
+            public const string UserNotFound = "Me profile not found for UserId {UserId}, TenantId {TenantId}.";
+            public const string ProfileLoaded = "Me profile loaded for UserId {UserId}, TenantId {TenantId}, EffectiveWorkRole {EffectiveWorkRole} in {ElapsedMs}ms.";
+        }
+
+        // Role-based dashboard logs
+        public static class Dashboard
+        {
+            public const string StatsLoaded = "Dashboard stats loaded for UserId {UserId}, TenantId {TenantId}, EffectiveWorkRole {EffectiveWorkRole} in {ElapsedMs}ms.";
+        }
+
+		// Asset list logs
+		public static class Asset
+		{
+			public const string ErrorFetchingAssets = "Error fetching asset list for organisation {OrganisationId}.";
+			public const string ErrorCreatingAsset = "Error creating asset for organisation {OrganisationId}.";
+			public const string ErrorUpdatingAsset = "Error updating asset {AssetId} for organisation {OrganisationId}.";
+			public const string AssetUpdated = "Asset {AssetId} updated by user {UserId} for organisation {OrganisationId} at {Timestamp}.";
+			public const string FetchingLookups = "Fetching asset lookups for user {UserId} in organisation {OrganisationId}.";
+			public const string LookupsFetched = "Fetched asset lookups for organisation {OrganisationId}: statuses={StatusCount}, categories={CategoryCount}, departments={DepartmentCount}, branches={BranchCount}, businessUnits={BusinessUnitCount}, assetTypes={AssetTypeCount}.";
+			public const string ErrorFetchingLookups = "Error fetching asset lookups for organisation {OrganisationId}.";
+			public const string AssetDeleted = "Asset deleted. AssetId={AssetId}, Number={AssetNumber}, Name={AssetName}, DeletedByUserId={UserId}, TenantId={TenantId}, IpAddress={IpAddress}, DeletedAtUtc={Timestamp}.";
+			public const string ErrorDeletingAsset = "Error deleting asset {AssetId} for organisation {OrganisationId}.";
+			public const string DeleteForbidden = "User {UserId} attempted to delete asset {AssetId} without Admin/SuperAdmin role.";
+			public const string FetchingQrCode = "Fetching QR code for asset {AssetId} by user {UserId} in organisation {OrganisationId}.";
+			public const string QrCodeFetched = "Fetched QR code for asset {AssetId} in organisation {OrganisationId}.";
+			public const string ErrorFetchingQrCode = "Error fetching QR code for asset {AssetId} in organisation {OrganisationId}.";
+			public const string QrCodeNotFound = "QR code not found for asset {AssetId} in organisation {OrganisationId}.";
+			public const string FetchingTimeline = "Fetching asset timeline for asset {AssetId} by user {UserId} in organisation {OrganisationId}.";
+			public const string TimelineFetched = "Fetched {Count} asset timeline records for asset {AssetId} in organisation {TenantId}.";
+			public const string ErrorFetchingTimeline = "Error fetching asset timeline for asset {AssetId} in organisation {OrganisationId}.";
+		}
+
+		// Asset hand over logs
+		public static class AssetHandOver
+
+        {
+            public const string ErrorFetchingList = "Error fetching asset hand over list for organisation {OrganisationId}.";
+            public const string ErrorHandingOver = "Error handing over asset {AssetId} for organisation {OrganisationId}.";
+            public const string AssetHandedOver = "Asset {AssetId} handed over to employee {EmployeeId} by user {UserId} for organisation {OrganisationId} at {Timestamp}.";
+            public const string FetchingLookups = "Fetching asset handover lookups for user {UserId} in organisation {OrganisationId}.";
+            public const string LookupsFetched = "Fetched asset handover lookups for organisation {OrganisationId}: assets={AssetCount}, handOverBy={HandOverByCount}, handOverTo={HandOverToCount}.";
+            public const string ErrorFetchingLookups = "Error fetching asset handover lookups for organisation {OrganisationId}.";
+            public const string HandoverDeleted = "Asset handover deleted. HandoverId={HandoverId}, Number={HandoverNumber}, AssetId={AssetId}, DeletedByUserId={UserId}, TenantId={TenantId}, IpAddress={IpAddress}, DeletedAtUtc={Timestamp}.";
+            public const string ErrorDeletingHandover = "Error deleting asset handover {HandoverId} for organisation {OrganisationId}.";
+            public const string DeleteForbidden = "User {UserId} attempted to delete asset handover {HandoverId} without Admin/SuperAdmin role.";
+            public const string FetchingTimeline = "Fetching asset handover timeline for asset {AssetId} by user {UserId} in organisation {OrganisationId}.";
+            public const string TimelineFetched = "Fetched {Count} asset handover timeline records for asset {AssetId} in organisation {TenantId}.";
+            public const string ErrorFetchingTimeline = "Error fetching asset handover timeline for asset {AssetId} in organisation {OrganisationId}.";
+        }
+
+		// Asset maintenance logs
+		public static class AssetMaintenance
+		{
+			public const string Creating = "Creating asset maintenance for asset {AssetId} by user {UserId} in organisation {OrganisationId}.";
+			public const string Created = "Asset maintenance created. MaintenanceId={MaintenanceId}, AssetId={AssetId}, CreatedByUserId={UserId}, TenantId={TenantId}, CreatedAtUtc={Timestamp}.";
+			public const string ErrorCreating = "Error creating asset maintenance for organisation {OrganisationId}.";
+			public const string ErrorFetching = "Error fetching asset maintenance {MaintenanceId} for organisation {OrganisationId}.";
+			public const string ErrorFetchingList = "Error fetching asset maintenance list for organisation {OrganisationId}.";
+			public const string Deleting = "Deleting asset maintenance {MaintenanceId} by user {UserId} in organisation {OrganisationId}.";
+			public const string Deleted = "Asset maintenance deleted. MaintenanceId={MaintenanceId}, AssetId={AssetId}, DeletedByUserId={UserId}, TenantId={TenantId}, IpAddress={IpAddress}, DeletedAtUtc={Timestamp}.";
+			public const string ErrorDeleting = "Error deleting asset maintenance {MaintenanceId} for organisation {OrganisationId}.";
+			public const string DeleteForbidden = "User {UserId} attempted to delete asset maintenance {MaintenanceId} without Admin/SuperAdmin role.";
+			public const string Updating = "Updating asset maintenance {MaintenanceId} for asset {AssetId} by user {UserId} in organisation {OrganisationId}.";
+			public const string Updated = "Asset maintenance updated. MaintenanceId={MaintenanceId}, AssetId={AssetId}, UpdatedByUserId={UserId}, TenantId={TenantId}, UpdatedAtUtc={Timestamp}.";
+			public const string ErrorUpdating = "Error updating asset maintenance {MaintenanceId} for organisation {OrganisationId}.";
+			public const string FetchingByAsset = "Fetching asset maintenance history for asset {AssetId} in organisation {OrganisationId}.";
+			public const string FetchedByAsset = "Fetched {Count} asset maintenance records for asset {AssetId} in organisation {TenantId}.";
+			public const string ErrorFetchingByAsset = "Error fetching asset maintenance history for asset {AssetId} in organisation {OrganisationId}.";
+			public const string ValidationFailed = "Asset maintenance validation failed for user {UserId} in organisation {OrganisationId}: {Reason}.";
+			public const string AttachmentsUploaded = "Uploaded {Count} asset maintenance attachment(s) for tenant {TenantId} by user {UserId}.";
+			public const string AttachmentUploadFailed = "Failed to upload asset maintenance attachment '{FileName}' for tenant {TenantId}.";
+			public const string FetchingLookups = "Fetching asset maintenance lookups for user {UserId} in organisation {OrganisationId}.";
+			public const string LookupsFetched = "Fetched asset maintenance lookups for organisation {OrganisationId}: assets={AssetCount}, responsiblePersons={ResponsiblePersonCount}.";
+			public const string ErrorFetchingLookups = "Error fetching asset maintenance lookups for organisation {OrganisationId}.";
+			public const string FetchingTimeline = "Fetching asset timeline for asset {AssetId} by user {UserId} in organisation {OrganisationId}.";
+			public const string TimelineFetched = "Fetched {Count} asset timeline records for asset {AssetId} in organisation {TenantId}.";
+			public const string ErrorFetchingTimeline = "Error fetching asset timeline for asset {AssetId} in organisation {OrganisationId}.";
+		}
+
+		// Scanner logs
+		public static class Scanner
+        {
+            public const string ErrorFetchingAsset = "Error fetching asset by scanner code for organisation {OrganisationId}.";
+        }
+
+        // Template logs
+        public static class Template
+        {
+            public const string FetchingTemplates = "Fetching active templates for organisation {OrganisationId}.";
+            public const string ErrorFetchingTemplates = "Error fetching active templates for organisation {OrganisationId}.";
+        }
+
+		// Dispute related logs
+		public static class Dispute
+		{
+			public const string FetchingDisputeCategories = "Fetching dispute categories";
+			public const string SubmittingDispute = "Submitting dispute for employee {EmployeeId}";
+			public const string DisputeSubmittedSuccessfully = "Dispute submitted successfully with ID {DisputeId}";
+			public const string ErrorFetchingDisputeCategories = "Error fetching dispute categories";
+			public const string ErrorSubmittingDispute = "Error submitting dispute for employee {EmployeeId}";
+			public const string UserAttemptedSubmitDispute = "User {UserId} attempted to submit dispute for employee {EmployeeId}";
+			public const string ApprovalWorkflowInitiated = "Approval workflow initiated for dispute {DisputeId}. EventId: {EventId}";
+			public const string ApprovalWorkflowNotConfigured = "Approval workflow not configured for dispute {DisputeId}";
+			public const string NoReportingManager = "No reporting manager (SupervisorId) assigned for employee {EmployeeId}";
+			public const string RoutingApprovalToManager = "Routing dispute {DisputeId} approval to manager UserId {ManagerUserId} (EmployeeId {ManagerEmployeeId})";
+			public const string ApprovingDispute = "Approving regularization dispute {DisputeId} for tenant {TenantId}";
+			public const string RejectingDispute = "Rejecting regularization dispute {DisputeId} for tenant {TenantId}";
+			public const string ApplyingPunchCorrection = "Applying punch correction for dispute {DisputeId}, PunchId {PunchId}";
+			public const string PunchCorrectionApplied = "Punch correction applied for PunchId {PunchId}. PunchIn: {PunchIn}, PunchOut: {PunchOut}, Duration: {Duration}";
+			public const string PunchCorrectionSkipped = "Punch correction skipped for dispute {DisputeId}: {Reason}";
+			public const string DisputeStatusUpdated = "EmployeeDispute {DisputeId} status updated to {Status}";
+			public const string ErrorApprovingDispute = "Error approving regularization dispute {DisputeId}";
+			public const string ErrorRejectingDispute = "Error rejecting regularization dispute {DisputeId}";
+		}
+
+		// Image/File Upload related logs
+		public static class ImageUpload
         {
             // Employee image upload logs
             public const string UploadingEmployeeImage = "Uploading employee image for employee ID: {EmployeeId}";
@@ -436,6 +612,30 @@ namespace MobileWebApi.Constants
             public const string UsingSharedUploadRootPath = "Using shared upload root path from configuration: {Path}";
         }
 
+        // Azure Blob related logs (Punch image upload + cleanup)
+        public static class AzureBlob
+        {
+            // Configuration / initialization
+            public const string NotConfiguredUploadDisabled = "AzureBlob is not configured. Punch image upload will be disabled.";
+            public const string NotConfiguredCleanupDisabled = "AzureBlob is not configured. Blob cleanup job will be disabled.";
+            public const string InvalidConnectionStringCleanupDisabled = "Invalid AzureBlob:ConnectionString format. Blob cleanup job will be disabled.";
+            public const string InvalidConnectionStringUploadDisabled = "Invalid AzureBlob:ConnectionString format. Punch image upload will be disabled.";
+            public const string InitFailedCleanupDisabled = "Failed to initialize AzureBlob client. Blob cleanup job will be disabled.";
+            public const string InitFailedUploadDisabled = "Failed to initialize AzureBlob client. Punch image upload will be disabled.";
+
+            // Upload
+            public const string UploadingPunchImage = "Uploading punch image to blob '{BlobName}' for employee {EmpId}.";
+            public const string PunchImageUploadedSuccessfully = "Punch image uploaded successfully for employee {EmpId}. Url: {BlobUrl}";
+            public const string ErrorUploadingPunchImage = "Error uploading punch image for employee {EmpId}.";
+
+            // Cleanup job
+            public const string CleanupServiceDisabled = "BlobCleanupService is disabled due to missing/invalid AzureBlob configuration.";
+            public const string CleanupServiceStarted = "BlobCleanupService started. RetentionDays={RetentionDays}";
+            public const string CleanupRunFailed = "Blob cleanup run failed.";
+            public const string ContainerDoesNotExistSkippingCleanup = "Blob container does not exist. Skipping cleanup.";
+            public const string CleanupCompleted = "Blob cleanup completed. Checked={CheckedCount}, Deleted={DeletedCount}, CutoffUtc={CutoffUtc}";
+        }
+
         // Employee resolution logs (shared across services)
         public static class EmployeeResolution
         {
@@ -443,38 +643,50 @@ namespace MobileWebApi.Constants
             public const string ErrorResolvingEmployeeIdFromUserId = "Error resolving EmployeeId from UserId: {UserId}";
         }
 
-        // SMS Service related logs
-        public static class Sms
-        {
-            public const string TwilioSettingsNotConfigured = "Twilio settings not configured";
-            public const string SendingSmsViaTwilio = "Sending SMS via Twilio to {MobileNumber} from {FromNumber}";
-            public const string TwilioSmsSentSuccessfully = "Twilio SMS sent successfully to {MobileNumber}. Response: {Response}";
-            public const string TwilioApiReturnedError = "Twilio API returned error. Status: {Status}, Response: {Response}";
-            public const string ExceptionWhileSendingSmsViaTwilio = "Exception while sending SMS via Twilio to {MobileNumber}";
-            public const string Msg91SettingsNotConfigured = "MSG91 settings not configured";
-            public const string SendingSmsViaMsg91 = "Sending SMS via MSG91 to {MobileNumber}";
-            public const string Msg91SmsSentSuccessfully = "MSG91 SMS sent successfully to {MobileNumber}. Response: {Response}";
-            public const string Msg91ApiReturnedSuccessButFailure = "MSG91 API returned success status but response indicates failure. Response: {Response}";
-            public const string Msg91ApiReturnedError = "MSG91 API returned error. Status: {Status}, Response: {Response}";
-            public const string ExceptionWhileSendingSmsViaMsg91 = "Exception while sending SMS via MSG91 to {MobileNumber}";
-        }
+		// SMS Service related logs
+		public static class Sms
+		{
+			public const string TwilioSettingsNotConfigured = "Twilio settings not configured";
+			public const string SendingSmsViaTwilio = "Sending SMS via Twilio to {MobileNumber} from {FromNumber}";
+			public const string TwilioSmsSentSuccessfully = "Twilio SMS sent successfully to {MobileNumber}. Response: {Response}";
+			public const string TwilioApiReturnedError = "Twilio API returned error. Status: {Status}, Response: {Response}";
+			public const string ExceptionWhileSendingSmsViaTwilio = "Exception while sending SMS via Twilio to {MobileNumber}";
+			public const string Msg91SettingsNotConfigured = "MSG91 settings not configured";
+			public const string SendingSmsViaMsg91 = "Sending SMS via MSG91 to {MobileNumber}";
+			public const string Msg91SmsSentSuccessfully = "MSG91 SMS sent successfully to {MobileNumber}. Response: {Response}";
+			public const string Msg91ApiReturnedSuccessButFailure = "MSG91 API returned success status but response indicates failure. Response: {Response}";
+			public const string Msg91ApiReturnedError = "MSG91 API returned error. Status: {Status}, Response: {Response}";
+			public const string ExceptionWhileSendingSmsViaMsg91 = "Exception while sending SMS via MSG91 to {MobileNumber}";
+			public const string SmsResponseBody = "SMS Response: {Body}";
 
-        // Tenant Context related logs
-        public static class TenantContext
-        {
-            public const string AttemptedToGetOrganisationIdNotAuthenticated = "Attempted to get OrganisationId but user is not authenticated or claim is missing. User: {Username}";
-            public const string TenantAccessValidationFailedNotAuthenticated = "Tenant access validation failed: User is not authenticated. Requested OrgId: {RequestedOrgId}";
-            public const string TenantAccessViolationDetected = "Tenant access violation detected! User {Username} (OrgId: {UserOrgId}) attempted to access OrgId: {RequestedOrgId}";
-            public const string TenantAccessValidated = "Tenant access validated for User {Username}, OrgId: {OrgId}";
-            public const string AttemptedToGetUserIdNotAuthenticated = "Attempted to get UserId but user is not authenticated or claim is missing. User: {Username}";
-            public const string UserAccessValidationFailedNotAuthenticated = "User access validation failed: User is not authenticated. Requested UserId: {RequestedUserId}";
-            public const string UserHasElevatedAccess = "User {Username} has elevated access (HR/Admin), allowing access to UserId: {RequestedUserId}";
-            public const string UserAccessViolationDetected = "User access violation detected! User {Username} (UserId: {CurrentUserId}) attempted to access UserId: {RequestedUserId}";
-            public const string UserAccessValidated = "User access validated for User {Username}, accessing own data UserId: {UserId}";
-        }
+			public const string ProviderNotConfigured = "SMS provider is not configured";
+			public const string WebSmsSettingsNotConfigured = "WebSms settings are missing or incomplete. Missing: {MissingFields}";
+			public const string WebSmsRequestPayload = "WebSms request: Url={Url}, User={User}, SenderId={SenderId}, Channel={Channel}, Route={Route}, Peid={Peid}, DltTemplateId={DltTemplateId}, Number={MobileNumber}, Text={Text}";
+			public const string WebSmsCallingApi = "Calling WebSms API: {Url}";
+			public const string WebSmsApiResponse = "WebSms API response: StatusCode={StatusCode}, Body={Body}";
+			public const string WebSmsApiHttpError = "WebSms API returned HTTP error. StatusCode={StatusCode}, Body={Body}";
+			public const string WebSmsApiBusinessError = "WebSms API returned business error. ErrorCode={ErrorCode}, ErrorMessage={ErrorMessage}, Body={Body}";
+			public const string WebSmsSentSuccessfully = "WebSms OTP sent successfully to {MobileNumber}. JobId={JobId}";
+			public const string InvalidMobileOrOtp = "Cannot send SMS: mobile number or OTP is null/empty";
+		}
 
-        // Data/Database related logs
-        public static class Database
+		// Tenant Context related logs
+		public static class TenantContext
+		{
+			public const string AttemptedToGetOrganisationIdNotAuthenticated = "Attempted to get OrganisationId but user is not authenticated or claim is missing. User: {Username}";
+			public const string AttemptedToGetBranchIdNotAuthenticated = "Attempted to get BranchId but user is not authenticated or claim is missing. User: {Username}";
+			public const string TenantAccessValidationFailedNotAuthenticated = "Tenant access validation failed: User is not authenticated. Requested OrgId: {RequestedOrgId}";
+			public const string TenantAccessViolationDetected = "Tenant access violation detected! User {Username} (OrgId: {UserOrgId}) attempted to access OrgId: {RequestedOrgId}";
+			public const string TenantAccessValidated = "Tenant access validated for User {Username}, OrgId: {OrgId}";
+			public const string AttemptedToGetUserIdNotAuthenticated = "Attempted to get UserId but user is not authenticated or claim is missing. User: {Username}";
+			public const string UserAccessValidationFailedNotAuthenticated = "User access validation failed: User is not authenticated. Requested UserId: {RequestedUserId}";
+			public const string UserHasElevatedAccess = "User {Username} has elevated access (HR/Admin), allowing access to UserId: {RequestedUserId}";
+			public const string UserAccessViolationDetected = "User access violation detected! User {Username} (UserId: {CurrentUserId}) attempted to access UserId: {RequestedUserId}";
+			public const string UserAccessValidated = "User access validated for User {Username}, accessing own data UserId: {UserId}";
+		}
+
+		// Data/Database related logs
+		public static class Database
         {
             public const string ConnectionStringMissing = "Connection string 'ConnectionString' is missing or empty in configuration!";
             public const string DapperContextInitialized = "DapperContext initialized with connection string.";
@@ -494,6 +706,7 @@ namespace MobileWebApi.Constants
         {
             public const string UserNotFoundForUserId = "User not found for user_id: {UserId}";
             public const string OrganizationIdRequired = "Organization ID is required for getting holidays. Provide either organization_id or user_id parameter.";
+            public const string InvalidHolidayIdLog = "Invalid holiday ID";
         }
 
         // Middleware related logs

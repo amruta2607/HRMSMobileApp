@@ -13,6 +13,12 @@ namespace MobileWebApi.Interfaces
         int? OrganisationId { get; }
 
         /// <summary>
+        /// Gets the current user's assigned branch ID from JWT claims.
+        /// Returns null if user is not authenticated or claim is missing.
+        /// </summary>
+        int? BranchId { get; }
+
+        /// <summary>
         /// Gets the current user's ID from JWT claims.
         /// </summary>
         int? UserId { get; }
@@ -71,6 +77,12 @@ namespace MobileWebApi.Interfaces
         /// Use this when organisation ID is required.
         /// </summary>
         int GetRequiredOrganisationId();
+
+        /// <summary>
+        /// Gets the current user's assigned branch ID, throwing if not available.
+        /// Use this when branch ID is required.
+        /// </summary>
+        int GetRequiredBranchId();
 
         /// <summary>
         /// Gets the current user's ID, throwing if not available.

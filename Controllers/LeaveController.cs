@@ -40,57 +40,53 @@ namespace MobileWebApi.Controllers
             return BadRequest(result);
         }
 
-        /// <summary>
-        /// Get leave requests with filters
-        /// GET: apipunch/leave/request/get/?user_id=10&organization_id=1&status=PENDING&branch=1
-        /// Note: Regular users can only see their own leave requests. HR/TenantAdmin can see all.
-        /// </summary>
-        [HttpGet("/apipunch/leave/request/get")]
-        public async Task<IActionResult> GetLeaveRequests(
-            [FromQuery] int? user_id = null,
-            [FromQuery] int? organization_id = null,
-            [FromQuery] string? status = null,
-            [FromQuery] int? branch = null)
-        {
-            // Validate tenant access - use user's org if not specified
-            var validatedOrgId = GetValidatedOrganisationId(organization_id);
-            
-            // Validate user access - regular users can only see their own leave requests
-            int? validatedUserId;
-            try
-            {
-                validatedUserId = GetValidatedUserId(user_id);
-            }
-            catch (Services.TenantAccessException)
-            {
-                return UserAccessDenied();
-            }
-            
-            Logger.LogInformation(LogMessages.Leave.FetchingLeaveRequestsByFilter, validatedUserId, validatedOrgId, status);
-            
-            var request = new LeaveRequestGetRequest
-            {
-                organization = validatedOrgId,
-                status = status,
-                user = validatedUserId,
-                branch = branch
-            };
+		[HttpGet("/apipunch/leave/request/get")]
+		public async Task<IActionResult> GetLeaveRequests(
+	[FromQuery] int? user_id = null,
+	[FromQuery] int? organization_id = null
+)
+		{
+			// Validate tenant access - use user's org if not specified
+			var validatedOrgId = GetValidatedOrganisationId(organization_id);
 
-            var result = await _leaveService.GetLeaveRequestsAsync(request);
+			// Validate user access - regular users can only see their own leave requests
+			int? validatedUserId;
+			try
+			{
+				validatedUserId = GetValidatedUserId(user_id);
+			}
+			catch (Services.TenantAccessException)
+			{
+				return UserAccessDenied();
+			}
 
-            if (result.Success)
-            {
-                return Ok(result);
-            }
+			Logger.LogInformation(
+				LogMessages.Leave.FetchingLeaveRequestsByFilter,
+				validatedUserId,
+				validatedOrgId
+			);
 
-            return BadRequest(result);
-        }
+			var request = new LeaveRequestGetRequest
+			{
+				organization = validatedOrgId,
+				user = validatedUserId
+			};
 
-        /// <summary>
-        /// Approve a leave request
-        /// PUT: api/leave/approve
-        /// </summary>
-        [HttpPut("approve")]
+			var result = await _leaveService.GetLeaveRequestsAsync(request);
+
+			if (result.Success)
+			{
+				return Ok(result);
+			}
+
+			return BadRequest(result);
+		}
+
+		/// <summary>
+		/// Approve a leave request
+		/// PUT: api/leave/approve
+		/// </summary>
+		[HttpPut("approve")]
         public async Task<IActionResult> ApproveLeaveRequest([FromBody] ApproveLeaveRequest request)
         {
             if (request == null)
@@ -101,8 +97,8 @@ namespace MobileWebApi.Controllers
 
             if (request.Id <= 0)
             {
-                Logger.LogWarning("Invalid leave request ID");
-                return BadRequest(new { Success = false, Message = "Leave request ID is required and must be greater than 0" });
+                Logger.LogWarning(LeaveMessages.LeaveRequestIdRequired);
+                return BadRequest(new { Success = false, Message = LeaveMessages.LeaveRequestIdRequired });
             }
 
             Logger.LogInformation(LogMessages.Leave.ApprovingLeaveRequest, request.Id);
@@ -131,8 +127,8 @@ namespace MobileWebApi.Controllers
 
             if (request.Id <= 0)
             {
-                Logger.LogWarning("Invalid leave request ID");
-                return BadRequest(new { Success = false, Message = "Leave request ID is required and must be greater than 0" });
+                Logger.LogWarning(LeaveMessages.LeaveRequestIdRequired);
+                return BadRequest(new { Success = false, Message = LeaveMessages.LeaveRequestIdRequired });
             }
 
             Logger.LogInformation(LogMessages.Leave.RejectingLeaveRequest, request.Id);
@@ -145,13 +141,83 @@ namespace MobileWebApi.Controllers
 
             return BadRequest(result);
         }
+		/// <summary>
+		/// Withdraw a leave request (only if pending)
+		/// PUT: api/leave/withdraw
+		/// </summary>
+		[HttpPut("withdraw")]
+		public async Task<IActionResult> WithdrawLeaveRequest([FromBody] WithdrawLeaveRequest request)
+		{
+			if (request == null || request.Id <= 0)
+			{
+				return BadRequest(new
+				{
+					Success = false,
+                    Message = LeaveMessages.LeaveRequestIdRequired
+				});
+			}
 
-        /// <summary>
-        /// Get leave balance for an employee
-        /// GET: api/leave/balance/?user=10
-        /// Note: Regular users can only see their own leave balance. HR/TenantAdmin can see all.
-        /// </summary>
-        [HttpGet("balance")]
+			var loggedInUserId = CurrentUserId;
+			if (!loggedInUserId.HasValue)
+			{
+				return Unauthorized(new { Success = false, Message = TenantAccessMessages.UserNotAuthenticated });
+			}
+
+			// Do not trust client-provided userId; enforce it matches authenticated user
+			if (request.UserId != loggedInUserId.Value)
+			{
+				Logger.LogWarning(LogMessages.TenantAccess.UnauthorizedUpdatePersonalDetails, loggedInUserId.Value, request.UserId);
+				return UserAccessDenied();
+			}
+
+            Logger.LogInformation(LogMessages.Leave.CancellingLeaveRequest, request.Id);
+
+			var result = await _leaveService.WithdrawLeaveRequestAsync(
+				request.Id,
+				loggedInUserId.Value,
+				request.Reason
+			);
+
+			if (result.Success)
+				return Ok(result);
+
+			// If the service denied access (leave doesn't belong to the logged-in user), return 403
+			if (string.Equals(result.Message, TenantAccessMessages.UserAccessDeniedSimple, System.StringComparison.OrdinalIgnoreCase))
+				return UserAccessDenied();
+
+			return BadRequest(result);
+		}
+
+		/// <summary>
+		/// Get leave history (summary per request) for the logged-in user
+		/// GET: api/leave/history
+		/// </summary>
+		[HttpGet("history")]
+		public async Task<IActionResult> GetLeaveHistory()
+		{
+			var userId = CurrentUserId;
+			if (!userId.HasValue)
+			{
+                return Unauthorized(new { Success = false, Message = TenantAccessMessages.UserNotAuthenticated });
+			}
+
+            Logger.LogInformation(LogMessages.Leave.FetchingLeaveHistory, userId.Value);
+			var result = await _leaveService.GetLeaveHistorySummaryAsync(userId.Value);
+
+			if (result.Success)
+			{
+				return Ok(result);
+			}
+
+			return BadRequest(result);
+		}
+
+		/// <summary>
+		/// Get leave balance for an employee
+		/// GET: api/leave/balance/?user=10
+		/// Note: Regular users can only see their own leave balance. HR/TenantAdmin can see all.
+		/// </summary>
+		[HttpGet("balance")]
         public async Task<IActionResult> GetLeaveBalance([FromQuery] int user, [FromQuery] int? organization = null)
         {
             // Validate tenant access - use user's org if not specified

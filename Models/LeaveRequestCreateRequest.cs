@@ -50,11 +50,7 @@ namespace MobileWebApi.Models
         /// User ID from the mobile app (will be resolved to EmployeeId)
         /// </summary>
         public int user { get; set; }
-
-        /// <summary>
-        /// Branch ID for validation/filtering
-        /// </summary>
-        public int? branch { get; set; }
     }
+        
 }
 

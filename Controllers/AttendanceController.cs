@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using MobileWebApi.Constants;
+using MobileWebApi.Helper;
 
 namespace MobileWebApi.Controllers
 {
@@ -28,47 +29,71 @@ namespace MobileWebApi.Controllers
             _attendanceOverviewService = attendanceOverviewService;
         }
 
-        /// <summary>
-        /// Validates that the provided date matches today's date (server local time).
-        /// Returns BadRequest if the date is not today, otherwise returns null.
-        /// </summary>
-        private IActionResult? ValidateDateIsToday(DateTime dateToValidate, string operationType)
-        {
-            // Handle UTC dates - convert to local time if needed
-            DateTime localDate;
-            if (dateToValidate.Kind == DateTimeKind.Utc)
-            {
-                localDate = dateToValidate.ToLocalTime();
-            }
-            else if (dateToValidate.Kind == DateTimeKind.Unspecified)
-            {
-                // If unspecified, assume it's UTC (common from mobile clients) and convert to local
-                localDate = DateTime.SpecifyKind(dateToValidate, DateTimeKind.Utc).ToLocalTime();
-            }
-            else
-            {
-                localDate = dateToValidate;
-            }
+		/// <summary>
+		/// Validates that the provided date matches today's date (server local time).
+		/// Returns BadRequest if the date is not today, otherwise returns null.
+		/// </summary>
+		private IActionResult? ValidateDateIsToday(DateTime dateToValidate, string operationType)
+		{
+			// Log received value for debugging
+			Logger.LogInformation(
+				"Validating {OperationType}. Received Date: {Date}, Kind: {Kind}",
+				operationType,
+				dateToValidate,
+				dateToValidate.Kind);
 
-            // Compare only the Date part with today's date
-            var todayDate = DateTime.Now.Date;
-            var requestDate = localDate.Date;
+			DateTime requestDate;
 
-            if (requestDate != todayDate)
-            {
-                Logger.LogWarning("Invalid date for {OperationType}: Requested date {RequestDate} does not match today's date {TodayDate}",
-                    operationType, requestDate, todayDate);
-                return BadRequest(new { Success = false, Message = "Punch in/out is allowed only for today's date." });
-            }
+			switch (dateToValidate.Kind)
+			{
+				case DateTimeKind.Utc:
+					requestDate = dateToValidate.ToLocalTime().Date;
+					break;
 
-            return null; // Validation passed
-        }
+				case DateTimeKind.Local:
+					requestDate = dateToValidate.Date;
+					break;
 
-        /// <summary>
-        /// Validates that the current user can access the specified employee's data.
-        /// HR/TenantAdmin can access all employees. Regular users can only access their own data.
-        /// </summary>
-        private async Task<IActionResult?> ValidateEmployeeAccessAsync(int employeeId)
+				case DateTimeKind.Unspecified:
+					// Treat as local date to avoid incorrect timezone conversion
+					requestDate = dateToValidate.Date;
+					break;
+
+				default:
+					requestDate = dateToValidate.Date;
+					break;
+			}
+
+			DateTime todayDate = DateTime.Now.Date;
+
+			Logger.LogInformation(
+				"Operation: {OperationType}, Request Date: {RequestDate}, Today: {TodayDate}",
+				operationType,
+				requestDate,
+				todayDate);
+
+			if (requestDate != todayDate)
+			{
+				Logger.LogWarning(
+					"Invalid date for {OperationType}: Requested date {RequestDate} does not match today's date {TodayDate}",
+					operationType,
+					requestDate,
+					todayDate);
+
+				return BadRequest(new
+				{
+					Success = false,
+					Message = "Punch in/out is allowed only for today's date."
+				});
+			}
+
+			return null;
+		}
+		/// <summary>
+		/// Validates that the current user can access the specified employee's data.
+		/// HR/TenantAdmin can access all employees. Regular users can only access their own data.
+		/// </summary>
+		private async Task<IActionResult?> ValidateEmployeeAccessAsync(int employeeId)
         {
             // HR or TenantAdmin can access all employees
             if (HasElevatedAccess)
@@ -91,98 +116,227 @@ namespace MobileWebApi.Controllers
                 return UserAccessDenied();
             }
 
-            return null; // Access granted
+			return null; // Access granted
         }
 
         /// <summary>
-        /// Punch In
-        /// POST: attendance/punch-in
+        /// Maps punch service result messages to appropriate HTTP responses.
         /// </summary>
-        [HttpPost("punch-in")]
-        public async Task<IActionResult> PunchIn([FromBody] PunchInRequest request)
+        private IActionResult MapPunchResult(string result)
         {
-            if (request == null)
+            if (IsPunchValidationError(result))
             {
-                return BadRequest(new { Success = false, Message = GeneralMessages.RequestBodyCannotBeNull });
+                return BadRequest(new { Success = false, Message = result });
             }
 
-            // Validate UserId
-            if (request.userId <= 0)
+            if (result.StartsWith("Error while processing", StringComparison.OrdinalIgnoreCase)
+                || result.StartsWith("No employee found", StringComparison.OrdinalIgnoreCase))
             {
-                return BadRequest(new { Success = false, Message = "UserId is required." });
+                return BadRequest(new { Success = false, Message = result });
             }
 
-            // Enforce: users can punch in only for themselves (no punching for other employees)
-            if (request.userId != CurrentUserId)
-            {
-                Logger.LogWarning(LogMessages.TenantAccess.UserAttemptedPunchIn,
-                    CurrentUserId, request.userId, request.userId);
-                return UserAccessDenied();
-            }
-
-            // Validate that attendance_date is today (server local date)
-            var dateValidation = ValidateDateIsToday(request.attendance_date, "Punch In");
-            if (dateValidation != null)
-            {
-                return dateValidation;
-            }
-
-            // Also validate punch_in_time date part matches today
-            var timeValidation = ValidateDateIsToday(request.punch_in_time, "Punch In");
-            if (timeValidation != null)
-            {
-                return timeValidation;
-            }
-
-            Logger.LogInformation(LogMessages.Attendance.ProcessingPunchIn, request.userId);
-            var result = await _service.PunchInAsync(request);
             return Ok(new { message = result });
         }
 
-        /// <summary>
-        /// Punch Out
-        /// POST: attendance/punch-out
-        /// </summary>
-        [HttpPost("punch-out")]
-        public async Task<IActionResult> PunchOut([FromBody] PunchOutRequest request)
+        private static bool IsPunchValidationError(string result)
         {
-            if (request == null)
-            {
-                return BadRequest(new { Success = false, Message = GeneralMessages.RequestBodyCannotBeNull });
-            }
-
-            // Validate UserId
-            if (request.userId <= 0)
-            {
-                return BadRequest(new { Success = false, Message = "UserId is required." });
-            }
-
-            // Enforce: users can punch out only for themselves (no punching for other employees)
-            if (request.userId != CurrentUserId)
-            {
-                Logger.LogWarning(LogMessages.TenantAccess.UserAttemptedPunchOut,
-                    CurrentUserId, request.userId, request.userId);
-                return UserAccessDenied();
-            }
-
-            // Validate that attendance_date is today (server local date)
-            var dateValidation = ValidateDateIsToday(request.attendance_date, "Punch Out");
-            if (dateValidation != null)
-            {
-                return dateValidation;
-            }
-
-            // Also validate punch_out_time date part matches today
-            var timeValidation = ValidateDateIsToday(request.punch_out_time, "Punch Out");
-            if (timeValidation != null)
-            {
-                return timeValidation;
-            }
-
-            Logger.LogInformation(LogMessages.Attendance.ProcessingPunchOut, request.userId);
-            var result = await _service.PunchOutAsync(request);
-            return Ok(new { message = result });
+            return result == AttendanceMessages.PunchInAlreadyDone
+                || result == AttendanceMessages.CannotPunchOutWithoutPunchIn
+                || result == AttendanceMessages.PunchOutAlreadyDone
+                || result == AttendanceMessages.PunchInFailed;
         }
+
+		/// <summary>
+		/// Punch In
+		/// POST: attendance/punch-in
+		/// </summary>
+		[HttpPost("punch-in")]
+		[Consumes("multipart/form-data")]
+		public async Task<IActionResult> PunchIn([FromForm] PunchInRequest request)
+		{
+            try
+            {
+                if (request == null)
+                {
+                    return BadRequest(new { Success = false, Message = GeneralMessages.RequestBodyCannotBeNull });
+                }
+
+                // Validate UserId
+                if (request.userId <= 0)
+                {
+                    return BadRequest(new { Success = false, Message = "UserId is required." });
+                }
+
+                // Enforce: users can punch in only for themselves (no punching for other employees)
+                if (request.userId != CurrentUserId)
+                {
+                    Logger.LogWarning(LogMessages.TenantAccess.UserAttemptedPunchIn,
+                        CurrentUserId, request.userId, request.userId);
+                    return UserAccessDenied();
+                }
+
+                // Validate that attendance_date is today (server local date)
+                var dateValidation = ValidateDateIsToday(request.attendance_date, "Punch In");
+                if (dateValidation != null)
+                {
+                    return dateValidation;
+                }
+
+                // Also validate punch_in_time date part matches today
+                var timeValidation = ValidateDateIsToday(request.punch_in_time, "Punch In");
+                if (timeValidation != null)
+                {
+                    return timeValidation;
+                }
+
+                Logger.LogInformation(LogMessages.Attendance.ProcessingPunchIn, request.userId);
+                var result = await _service.PunchInAsync(request);
+                return MapPunchResult(result);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ExceptionCodes.Attendance.PunchIn, nameof(PunchIn), ex, CurrentUserId);
+                return StatusCode(500, new { Success = false, Message = GeneralMessages.SomethingWentWrongContactAdmin });
+            }
+        }
+
+        ///// <summary>
+        ///// Punch In with optional image upload.
+        ///// Endpoint consumes multipart/form-data to support IFormFile.
+        ///// POST: attendance/punch-in (multipart/form-data)
+        ///// </summary>
+        //[HttpPost("punch-in-with-image")]
+        //[Consumes("multipart/form-data")]
+        //public async Task<IActionResult> PunchInWithImage([FromForm] PunchInImageRequest request)
+        //{
+        //    try
+        //    {
+        //        if (request == null)
+        //            return BadRequest(new { Success = false, Message = GeneralMessages.RequestBodyCannotBeNull });
+
+        //        if (request.empId <= 0)
+        //            return BadRequest(new { Success = false, Message = "empId is required." });
+
+        //        // Enforce: regular users can punch only for their own employees.
+        //        var accessValidation = await ValidateEmployeeAccessAsync(request.empId);
+        //        if (accessValidation != null)
+        //            return accessValidation;
+
+        //        // Validate that punchTime is today's date (server local date).
+        //        var dateValidation = ValidateDateIsToday(request.punchTime, "Punch In");
+        //        if (dateValidation != null)
+        //            return dateValidation;
+
+        //        Logger.LogInformation(LogMessages.Attendance.ProcessingPunchIn, request.empId);
+        //        var result = await _service.PunchInWithImageAsync(request);
+        //        return Ok(new { message = result });
+        //    }
+        //    catch (ArgumentException ex)
+        //    {
+        //        return BadRequest(new { Success = false, Message = ex.Message });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Logger.LogException(ExceptionCodes.Attendance.PunchIn, nameof(PunchInWithImage), ex, request.empId);
+        //        return StatusCode(500, new { Success = false, Message = GeneralMessages.SomethingWentWrongContactAdmin });
+        //    }
+        //}
+
+		/// <summary>
+		/// Punch Out
+		/// POST: attendance/punch-out
+		/// </summary>
+		[HttpPost("punch-out")]
+		[Consumes("multipart/form-data")]
+		public async Task<IActionResult> PunchOut([FromForm] PunchOutRequest request)
+		{
+            try
+            {
+                if (request == null)
+                {
+                    return BadRequest(new { Success = false, Message = GeneralMessages.RequestBodyCannotBeNull });
+                }
+
+                // Validate UserId
+                if (request.userId <= 0)
+                {
+                    return BadRequest(new { Success = false, Message = "UserId is required." });
+                }
+
+                // Enforce: users can punch out only for themselves (no punching for other employees)
+                if (request.userId != CurrentUserId)
+                {
+                    Logger.LogWarning(LogMessages.TenantAccess.UserAttemptedPunchOut,
+                        CurrentUserId, request.userId, request.userId);
+                    return UserAccessDenied();
+                }
+
+                // Validate that attendance_date is today (server local date)
+                var dateValidation = ValidateDateIsToday(request.attendance_date, "Punch Out");
+                if (dateValidation != null)
+                {
+                    return dateValidation;
+                }
+
+                // Also validate punch_out_time date part matches today
+                var timeValidation = ValidateDateIsToday(request.punch_out_time, "Punch Out");
+                if (timeValidation != null)
+                {
+                    return timeValidation;
+                }
+
+                Logger.LogInformation(LogMessages.Attendance.ProcessingPunchOut, request.userId);
+                var result = await _service.PunchOutAsync(request);
+                return MapPunchResult(result);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ExceptionCodes.Attendance.PunchOut, nameof(PunchOut), ex, CurrentUserId);
+                return StatusCode(500, new { Success = false, Message = GeneralMessages.SomethingWentWrongContactAdmin });
+            }
+        }
+
+        ///// <summary>
+        ///// Punch Out with optional image upload.
+        ///// Endpoint consumes multipart/form-data to support IFormFile.
+        ///// POST: attendance/punch-out (multipart/form-data)
+        ///// </summary>
+        //[HttpPost("punch-out-with-image")]
+        //[Consumes("multipart/form-data")]
+        //public async Task<IActionResult> PunchOutWithImage([FromForm] PunchOutImageRequest request)
+        //{
+        //    try
+        //    {
+        //        if (request == null)
+        //            return BadRequest(new { Success = false, Message = GeneralMessages.RequestBodyCannotBeNull });
+
+        //        if (request.empId <= 0)
+        //            return BadRequest(new { Success = false, Message = "empId is required." });
+
+        //        // Enforce: regular users can punch only for their own employees.
+        //        var accessValidation = await ValidateEmployeeAccessAsync(request.empId);
+        //        if (accessValidation != null)
+        //            return accessValidation;
+
+        //        // Validate that punchTime is today's date (server local date).
+        //        var dateValidation = ValidateDateIsToday(request.punchTime, "Punch Out");
+        //        if (dateValidation != null)
+        //            return dateValidation;
+
+        //        Logger.LogInformation(LogMessages.Attendance.ProcessingPunchOut, request.empId);
+        //        var result = await _service.PunchOutWithImageAsync(request);
+        //        return Ok(new { message = result });
+        //    }
+        //    catch (ArgumentException ex)
+        //    {
+        //        return BadRequest(new { Success = false, Message = ex.Message });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Logger.LogException(ExceptionCodes.Attendance.PunchOut, nameof(PunchOutWithImage), ex, request.empId);
+        //        return StatusCode(500, new { Success = false, Message = GeneralMessages.SomethingWentWrongContactAdmin });
+        //    }
+        //}
 
         /// <summary>
         /// Get today's attendance for all employees in the organization
@@ -192,63 +346,80 @@ namespace MobileWebApi.Controllers
         [HttpGet("get-all-attendance")]
         public async Task<IActionResult> GetAttendance()
         {
-            var today = DateTime.Today;
-            var organizationId = CurrentOrganisationId;
-            
-            Logger.LogInformation(LogMessages.Attendance.FetchingAttendance, today);
-            
-            var request = new AttendanceReportRequest
+            try
             {
-                Daily = true,
-                Monthly = false,
-                CalendarDate = today,
-                organization = organizationId
-                // EmployeeId is null to get all employees in the organization
-            };
+                var today = DateTime.Today;
+                var organizationId = CurrentOrganisationId;
 
-            var result = await _service.GetAttendanceReportAsync(request);
-            
-            if (result.Success)
-            {
-                return Ok(result);
+                Logger.LogInformation(LogMessages.Attendance.FetchingAttendance, today);
+
+                var request = new AttendanceReportRequest
+                {
+                    Daily = true,
+                    Monthly = false,
+                    CalendarDate = today,
+                    organization = organizationId
+                    // EmployeeId is null to get all employees in the organization
+                };
+
+                var result = await _service.GetAttendanceReportAsync(request);
+
+                if (result.Success)
+                {
+                    return Ok(result);
+                }
+
+                return BadRequest(result);
             }
-            
-            return BadRequest(result);
+            catch (Exception ex)
+            {
+                Logger.LogException(ExceptionCodes.Attendance.GetAttendanceReport, nameof(GetAttendance), ex, CurrentUserId);
+                return StatusCode(500, new { Success = false, Message = GeneralMessages.SomethingWentWrongContactAdmin });
+            }
         }
 
         /// <summary>
         /// Get attendance by personal details for employee (current month)
         /// GET: attendance/get-attendance-by-personal-details/?user_id=7
         /// Note: Regular users can only see their own attendance. HR/TenantAdmin can see all.
+        /// Workdays: both punches → Present; punch in only → Present with Remarks "Missing Punch Out" (PunchIn still returned); neither punch → Absent.
         /// </summary>
         [HttpGet("get-attendance-by-personal-details")]
         public async Task<IActionResult> GetAttendanceByPersonalDetails([FromQuery] int user_id)
         {
-            // Validate UserId
-            if (user_id <= 0)
+            try
             {
-                return BadRequest(new { Success = false, Message = "UserId is required." });
-            }
+                // Validate UserId
+                if (user_id <= 0)
+                {
+                    return BadRequest(new { Success = false, Message = "UserId is required." });
+                }
 
-            // Enforce: users can only see their own attendance (unless HR/TenantAdmin)
-            if (!HasElevatedAccess && user_id != CurrentUserId)
-            {
-                Logger.LogWarning(LogMessages.TenantAccess.UserAttemptedAccessAttendance,
-                    CurrentUserId, user_id, user_id);
-                return UserAccessDenied();
-            }
+                // Enforce: users can only see their own attendance (unless HR/TenantAdmin)
+                if (!HasElevatedAccess && user_id != CurrentUserId)
+                {
+                    Logger.LogWarning(LogMessages.TenantAccess.UserAttemptedAccessAttendance,
+                        CurrentUserId, user_id, user_id);
+                    return UserAccessDenied();
+                }
 
-            var currentDate = DateTime.Now;
-            Logger.LogInformation(LogMessages.Attendance.FetchingAttendanceByPersonalDetails, user_id);
-            
-            var result = await _service.GetAttendanceByCalendarAsync(user_id, currentDate.Month, currentDate.Year);
-            
-            if (result.Success)
-            {
-                return Ok(result);
+                var currentDate = DateTime.Now;
+                Logger.LogInformation(LogMessages.Attendance.FetchingAttendanceByPersonalDetails, user_id);
+
+                var result = await _service.GetAttendanceByCalendarAsync(user_id, currentDate.Month, currentDate.Year);
+
+                if (result.Success)
+                {
+                    return Ok(result);
+                }
+
+                return BadRequest(result);
             }
-            
-            return BadRequest(result);
+            catch (Exception ex)
+            {
+                Logger.LogException(ExceptionCodes.Attendance.GetCalendarAttendance, nameof(GetAttendanceByPersonalDetails), ex, CurrentUserId);
+                return StatusCode(500, new { Success = false, Message = GeneralMessages.SomethingWentWrongContactAdmin });
+            }
         }
 
         //[HttpPost("Attendance-Report")]
@@ -337,33 +508,43 @@ namespace MobileWebApi.Controllers
             [FromQuery] DateTime from_date,
             [FromQuery] DateTime to_date)
         {
-            // Validate UserId
-            if (user_id <= 0)
+            try
             {
-                return BadRequest(new { Success = false, Message = "UserId is required." });
-            }
+                var validatedOrgIdForAccess = GetValidatedOrganisationId(organization_id);
 
-            // Validate tenant access - user can only access their own organisation's data
-            var validatedOrgId = GetValidatedOrganisationId(organization_id);
-            
-            // Enforce: users can only see their own attendance (unless HR/TenantAdmin)
-            if (!HasElevatedAccess && user_id != CurrentUserId)
-            {
-                Logger.LogWarning(LogMessages.TenantAccess.UserAttemptedAccessAttendance,
-                    CurrentUserId, user_id, user_id);
-                return UserAccessDenied();
+                // Validate UserId
+                if (user_id <= 0)
+                {
+                    return BadRequest(new { Success = false, Message = "UserId is required." });
+                }
+
+                // Validate tenant access - user can only access their own organisation's data
+                var validatedOrgId = validatedOrgIdForAccess;
+
+                // Enforce: users can only see their own attendance (unless HR/TenantAdmin)
+                if (!HasElevatedAccess && user_id != CurrentUserId)
+                {
+                    Logger.LogWarning(LogMessages.TenantAccess.UserAttemptedAccessAttendance,
+                        CurrentUserId, user_id, user_id);
+                    return UserAccessDenied();
+                }
+
+                Logger.LogInformation(LogMessages.Attendance.FetchingAttendanceSummary, user_id, from_date, to_date);
+
+                var result = await _service.GetAttendanceSummaryAsync(validatedOrgId, user_id, from_date, to_date);
+
+                if (result.Success)
+                {
+                    return Ok(result);
+                }
+
+                return BadRequest(result);
             }
-            
-            Logger.LogInformation(LogMessages.Attendance.FetchingAttendanceSummary, user_id, from_date, to_date);
-            
-            var result = await _service.GetAttendanceSummaryAsync(validatedOrgId, user_id, from_date, to_date);
-            
-            if (result.Success)
+            catch (Exception ex)
             {
-                return Ok(result);
+                Logger.LogException(ExceptionCodes.Attendance.GetAttendanceSummary, nameof(GetAttendanceSummary), ex, CurrentUserId);
+                return StatusCode(500, new { Success = false, Message = GeneralMessages.SomethingWentWrongContactAdmin });
             }
-            
-            return BadRequest(result);
         }
 
         /// <summary>
@@ -377,30 +558,38 @@ namespace MobileWebApi.Controllers
             [FromQuery] int month,
             [FromQuery] int year)
         {
-            // Validate UserId
-            if (user_id <= 0)
+            try
             {
-                return BadRequest(new { Success = false, Message = "UserId is required." });
-            }
+                // Validate UserId
+                if (user_id <= 0)
+                {
+                    return BadRequest(new { Success = false, Message = "UserId is required." });
+                }
 
-            // Enforce: users can only see their own attendance (unless HR/TenantAdmin)
-            if (!HasElevatedAccess && user_id != CurrentUserId)
-            {
-                Logger.LogWarning(LogMessages.TenantAccess.UserAttemptedAccessAttendance,
-                    CurrentUserId, user_id, user_id);
-                return UserAccessDenied();
-            }
+                // Enforce: users can only see their own attendance (unless HR/TenantAdmin)
+                if (!HasElevatedAccess && user_id != CurrentUserId)
+                {
+                    Logger.LogWarning(LogMessages.TenantAccess.UserAttemptedAccessAttendance,
+                        CurrentUserId, user_id, user_id);
+                    return UserAccessDenied();
+                }
 
-            Logger.LogInformation(LogMessages.Attendance.FetchingCalendarAttendance, user_id, month, year);
-            
-            var result = await _service.GetAttendanceByCalendarAsync(user_id, month, year);
-            
-            if (result.Success)
-            {
-                return Ok(result);
+                Logger.LogInformation(LogMessages.Attendance.FetchingCalendarAttendance, user_id, month, year);
+
+                var result = await _service.GetAttendanceByCalendarAsync(user_id, month, year);
+
+                if (result.Success)
+                {
+                    return Ok(result);
+                }
+
+                return BadRequest(result);
             }
-            
-            return BadRequest(result);
+            catch (Exception ex)
+            {
+                Logger.LogException(ExceptionCodes.Attendance.GetCalendarAttendance, nameof(GetAttendanceByCalendar), ex, CurrentUserId);
+                return StatusCode(500, new { Success = false, Message = GeneralMessages.SomethingWentWrongContactAdmin });
+            }
         }
 
         /// <summary>
@@ -503,33 +692,51 @@ namespace MobileWebApi.Controllers
         //}
 
         /// <summary>
-        /// Delete attendance record
-        /// DELETE: attendance/delete-attendance/?id=4
+        /// Delete attendance record (Punch).
+        /// DELETE: attendance/delete-attendance?id={punchId}
         /// </summary>
         [HttpDelete("delete-attendance")]
         public async Task<IActionResult> DeleteAttendance([FromQuery] int id)
         {
-            if (id <= 0)
+            try
             {
-                return BadRequest(new AttendanceDeleteResponse
+                if (id <= 0)
+                {
+                    return BadRequest(new AttendanceDeleteResponse
+                    {
+                        Success = false,
+                        Message = AttendanceMessages.PunchIdRequired,
+                        Data = null
+                    });
+                }
+
+                var tenantId = CurrentOrganisationId;
+
+                Logger.LogInformation(LogMessages.Attendance.DeletingAttendanceRecord, id);
+                var result = await _service.DeleteAttendanceAsync(id, tenantId);
+
+                if (result.Success)
+                {
+                    return Ok(result);
+                }
+
+                if (string.Equals(result.Message, AttendanceMessages.AttendanceNotFound, StringComparison.Ordinal))
+                {
+                    return NotFound(result);
+                }
+
+                return BadRequest(result);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ExceptionCodes.Attendance.DeleteAttendance, nameof(DeleteAttendance), ex, CurrentUserId);
+                return StatusCode(500, new AttendanceDeleteResponse
                 {
                     Success = false,
-                    Message = AttendanceMessages.EmployeeIdRequired,
+                    Message = AttendanceMessages.FailedToDeleteAttendance,
                     Data = null
                 });
             }
-
-            var tenantId = CurrentOrganisationId;
-
-            Logger.LogInformation(LogMessages.Attendance.DeletingAttendanceRecord, id);
-            var result = await _service.DeleteAttendanceAsync(id, tenantId);
-
-            if (result.Success)
-            {
-                return Ok(result);
-            }
-
-            return BadRequest(result);
         }
 
         /// <summary>
@@ -542,46 +749,54 @@ namespace MobileWebApi.Controllers
             [FromQuery] int userId,
             [FromQuery] DateTime date)
         {
-            // Validate parameters
-            if (userId <= 0)
+            try
             {
-                return BadRequest(new AttendanceStatusResponse
+                // Validate parameters
+                if (userId <= 0)
                 {
-                    Success = false,
-                    Message = "UserId is required.",
-                    Data = null
-                });
-            }
+                    return BadRequest(new AttendanceStatusResponse
+                    {
+                        Success = false,
+                        Message = "UserId is required.",
+                        Data = null
+                    });
+                }
 
-            if (date == default(DateTime))
-            {
-                return BadRequest(new AttendanceStatusResponse
+                if (date == default(DateTime))
                 {
-                    Success = false,
-                    Message = AttendanceMessages.DateRequired,
-                    Data = null
-                });
-            }
+                    return BadRequest(new AttendanceStatusResponse
+                    {
+                        Success = false,
+                        Message = AttendanceMessages.DateRequired,
+                        Data = null
+                    });
+                }
 
-            // Enforce: users can only check their own attendance (unless HR/TenantAdmin)
-            if (!HasElevatedAccess && userId != CurrentUserId)
+                // Enforce: users can only check their own attendance (unless HR/TenantAdmin)
+                if (!HasElevatedAccess && userId != CurrentUserId)
+                {
+                    Logger.LogWarning(LogMessages.TenantAccess.UserAttemptedAccessAttendance,
+                        CurrentUserId, userId, userId);
+                    return UserAccessDenied();
+                }
+
+                var tenantId = CurrentOrganisationId;
+
+                Logger.LogInformation(LogMessages.Attendance.GettingAttendanceStatus, userId, date);
+                var result = await _service.GetAttendanceStatusAsync(userId, date, tenantId);
+
+                if (result.Success)
+                {
+                    return Ok(result);
+                }
+
+                return BadRequest(result);
+            }
+            catch (Exception ex)
             {
-                Logger.LogWarning(LogMessages.TenantAccess.UserAttemptedAccessAttendance,
-                    CurrentUserId, userId, userId);
-                return UserAccessDenied();
+                Logger.LogException(ExceptionCodes.Attendance.GetStatus, nameof(GetAttendanceStatus), ex, CurrentUserId);
+                return StatusCode(500, new { Success = false, Message = GeneralMessages.SomethingWentWrongContactAdmin });
             }
-
-            var tenantId = CurrentOrganisationId;
-
-            Logger.LogInformation(LogMessages.Attendance.GettingAttendanceStatus, userId, date);
-            var result = await _service.GetAttendanceStatusAsync(userId, date, tenantId);
-
-            if (result.Success)
-            {
-                return Ok(result);
-            }
-
-            return BadRequest(result);
         }
 
         /// <summary>
@@ -596,77 +811,126 @@ namespace MobileWebApi.Controllers
             [FromQuery] DateTime fromDate,
             [FromQuery] DateTime toDate)
         {
-            // Validate parameters
-            if (userId <= 0)
+            try
             {
-                return BadRequest(new AttendanceOverviewResponse
+                var validatedTenantIdForAccess = GetValidatedOrganisationId(organisationId);
+
+                // Validate parameters
+                if (userId <= 0)
                 {
-                    Success = false,
-                    Message = "UserId is required.",
-                    Data = null
-                });
-            }
+                    return BadRequest(new AttendanceOverviewResponse
+                    {
+                        Success = false,
+                        Message = "UserId is required.",
+                        Data = null
+                    });
+                }
 
-            if (organisationId <= 0)
-            {
-                return BadRequest(new AttendanceOverviewResponse
+                if (organisationId <= 0)
                 {
-                    Success = false,
-                    Message = AttendanceMessages.OrganisationIdRequired,
-                    Data = null
-                });
-            }
+                    return BadRequest(new AttendanceOverviewResponse
+                    {
+                        Success = false,
+                        Message = AttendanceMessages.OrganisationIdRequired,
+                        Data = null
+                    });
+                }
 
-            if (fromDate == default(DateTime) || toDate == default(DateTime))
-            {
-                return BadRequest(new AttendanceOverviewResponse
+                if (fromDate == default(DateTime) || toDate == default(DateTime))
                 {
-                    Success = false,
-                    Message = "FromDate and ToDate are required",
-                    Data = null
-                });
-            }
+                    return BadRequest(new AttendanceOverviewResponse
+                    {
+                        Success = false,
+                        Message = "FromDate and ToDate are required",
+                        Data = null
+                    });
+                }
 
-            if (fromDate > toDate)
-            {
-                return BadRequest(new AttendanceOverviewResponse
+                if (fromDate > toDate)
                 {
-                    Success = false,
-                    Message = AttendanceMessages.InvalidDateRange,
-                    Data = null
-                });
+                    return BadRequest(new AttendanceOverviewResponse
+                    {
+                        Success = false,
+                        Message = AttendanceMessages.InvalidDateRange,
+                        Data = null
+                    });
+                }
+
+                // Validate tenant access - user can only access their own organisation's data
+                var validatedTenantId = validatedTenantIdForAccess;
+
+                // Enforce: users can only see their own attendance (unless HR/TenantAdmin)
+                if (!HasElevatedAccess && userId != CurrentUserId)
+                {
+                    Logger.LogWarning(LogMessages.TenantAccess.UserAttemptedAccessAttendance,
+                        CurrentUserId, userId, userId);
+                    return UserAccessDenied();
+                }
+
+                Logger.LogInformation(LogMessages.Attendance.GettingAttendanceOverview,
+                    userId, validatedTenantId, fromDate, toDate);
+
+                var request = new AttendanceOverviewRequest
+                {
+                    UserId = userId,
+                    organisationId = validatedTenantId,
+                    FromDate = fromDate,
+                    ToDate = toDate
+                };
+
+                var result = await _attendanceOverviewService.GetAttendanceOverviewAsync(request);
+
+                if (result.Success)
+                {
+                    return Ok(result);
+                }
+
+                return BadRequest(result);
             }
-
-            // Validate tenant access - user can only access their own organisation's data
-            var validatedTenantId = GetValidatedOrganisationId(organisationId);
-
-            // Enforce: users can only see their own attendance (unless HR/TenantAdmin)
-            if (!HasElevatedAccess && userId != CurrentUserId)
+            catch (Exception ex)
             {
-                Logger.LogWarning(LogMessages.TenantAccess.UserAttemptedAccessAttendance,
-                    CurrentUserId, userId, userId);
-                return UserAccessDenied();
+                Logger.LogException(ExceptionCodes.AttendanceOverview.GetOverview, nameof(GetAttendanceOverview), ex, CurrentUserId);
+                return StatusCode(500, new { Success = false, Message = GeneralMessages.SomethingWentWrongContactAdmin });
             }
+        }
 
-            Logger.LogInformation(LogMessages.Attendance.GettingAttendanceOverview,
-                userId, validatedTenantId, fromDate, toDate);
-
-            var request = new AttendanceOverviewRequest
+        /// <summary>
+        /// Get today's punch in / punch out logs for the logged-in user
+        /// GET: /api/attendance/today-logs
+        /// </summary>
+        [HttpGet("/api/attendance/today-logs")]
+        public async Task<IActionResult> GetTodayPunchLogs()
+        {
+            try
             {
-                UserId = userId,
-                organisationId = validatedTenantId,
-                FromDate = fromDate,
-                ToDate = toDate
-            };
+                var userId = CurrentUserId;
+                if (!userId.HasValue)
+                {
+                    return Unauthorized(new
+                    {
+                        Success = false,
+                        Message = TenantAccessMessages.UserNotAuthenticated
+                    });
+                }
 
-            var result = await _attendanceOverviewService.GetAttendanceOverviewAsync(request);
+                var tenantId = CurrentOrganisationId;
 
-            if (result.Success)
-            {
-                return Ok(result);
+                Logger.LogInformation(LogMessages.Attendance.FetchingTodayPunchLogs, userId.Value);
+
+                var result = await _service.GetTodayPunchLogsAsync(userId.Value, tenantId);
+
+                if (result.Success)
+                {
+                    return Ok(result);
+                }
+
+                return BadRequest(result);
             }
-
-            return BadRequest(result);
+            catch (Exception ex)
+            {
+                Logger.LogException(ExceptionCodes.Attendance.GetTodayPunchLogs, nameof(GetTodayPunchLogs), ex, CurrentUserId);
+                return StatusCode(500, new { Success = false, Message = GeneralMessages.SomethingWentWrongContactAdmin });
+            }
         }
     }
 }

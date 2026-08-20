@@ -1,24 +1,30 @@
 using MobileWebApi.Models;
+using MobileWebApi.Repositories;
 
 namespace MobileWebApi.Interfaces
 {
-    public interface IPaySlipService
-    {
-        /// <summary>
-        /// Get list of monthly pay slips for the user
-        /// </summary>
-        Task<PaySlipResponse> GetPaySlipsAsync(PaySlipListRequest request);
-        
-        /// <summary>
-        /// Get detailed pay slip by ID
-        /// </summary>
-        Task<PaySlipResponse> GetPaySlipByIdAsync(int userId, int paySlipId);
-        
-        /// <summary>
-        /// Get pay slip for download
-        /// </summary>
-        Task<PaySlipDownloadResponse> DownloadPaySlipAsync(PaySlipDownloadRequest request);
-    }
+	public interface IPaySlipService
+	{
+		Task<PaySlipResponse> GetPaySlipsAsync(PaySlipListRequest request);
+
+		Task<PaySlipResponse> GetPaySlipByIdAsync(int userId, int paySlipId);
+
+		Task<PaySlipResponse> GetProvidentFundSummaryAsync(int validatedUserId);
+
+		Task<MonthlyPaymentSummaryResponse> GetMonthlyPaymentSummaryAsync(
+			MonthlyPaymentSummaryRequest request);
+
+		// Same response structure as GetMonthlyPaymentSummaryAsync, but returns only published payroll records.
+		Task<MonthlyPaymentSummaryResponse> GetMonthlyPaymentSummaryPublishedAsync(
+			MonthlyPaymentSummaryRequest request);
+
+		Task<PaySlipDownloadResponse> DownloadPaySlipByMonthYearAsync(
+			PaySlipDownloadByMonthYearRequest request);
+		Task<PaySlipWithWeekOff?> GetPaySlipAsync(int employeeId, int tenantId, int month, int year);
+		Task<MonthlyPaymentSummaryResponse>GetLastMonthPaymentSummaryAsync(int userId);
+		Task<PaySlipYearsResponse> GetPaySlipYearsAsync(int userId);
+		Task<PaySlipMonthsResponse> GetPaySlipMonthsByYearAsync(int userId, int year);
+	}
 }
 
 

@@ -18,17 +18,14 @@ namespace MobileWebApi.Models
         /// <summary>
         /// Status filter: Pending, Approved, Submit, etc.
         /// </summary>
-        public string? status { get; set; }
+       // public string? status { get; set; }
 
         /// <summary>
         /// User ID to filter leave requests for specific user
         /// </summary>
         public int? user { get; set; }
 
-        /// <summary>
-        /// Branch ID filter
-        /// </summary>
-        public int? branch { get; set; }
+        
     }
 }
 

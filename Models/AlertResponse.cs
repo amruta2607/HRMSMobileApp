@@ -15,5 +15,12 @@ namespace MobileWebApi.Models
         public int TotalRecords { get; set; }
         public int UnreadCount { get; set; }
     }
+
+    public class AlertCountResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public int Count { get; set; }
+    }
 }
 

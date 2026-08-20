@@ -1,4 +1,4 @@
-﻿namespace MobileWebApi.Models
+namespace MobileWebApi.Models
 {
     public class Punch
     {
@@ -8,6 +8,9 @@
         public DateTime? PunchIn { get; set; }
         public DateTime? PunchOut { get; set; }
         public double? Duration { get; set; }
+        public string? PunchInImage { get; set; }
+        public string? PunchOutImage { get; set; }
+        public string? PunchOutReason { get; set; }
         public DateTime InsertDate { get; set; }
         public int InsertUserId { get; set; }
         public DateTime? UpdateDate { get; set; }
@@ -17,13 +20,12 @@
         /// OrganisationId - maps to TenantId column in database
         /// </summary>
         public int OrganisationId { get; set; }
-        
-        //// Location data for punch-in
-        //public double? PunchInLatitude { get; set; }
-        //public double? PunchInLongitude { get; set; }
-        
-        //// Location data for punch-out
-        //public double? PunchOutLatitude { get; set; }
-        //public double? PunchOutLongitude { get; set; }
+
+        public string? InSource { get; set; }
+        public string? OutSource { get; set; }
+        public string? CoordinateIn { get; set; }
+        public string? CoordinateOut { get; set; }
+        public string? LinkIn { get; set; }
+        public string? LinkOut { get; set; }
     }
 }

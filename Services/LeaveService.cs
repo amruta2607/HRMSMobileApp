@@ -1,672 +1,571 @@
+using System.Collections.Generic;
+using System.Globalization;
+using MobileWebApi.Constants;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
-using MobileWebApi.Constants;
+using Microsoft.Extensions.Logging;
 
 namespace MobileWebApi.Services
 {
-    public class LeaveService : ILeaveService
-    {
-        private readonly ILeaveRepository _leaveRepository;
-        private readonly IEmployeeRepository _employeeRepository;
-        private readonly IApprovalWorkflowService _approvalWorkflowService;
-        private readonly ILogger<LeaveService> _logger;
+	public class LeaveService : ILeaveService
+	{
+		private readonly ILeaveRepository _leaveRepository;
+		private readonly IEmployeeRepository _employeeRepository;
+		private readonly IApprovalWorkflowService _approvalWorkflowService;
+		private readonly IApprovalRepository _approvalRepository;
+		private readonly ILogger<LeaveService> _logger;
 
-        // Leave request statuses (string for CurrentAction column)
-        private const string STATUS_SUBMIT = "Submit";
-        private const string STATUS_PENDING = "Pending";
-        private const string STATUS_APPROVED = "Approved";
-        private const string STATUS_REJECTED = "Rejected";
-        private const string STATUS_CANCELLED = "Cancelled";
+		// -----------------------------
+		// Status strings
+		// -----------------------------
+		private const string STATUS_SUBMIT = "Submit";
+		private const string STATUS_APPROVED = "Approved";
+		private const string STATUS_REJECTED = "Rejected";
+		private const string STATUS_CANCELLED = "Cancelled";
+		private const string STATUS_WITHDRAW = "Withdraw";
+		private const string STATUS_PENDING = "Pending";
+		private const string STATUS_PENDING_FOR_APPROVAL = "Pending For Approval";
+		private const string STATUS_CANCELLATION_APPROVED = "Cancellation Approved";
+		private const string STATUS_CANCELLATION_REJECTED = "Cancellation Rejected";
 
-        // Leave request status IDs (int for LeaveRequestStatus column)
-        private const int STATUS_ID_SUBMIT = 1;
-        private const int STATUS_ID_APPROVED = 2;
-        private const int STATUS_ID_REJECTED = 3;
-        private const int STATUS_ID_CANCELLED = 4;
 
-        public LeaveService(
-            ILeaveRepository leaveRepository, 
-            IEmployeeRepository employeeRepository, 
-            IApprovalWorkflowService approvalWorkflowService,
-            ILogger<LeaveService> logger)
-        {
-            _leaveRepository = leaveRepository;
-            _employeeRepository = employeeRepository;
-            _approvalWorkflowService = approvalWorkflowService;
-            _logger = logger;
-        }
+		// -----------------------------
+		// Status IDs in DB
+		// -----------------------------
+		private const int STATUS_ID_SUBMIT = 1;
+		private const int STATUS_ID_APPROVED = 2;
+		private const int STATUS_ID_REJECTED = 3;
+		private const int STATUS_ID_CANCELLED = 5;
+		private const int STATUS_ID_WITHDRAW = 4;
+		private const int STATUS_ID_PENDING = 6;
+		private const int STATUS_ID_PENDING_FOR_APPROVAL = 7;
+		private const int STATUS_ID_CANCELLATION_APPROVED = 8;
+		private const int STATUS_ID_CANCELLATION_REJECTED = 9;
 
-        /// <summary>
-        /// Create a new leave request from mobile app
-        /// </summary>
-        public async Task<LeaveRequestResponse> CreateLeaveRequestAsync(LeaveRequestCreateRequest request)
-        {
-            try
-            {
-                _logger.LogInformation(LogMessages.Leave.CreatingLeaveRequest, request.user);
-                
-                // Validate required fields
-                if (request.user <= 0)
-                {
-                    return new LeaveRequestResponse
-                    {
-                        Success = false,
-                        Message = LeaveMessages.UserIdRequired,
-                        Data = null,
-                        TotalRecords = 0
-                    };
-                }
+		public LeaveService(
+			ILeaveRepository leaveRepository,
+			IEmployeeRepository employeeRepository,
+			IApprovalWorkflowService approvalWorkflowService,
+			IApprovalRepository approvalRepository,
+			ILogger<LeaveService> logger)
+		{
+			_leaveRepository = leaveRepository;
+			_employeeRepository = employeeRepository;
+			_approvalWorkflowService = approvalWorkflowService;
+			_approvalRepository = approvalRepository;
+			_logger = logger;
+		}
 
-                if (request.leave_type <= 0)
-                {
-                    return new LeaveRequestResponse
-                    {
-                        Success = false,
-                        Message = LeaveMessages.LeaveTypeRequired,
-                        Data = null,
-                        TotalRecords = 0
-                    };
-                }
+		// =====================================================
+		// CREATE LEAVE REQUEST
+		// =====================================================
+		public async Task<LeaveRequestResponse> CreateLeaveRequestAsync(LeaveRequestCreateRequest request)
+		{
+			try
+			{
+				// -----------------------------
+				// Validate basic input
+				// -----------------------------
+				if (request.user <= 0 || request.leave_type <= 0)
+					return Fail(LeaveMessages.InvalidRequest);
 
-                // Use organization ID directly from request
-                int? organisationId = request.organization;
+				var employeeId = await _leaveRepository.GetEmployeeIdByUserIdAsync(request.user);
+				if (!employeeId.HasValue)
+					return Fail(LeaveMessages.EmployeeNotFoundForUser);
 
-                // Resolve user to EmployeeId
-                var employeeId = await _leaveRepository.GetEmployeeIdByUserIdAsync(request.user);
-                if (!employeeId.HasValue)
-                {
-                    return new LeaveRequestResponse
-                    {
-                        Success = false,
-                        Message = LeaveMessages.EmployeeNotFoundForUser,
-                        Data = null,
-                        TotalRecords = 0
-                    };
-                }
+				// -----------------------------
+				// Get configured week offs & holidays
+				// -----------------------------
+				var dayOffs = await _leaveRepository.GetTenantDayOffsAsync(request.organization ?? 0); // returns List<int> for DayOffId (1=Sunday etc.)
+				var holidays = await _leaveRepository.GetHolidaysAsync(request.organization ?? 0, request.startdate, request.enddate);
 
-                // Use leave type ID directly from request
-                int leaveTypeId = request.leave_type;
+				// -----------------------------
+				// Determine valid leave dates
+				// -----------------------------
+				var requestedDates = EachDate(request.startdate, request.enddate).ToList();
 
-                // Get current leave balance
-                var leaveBalance = await _leaveRepository.GetLeaveBalanceAsync(employeeId.Value, leaveTypeId);
-                decimal currentBalance = leaveBalance?.LeaveBalanceValue ?? 0;
+				var invalidDates = requestedDates
+					.Where(d => dayOffs.Contains((int)d.DayOfWeek) || holidays.Any(h => h.Date.Date == d.Date))
+					.ToList();
 
-                // Calculate duration (if half day, set to 0.5)
-                decimal duration = request.is_half_day ? 0.5m : request.duration;
+				if (invalidDates.Any())
+				{
+					var invalidDatesStr = string.Join(", ", invalidDates.Select(d => d.ToString("yyyy-MM-dd")));
+					return Fail($"Cannot apply leave on week offs or holidays: {invalidDatesStr}");
+				}
 
-                // Check if sufficient balance
-                if (currentBalance < duration)
-                {
-                    return new LeaveRequestResponse
-                    {
-                        Success = false,
-                        Message = string.Format(LeaveMessages.InsufficientLeaveBalance, currentBalance, duration),
-                        Data = null,
-                        TotalRecords = 0
-                    };
-                }
+				// -----------------------------
+				// Calculate leave balance & duration
+				// -----------------------------
+				var leaveBalance = await _leaveRepository.GetLeaveBalanceAsync(employeeId.Value, request.leave_type);
+				decimal availableBalance = leaveBalance?.RemainingBalance ?? 0;
 
-                // Generate leave request number
-                var leaveRequestNumber = await _leaveRepository.GenerateLeaveRequestNumberAsync(organisationId ?? 0);
+				decimal duration = request.is_half_day ? 0.5m : requestedDates.Count;
 
-                // Create leave request object
-                var leaveRequest = new LeaveRequest
-                {
-                    Number = leaveRequestNumber,
-                    EmployeeId = employeeId.Value,
-                    LeaveTypeId = leaveTypeId,
-                    LeaveBalance = currentBalance,
-                    FromDate = request.startdate,
-                    ToDate = request.enddate,
-                    Duration = duration,
-                    Description = request.reason,
-                    CurrentAction = STATUS_SUBMIT,
-                    LeaveRequestStatus = STATUS_ID_SUBMIT,
-                    OrganisationId = organisationId,
-                    BranchId = request.branch,
-                    InsertUserId = request.user,
-                    InsertDate = DateTime.Now
-                };
+				if (availableBalance < duration)
+					return Fail(string.Format(LeaveMessages.InsufficientLeaveBalance, availableBalance, duration));
 
-                // Insert leave request
-                var newId = await _leaveRepository.CreateLeaveRequestAsync(leaveRequest);
+				// -----------------------------
+				// Generate leave request number
+				// -----------------------------
+				var requestNumber = await _leaveRepository.GenerateLeaveRequestNumberAsync(request.organization ?? 0);
 
-                if (newId > 0)
-                {
-                    // Update leave request with the generated ID for workflow
-                    leaveRequest.Id = newId;
+				// -----------------------------
+				// Create leave request
+				// -----------------------------
+				var leaveRequest = new LeaveRequest
+				{
+					Number = requestNumber,
+					EmployeeId = employeeId.Value,
+					LeaveTypeId = request.leave_type,
+					LeaveBalance = availableBalance,
+					FromDate = request.startdate,
+					ToDate = request.enddate,
+					Duration = duration,
+					Description = request.reason,
+					CurrentAction = STATUS_SUBMIT,
+					LeaveRequestStatus = STATUS_ID_SUBMIT,
+					OrganisationId = request.organization,
+					InsertUserId = request.user,
+					InsertDate = DateTime.Now
+				};
 
-                    // Initiate approval workflow (insert into Events, Approval, ScreenNotification tables)
-                    try
-                    {
-                        var tenantId = organisationId ?? 0;
-                        if (tenantId > 0)
-                        {
-                            var workflowResult = await _approvalWorkflowService.InitiateLeaveRequestApprovalAsync(
-                                leaveRequest, 
-                                request.user, 
-                                tenantId);
+				var newId = await _leaveRepository.CreateLeaveRequestAsync(leaveRequest);
+				if (newId <= 0)
+					return Fail(LeaveMessages.FailedToCreateLeaveRequest);
 
-                            if (workflowResult.Success)
-                            {
-                                _logger.LogInformation(LogMessages.ApprovalWorkflow.ApprovalWorkflowInitiated, 
-                                    newId, workflowResult.EventId);
-                            }
-                            else
-                            {
-                                _logger.LogWarning(LogMessages.ApprovalWorkflow.FailedToInitiateWorkflow, 
-                                    newId, workflowResult.Message);
-                            }
-                        }
-                    }
-                    catch (Exception workflowEx)
-                    {
-                        // Log but don't fail the leave request creation
-                        _logger.LogWarning(workflowEx, LogMessages.ApprovalWorkflow.WorkflowNotConfigured, newId);
-                    }
+				leaveRequest.Id = newId;
 
-                    return new LeaveRequestResponse
-                    {
-                        Success = true,
-                        Message = LeaveMessages.LeaveRequestSubmittedSuccessfully,
-                        Data = new { Id = newId, Number = leaveRequestNumber },
-                        TotalRecords = 1
-                    };
-                }
+				// -----------------------------
+				// Initiate approval workflow if configured
+				// -----------------------------
+				try
+				{
+					if (request.organization.HasValue)
+					{
+						await _approvalWorkflowService.InitiateLeaveRequestApprovalAsync(
+							leaveRequest,
+							request.user,
+							request.organization.Value);
+					}
+				}
+				catch (Exception ex)
+				{
+					_logger.LogWarning(ex, "Approval workflow not configured");
+				}
 
-                return new LeaveRequestResponse
-                {
-                    Success = false,
-                    Message = LeaveMessages.FailedToCreateLeaveRequest,
-                    Data = null,
-                    TotalRecords = 0
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, LogMessages.Leave.ErrorCreatingLeaveRequest);
-                return new LeaveRequestResponse
-                {
-                    Success = false,
-                    Message = string.Format(LeaveMessages.ErrorCreatingLeaveRequest, ex.Message),
-                    Data = null,
-                    TotalRecords = 0
-                };
-            }
-        }
+				return Success(LeaveMessages.LeaveRequestSubmittedSuccessfully, new { Id = newId, Number = requestNumber });
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error creating leave request");
+				return Fail(ex.Message);
+			}
+		}
 
-        /// <summary>
-        /// Get leave requests with filters
-        /// </summary>
-        public async Task<LeaveRequestResponse> GetLeaveRequestsAsync(LeaveRequestGetRequest request)
-        {
-            try
-            {
-                _logger.LogInformation(LogMessages.Leave.FetchingLeaveRequests);
-                
-                // Use organization ID directly from request
-                int? organisationId = request.organization;
+		// -----------------------------
+		// Helper: iterate through all dates
+		// -----------------------------
+		private IEnumerable<DateTime> EachDate(DateTime from, DateTime to)
+		{
+			for (var day = from.Date; day <= to.Date; day = day.AddDays(1))
+				yield return day;
+		}
 
-                // Resolve user to EmployeeId
-                int? employeeId = null;
-                if (request.user.HasValue)
-                {
-                    employeeId = await _leaveRepository.GetEmployeeIdByUserIdAsync(request.user.Value);
-                }
+		public static int CalculateLeaveDays(DateTime fromDate, DateTime toDate, List<DateTime> holidays)
+		{
+			if (toDate.Date < fromDate.Date)
+				return 0;
 
-                // Use leave type ID directly from request
-                int? leaveTypeId = request.leave_type;
+			var holidaySet = new HashSet<DateTime>(holidays.Select(h => h.Date));
+			var count = 0;
 
-                // Map mobile status to database status
-                string? status = MapMobileStatusToDbStatus(request.status);
+			for (var day = fromDate.Date; day <= toDate.Date; day = day.AddDays(1))
+			{
+				if (holidaySet.Contains(day))
+					continue;
 
-                // Get leave requests
-                var leaveRequests = await _leaveRepository.GetLeaveRequestsAsync(
-                    organisationId, 
-                    employeeId, 
-                    leaveTypeId, 
-                    status);
+				count++;
+			}
 
-                var leaveList = leaveRequests.ToList();
+			return count;
+		}
 
-                // Map to response DTOs
-                var responseData = leaveList.Select(lr => new LeaveRequestDetailResponse
-                {
-                    Id = lr.Id,
-                    Number = lr.Number,
-                    EmployeeId = lr.EmployeeId,
-                    EmployeeName = lr.EmployeeName,
-                    LeaveTypeId = lr.LeaveTypeId,
-                    LeaveTypeName = lr.LeaveTypeName,
-                    LeaveBalance = lr.LeaveBalance,
-                    FromDate = lr.FromDate,
-                    ToDate = lr.ToDate,
-                    Duration = lr.Duration,
-                    Description = lr.Description,
-                    Status = MapStatusIdToString(lr.LeaveRequestStatus),
-                    CurrentAction = lr.CurrentAction,
-                    InsertDate = lr.InsertDate
-                }).ToList();
+		private static string FormatLeaveDates(DateTime fromDate, DateTime toDate)
+		{
+			const string fmt = "dd-MM-yyyy";
+			var fromStr = fromDate.ToString(fmt, CultureInfo.InvariantCulture);
+			var toStr = toDate.ToString(fmt, CultureInfo.InvariantCulture);
+			return fromDate.Date == toDate.Date ? fromStr : $"{fromStr} - {toStr}";
+		}
 
-                return new LeaveRequestResponse
-                {
-                    Success = true,
-                    Message = LeaveMessages.LeaveRequestsFetchedSuccessfully,
-                    Data = responseData,
-                    TotalRecords = responseData.Count
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, LogMessages.Leave.ErrorFetchingLeaveRequests);
-                return new LeaveRequestResponse
-                {
-                    Success = false,
-                    Message = string.Format(LeaveMessages.ErrorFetchingLeaveRequests, ex.Message),
-                    Data = null,
-                    TotalRecords = 0
-                };
-            }
-        }
+		// =====================================================
+		// GET LEAVE REQUESTS
+		// =====================================================
+		public async Task<LeaveRequestResponse> GetLeaveRequestsAsync(LeaveRequestGetRequest request)
+		{
+			try
+			{
+				int? employeeId = null;
 
-        /// <summary>
-        /// Get leave request by ID
-        /// </summary>
-        public async Task<LeaveRequestResponse> GetLeaveRequestByIdAsync(int id)
-        {
-            try
-            {
-                _logger.LogInformation(LogMessages.Leave.FetchingLeaveRequestById, id);
-                
-                var leaveRequest = await _leaveRepository.GetLeaveRequestByIdAsync(id);
+				if (request.user.HasValue)
+					employeeId = await _leaveRepository
+						.GetEmployeeIdByUserIdAsync(request.user.Value);
 
-                if (leaveRequest == null)
-                {
-                    return new LeaveRequestResponse
-                    {
-                        Success = false,
-                        Message = LeaveMessages.LeaveRequestNotFound,
-                        Data = null,
-                        TotalRecords = 0
-                    };
-                }
+				var list = (await _leaveRepository.GetLeaveRequestsAsync(
+					request.organization,
+					employeeId,
+					request.leave_type
+				)).ToList();
 
-                var responseData = new LeaveRequestDetailResponse
-                {
-                    Id = leaveRequest.Id,
-                    Number = leaveRequest.Number,
-                    EmployeeId = leaveRequest.EmployeeId,
-                    EmployeeName = leaveRequest.EmployeeName,
-                    LeaveTypeId = leaveRequest.LeaveTypeId,
-                    LeaveTypeName = leaveRequest.LeaveTypeName,
-                    LeaveBalance = leaveRequest.LeaveBalance,
-                    FromDate = leaveRequest.FromDate,
-                    ToDate = leaveRequest.ToDate,
-                    Duration = leaveRequest.Duration,
-                    Description = leaveRequest.Description,
-                    Status = MapStatusIdToString(leaveRequest.LeaveRequestStatus),
-                    CurrentAction = leaveRequest.CurrentAction,
-                    InsertDate = leaveRequest.InsertDate
-                };
+				// ✅ Convert status ID → status text
+				foreach (var item in list)
+				{
+					item.LeaveRequestStatusText =
+						MapDbStatusIdToText(item.LeaveRequestStatus ?? 0);
+				}
 
-                return new LeaveRequestResponse
-                {
-                    Success = true,
-                    Message = LeaveMessages.LeaveRequestFetchedSuccessfully,
-                    Data = responseData,
-                    TotalRecords = 1
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, LogMessages.Leave.ErrorFetchingLeaveRequestById);
-                return new LeaveRequestResponse
-                {
-                    Success = false,
-                    Message = string.Format(LeaveMessages.ErrorFetchingLeaveRequest, ex.Message),
-                    Data = null,
-                    TotalRecords = 0
-                };
-            }
-        }
+				return new LeaveRequestResponse
+				{
+					Success = true,
+					Message = LeaveMessages.LeaveRequestsFetchedSuccessfully,
+					Data = list,
+					TotalRecords = list.Count
+				};
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "GetLeaveRequestsAsync failed");
+				return Fail(ex.Message);
+			}
+		}
+		private string MapDbStatusIdToText(int statusId)
+		{
+			return statusId switch
+			{
+				STATUS_ID_SUBMIT => STATUS_SUBMIT,
+				STATUS_ID_APPROVED => STATUS_APPROVED,
+				STATUS_ID_REJECTED => STATUS_REJECTED,
+				STATUS_ID_CANCELLED => STATUS_CANCELLED,
+				STATUS_ID_WITHDRAW => STATUS_WITHDRAW,
+				STATUS_ID_PENDING => STATUS_PENDING,
+				STATUS_ID_PENDING_FOR_APPROVAL => STATUS_PENDING_FOR_APPROVAL,
+				STATUS_ID_CANCELLATION_APPROVED => STATUS_CANCELLATION_APPROVED,
+				STATUS_ID_CANCELLATION_REJECTED => STATUS_CANCELLATION_REJECTED,
+				_ => "Unknown"
+			};
+		}
 
-        /// <summary>
-        /// Approve a leave request
-        /// </summary>
-        public async Task<LeaveRequestResponse> ApproveLeaveRequestAsync(int id, int approverUserId)
-        {
-            try
-            {
-                _logger.LogInformation(LogMessages.Leave.ApprovingLeaveRequest, id);
-                
-                var leaveRequest = await _leaveRepository.GetLeaveRequestByIdAsync(id);
 
-                if (leaveRequest == null)
-                {
-                    return new LeaveRequestResponse
-                    {
-                        Success = false,
-                        Message = LeaveMessages.LeaveRequestNotFound,
-                        Data = null,
-                        TotalRecords = 0
-                    };
-                }
 
-                if (leaveRequest.LeaveRequestStatus == STATUS_ID_APPROVED)
-                {
-                    return new LeaveRequestResponse
-                    {
-                        Success = false,
-                        Message = LeaveMessages.LeaveRequestAlreadyApproved,
-                        Data = null,
-                        TotalRecords = 0
-                    };
-                }
+		// =====================================================
+		// GET LEAVE REQUEST BY ID
+		// =====================================================
+		public async Task<LeaveRequestResponse> GetLeaveRequestByIdAsync(int id)
+		{
+			var leave = await _leaveRepository.GetLeaveRequestByIdAsync(id);
+			if (leave == null)
+				return Fail(LeaveMessages.LeaveRequestNotFound);
 
-                // Update leave request status
-                var updated = await _leaveRepository.UpdateLeaveRequestStatusAsync(id, STATUS_ID_APPROVED, STATUS_APPROVED, approverUserId);
+			return Success(LeaveMessages.LeaveRequestFetchedSuccessfully, leave);
+		}
 
-                if (updated)
-                {
-                    // Deduct leave balance
-                    var currentBalance = await _leaveRepository.GetLeaveBalanceAsync(leaveRequest.EmployeeId, leaveRequest.LeaveTypeId);
-                    if (currentBalance != null)
-                    {
-                        var newBalance = currentBalance.LeaveBalanceValue - leaveRequest.Duration;
-                        await _leaveRepository.UpdateLeaveBalanceAsync(leaveRequest.EmployeeId, leaveRequest.LeaveTypeId, newBalance, approverUserId);
+		// =====================================================
+		// GET LEAVE BALANCE
+		// =====================================================
+		public async Task<LeaveBalanceResponse> GetLeaveBalanceAsync(int userId, int? organization)
+		{
+			var employeeId = await _leaveRepository.GetEmployeeIdByUserIdAsync(userId);
+			if (!employeeId.HasValue)
+				return new LeaveBalanceResponse
+				{
+					Success = false,
+					Message = LeaveMessages.EmployeeNotFoundForUser
+				};
 
-                        // Try to create transaction for approval (optional - table may not exist)
-                        try
-                        {
-                            var transaction = new LeaveTransaction
-                            {
-                                LeaveTransactionType = (int)LeaveTransactionType.DeductLeave, // DeductLeave = 2
-                                EmployeeId = leaveRequest.EmployeeId,
-                                LeaveTypeId = leaveRequest.LeaveTypeId,
-                                Description = $"Leave approved: {leaveRequest.Number}",
-                                LeaveBalance = -leaveRequest.Duration,
-                                EffectiveDate = leaveRequest.FromDate,
-                                InsertUserId = approverUserId,
-                                OrganisationId = leaveRequest.OrganisationId ?? 0,
-                                IsActive = true
-                            };
+			var balances = await _leaveRepository.GetLeaveBalanceByEmployeeIdAsync(employeeId.Value);
 
-                            await _leaveRepository.CreateLeaveTransactionAsync(transaction);
-                        }
-                        catch (Exception txEx)
-                        {
-                            // Log but don't fail - transaction logging is optional
-                            _logger.LogWarning(txEx, LogMessages.Transaction.TransactionTableNotExist);
-                        }
-                    }
+			var responseData = balances.Select(b => new LeaveBalanceDetail
+			{
+				LeaveTypeId = b.LeaveTypeId,
+				LeaveTypeName = b.LeaveTypeName,
+				TotalBalance = b.TotalBalance,
+			
+				RemainingBalance = b.RemainingBalance // Total - Used
+			}).ToList();
 
-                    return new LeaveRequestResponse
-                    {
-                        Success = true,
-                        Message = LeaveMessages.LeaveRequestApprovedSuccessfully,
-                        Data = new { Id = id },
-                        TotalRecords = 1
-                    };
-                }
+			return new LeaveBalanceResponse
+			{
+				Success = true,
+				Message = LeaveMessages.LeaveBalanceFetchedSuccessfully,
+				Data = responseData
+			};
+		}
 
-                return new LeaveRequestResponse
-                {
-                    Success = false,
-                    Message = LeaveMessages.FailedToApproveLeaveRequest,
-                    Data = null,
-                    TotalRecords = 0
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, LogMessages.Leave.ErrorApprovingLeaveRequest);
-                return new LeaveRequestResponse
-                {
-                    Success = false,
-                    Message = string.Format(LeaveMessages.ErrorApprovingLeaveRequest, ex.Message),
-                    Data = null,
-                    TotalRecords = 0
-                };
-            }
-        }
+		// =====================================================
+		// STATUS ACTIONS
+		// =====================================================
+		public Task<LeaveRequestResponse> ApproveLeaveRequestAsync(int id, int approverUserId)
+			=> UpdateStatus(id, STATUS_ID_APPROVED, STATUS_APPROVED, approverUserId);
 
-        /// <summary>
-        /// Reject a leave request
-        /// </summary>
-        public async Task<LeaveRequestResponse> RejectLeaveRequestAsync(int id, int rejecterUserId, string? reason)
-        {
-            try
-            {
-                _logger.LogInformation(LogMessages.Leave.RejectingLeaveRequest, id);
-                
-                var leaveRequest = await _leaveRepository.GetLeaveRequestByIdAsync(id);
+		public Task<LeaveRequestResponse> RejectLeaveRequestAsync(int id, int userId, string? reason)
+			=> UpdateStatus(id, STATUS_ID_REJECTED, STATUS_REJECTED, userId);
 
-                if (leaveRequest == null)
-                {
-                    return new LeaveRequestResponse
-                    {
-                        Success = false,
-                        Message = LeaveMessages.LeaveRequestNotFound,
-                        Data = null,
-                        TotalRecords = 0
-                    };
-                }
+		public Task<LeaveRequestResponse> CancelLeaveRequestAsync(int id, int userId, string? reason)
+			=> UpdateStatus(id, STATUS_ID_CANCELLED, STATUS_CANCELLED, userId);
 
-                // Update leave request status
-                var updated = await _leaveRepository.UpdateLeaveRequestStatusAsync(id, STATUS_ID_REJECTED, STATUS_REJECTED, rejecterUserId);
+		public async Task<LeaveRequestResponse> WithdrawLeaveRequestAsync(int id, int userId, string? reason)
+		{
+			var leave = await _leaveRepository.GetLeaveRequestByIdAsync(id);
+			if (leave == null)
+				return Fail(LeaveMessages.LeaveRequestNotFound);
 
-                if (updated)
-                {
-                    // Note: Rejection doesn't create a transaction since no balance change occurs
-                    // If you need to log rejections, you might want to add a separate status field
-                    // or use a different approach. For now, we skip transaction creation on rejection.
+			// Enforce: user can only withdraw their own leave request
+			var employeeId = await _leaveRepository.GetEmployeeIdByUserIdAsync(userId);
+			if (!employeeId.HasValue || leave.EmployeeId != employeeId.Value)
+				return Fail(TenantAccessMessages.UserAccessDeniedSimple);
 
-                    return new LeaveRequestResponse
-                    {
-                        Success = true,
-                        Message = LeaveMessages.LeaveRequestRejectedSuccessfully,
-                        Data = new { Id = id },
-                        TotalRecords = 1
-                    };
-                }
+			if (leave.LeaveRequestStatus != STATUS_ID_SUBMIT && leave.LeaveRequestStatus != STATUS_ID_PENDING)
+				return Fail("Only pending leave requests can be withdrawn");
 
-                return new LeaveRequestResponse
-                {
-                    Success = false,
-                    Message = LeaveMessages.FailedToRejectLeaveRequest,
-                    Data = null,
-                    TotalRecords = 0
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, LogMessages.Leave.ErrorRejectingLeaveRequest);
-                return new LeaveRequestResponse
-                {
-                    Success = false,
-                    Message = string.Format(LeaveMessages.ErrorRejectingLeaveRequest, ex.Message),
-                    Data = null,
-                    TotalRecords = 0
-                };
-            }
-        }
+			await _leaveRepository.UpdateLeaveRequestStatusAsync(
+				id,
+				STATUS_ID_WITHDRAW,
+				STATUS_WITHDRAW,
+				userId);
 
-        /// <summary>
-        /// Cancel a leave request
-        /// </summary>
-        public async Task<LeaveRequestResponse> CancelLeaveRequestAsync(int id, int userId, string? reason)
-        {
-            try
-            {
-                _logger.LogInformation(LogMessages.Leave.CancellingLeaveRequest, id);
-                
-                var leaveRequest = await _leaveRepository.GetLeaveRequestByIdAsync(id);
+			// Mark existing screen notifications related to this leave request as read
+			if (leave.OrganisationId.HasValue)
+			{
+				await _approvalRepository.MarkScreenNotificationsReadByLeaveRequestIdAsync(
+					id,
+					leave.OrganisationId.Value,
+					userId);
+			}
 
-                if (leaveRequest == null)
-                {
-                    return new LeaveRequestResponse
-                    {
-                        Success = false,
-                        Message = LeaveMessages.LeaveRequestNotFound,
-                        Data = null,
-                        TotalRecords = 0
-                    };
-                }
+			return Success("Leave request withdrawn successfully", new { Id = id });
+		}
 
-                if (leaveRequest.LeaveRequestStatus == STATUS_ID_APPROVED)
-                {
-                    // If already approved, restore the balance
-                    var currentBalance = await _leaveRepository.GetLeaveBalanceAsync(leaveRequest.EmployeeId, leaveRequest.LeaveTypeId);
-                    if (currentBalance != null)
-                    {
-                        var newBalance = currentBalance.LeaveBalanceValue + leaveRequest.Duration;
-                        await _leaveRepository.UpdateLeaveBalanceAsync(leaveRequest.EmployeeId, leaveRequest.LeaveTypeId, newBalance, userId);
+		/// <summary>
+		/// Get leave history for the logged-in user (current year).
+		/// </summary>
+		public async Task<LeaveHistoryResponse> GetLeaveHistoryAsync(int userId)
+		{
+			try
+			{
+				if (userId <= 0)
+				{
+					return new LeaveHistoryResponse
+					{
+						Success = false,
+						Message = LeaveMessages.UserIdRequired,
+						Year = DateTime.Now.Year,
+						LeavesAvailed = 0,
+						Data = null
+					};
+				}
 
-                        // Try to create transaction for cancellation (optional - table may not exist)
-                        // When cancelling, we add back the leave balance, so use AddLeave = 1
-                        try
-                        {
-                            var transaction = new LeaveTransaction
-                            {
-                                LeaveTransactionType = (int)LeaveTransactionType.AddLeave, // AddLeave = 1 (adding back the leave)
-                                EmployeeId = leaveRequest.EmployeeId,
-                                LeaveTypeId = leaveRequest.LeaveTypeId,
-                                Description = $"Leave cancelled: {leaveRequest.Number}. Reason: {reason}",
-                                LeaveBalance = leaveRequest.Duration, // Positive value adds back the leave
-                                EffectiveDate = DateTime.Now,
-                                InsertUserId = userId,
-                                OrganisationId = leaveRequest.OrganisationId ?? 0,
-                                IsActive = true
-                            };
+				var employeeId = await _leaveRepository.GetEmployeeIdByUserIdAsync(userId);
+				if (!employeeId.HasValue)
+				{
+					return new LeaveHistoryResponse
+					{
+						Success = false,
+						Message = LeaveMessages.EmployeeNotFoundForUser,
+						Year = DateTime.Now.Year,
+						LeavesAvailed = 0,
+						Data = null
+					};
+				}
 
-                            await _leaveRepository.CreateLeaveTransactionAsync(transaction);
-                        }
-                        catch (Exception txEx)
-                        {
-                            // Log but don't fail - transaction logging is optional
-                            _logger.LogWarning(txEx, LogMessages.Transaction.TransactionTableNotExist);
-                        }
-                    }
-                }
+				var year = DateTime.Now.Year;
+				var leaveRequests = await _leaveRepository.GetLeaveRequestsByEmployeeIdAsync(employeeId.Value);
 
-                // Update leave request status
-                var updated = await _leaveRepository.UpdateLeaveRequestStatusAsync(id, STATUS_ID_CANCELLED, STATUS_CANCELLED, userId);
+				var history = new List<LeaveHistoryItem>();
 
-                if (updated)
-                {
-                    return new LeaveRequestResponse
-                    {
-                        Success = true,
-                        Message = LeaveMessages.LeaveRequestCancelledSuccessfully,
-                        Data = new { Id = id },
-                        TotalRecords = 1
-                    };
-                }
+				foreach (var lr in leaveRequests)
+				{
+					foreach (var day in EachDate(lr.FromDate, lr.ToDate))
+					{
+						if (day.Year != year)
+							continue;
 
-                return new LeaveRequestResponse
-                {
-                    Success = false,
-                    Message = LeaveMessages.FailedToCancelLeaveRequest,
-                    Data = null,
-                    TotalRecords = 0
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, LogMessages.Leave.ErrorCancellingLeaveRequest);
-                return new LeaveRequestResponse
-                {
-                    Success = false,
-                    Message = string.Format(LeaveMessages.ErrorCancellingLeaveRequest, ex.Message),
-                    Data = null,
-                    TotalRecords = 0
-                };
-            }
-        }
+						history.Add(new LeaveHistoryItem
+						{
+							LeaveDate = day.Date,
+							LeaveType = lr.LeaveTypeName,
+							Reason = lr.Description,
+							Status = MapDbStatusIdToText(lr.LeaveRequestStatus ?? 0)
+						});
+					}
+				}
 
-        /// <summary>
-        /// Get leave balance for an employee
-        /// </summary>
-        public async Task<LeaveBalanceResponse> GetLeaveBalanceAsync(int userId, int? organization)
-        {
-            try
-            {
-                _logger.LogInformation(LogMessages.Leave.FetchingLeaveBalance, userId);
-                
-                // Resolve user to EmployeeId
-                var employeeId = await _leaveRepository.GetEmployeeIdByUserIdAsync(userId);
-                if (!employeeId.HasValue)
-                {
-                    return new LeaveBalanceResponse
-                    {
-                        Success = false,
-                        Message = LeaveMessages.EmployeeNotFoundForUser,
-                        Data = null
-                    };
-                }
+				history = history.OrderBy(h => h.LeaveDate).ToList();
 
-                // Get leave balances
-                var leaveBalances = await _leaveRepository.GetLeaveBalanceByEmployeeIdAsync(employeeId.Value);
-                var balanceList = leaveBalances.ToList();
+				return new LeaveHistoryResponse
+				{
+					Success = true,
+					Message = LeaveMessages.LeaveHistoryFetchedSuccessfully,
+					LeavesAvailed = history.Count,
+					Year = year,
+					Data = history
+				};
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "GetLeaveHistoryAsync failed for user {UserId}", userId);
+				return new LeaveHistoryResponse
+				{
+					Success = false,
+					Message = GeneralMessages.SomethingWentWrongContactAdmin,
+					LeavesAvailed = 0,
+					Year = DateTime.Now.Year,
+					Data = null
+				};
+			}
+		}
 
-                var responseData = balanceList.Select(lb => new LeaveBalanceDetail
-                {
-                    LeaveTypeId = lb.LeaveTypeId,
-                    LeaveTypeName = lb.LeaveTypeName,
-                    TotalBalance = lb.LeaveBalanceValue,
-                    UsedBalance = 0, // Could be calculated from transactions
-                    RemainingBalance = lb.LeaveBalanceValue
-                }).ToList();
+		public async Task<LeaveHistorySummaryResponse> GetLeaveHistorySummaryAsync(int userId)
+		{
+			try
+			{
+				if (userId <= 0)
+				{
+					return new LeaveHistorySummaryResponse
+					{
+						Success = false,
+						Message = LeaveMessages.UserIdRequired,
+						EmployeeId = 0,
+						AvailableLeaves = 0,
+						Year = DateTime.Now.Year,
+						LeaveHistory = null
+					};
+				}
 
-                return new LeaveBalanceResponse
-                {
-                    Success = true,
-                    Message = LeaveMessages.LeaveBalanceFetchedSuccessfully,
-                    Data = responseData
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, LogMessages.Leave.ErrorFetchingLeaveBalance);
-                return new LeaveBalanceResponse
-                {
-                    Success = false,
-                    Message = string.Format(LeaveMessages.ErrorFetchingLeaveBalance, ex.Message),
-                    Data = null
-                };
-            }
-        }
+				var employeeId = await _leaveRepository.GetEmployeeIdByUserIdAsync(userId);
+				if (!employeeId.HasValue)
+				{
+					return new LeaveHistorySummaryResponse
+					{
+						Success = false,
+						Message = LeaveMessages.EmployeeNotFoundForUser,
+						EmployeeId = 0,
+						AvailableLeaves = 0,
+						Year = DateTime.Now.Year,
+						LeaveHistory = null
+					};
+				}
 
-        /// <summary>
-        /// Map mobile app status to database status
-        /// </summary>
-        private string? MapMobileStatusToDbStatus(string? mobileStatus)
-        {
-            if (string.IsNullOrEmpty(mobileStatus)) return null;
+				var year = DateTime.Now.Year;
+				var leaveRequests = (await _leaveRepository.GetLeaveRequestsByEmployeeIdAsync(employeeId.Value))
+					.Where(lr => lr.FromDate.Year == year)
+					.ToList();
 
-            return mobileStatus.ToLower() switch
-            {
-                "pending" => STATUS_SUBMIT,
-                "approve" or "approved" => STATUS_APPROVED,
-                "reject" or "rejected" => STATUS_REJECTED,
-                "cancelled" => STATUS_CANCELLED,
-                _ => mobileStatus
-            };
-        }
+				// Pre-fetch holidays once per tenant across the min/max leave range.
+				var holidaysByTenant = new Dictionary<int, List<DateTime>>();
+				var tenantGroups = leaveRequests
+					.Where(lr => lr.OrganisationId.HasValue)
+					.GroupBy(lr => lr.OrganisationId!.Value)
+					.ToList();
 
-        /// <summary>
-        /// Map status ID to status string
-        /// </summary>
-        private string? MapStatusIdToString(int? statusId)
-        {
-            return statusId switch
-            {
-                STATUS_ID_SUBMIT => STATUS_SUBMIT,
-                STATUS_ID_APPROVED => STATUS_APPROVED,
-                STATUS_ID_REJECTED => STATUS_REJECTED,
-                STATUS_ID_CANCELLED => STATUS_CANCELLED,
-                _ => statusId?.ToString()
-            };
-        }
-    }
+				foreach (var grp in tenantGroups)
+				{
+					var minFrom = grp.Min(lr => lr.FromDate).Date;
+					var maxTo = grp.Max(lr => lr.ToDate).Date;
+					var hols = await _leaveRepository.GetHolidaysAsync(grp.Key, minFrom, maxTo);
+					holidaysByTenant[grp.Key] = hols.Select(h => h.Date.Date).Distinct().ToList();
+				}
+
+				var items = new List<LeaveHistorySummaryItem>();
+				decimal usedLeaves = 0m;
+
+				foreach (var lr in leaveRequests.OrderByDescending(x => x.InsertDate ?? DateTime.MinValue).ThenByDescending(x => x.Id))
+				{
+					var status = MapDbStatusIdToText(lr.LeaveRequestStatus ?? 0);
+
+					// Leave history should include all statuses
+					items.Add(new LeaveHistorySummaryItem
+					{
+						LeaveRequestId = lr.Id,
+						LeaveDates = FormatLeaveDates(lr.FromDate, lr.ToDate),
+						LeaveType = lr.LeaveTypeName,
+						Reason = lr.Description,
+						Duration = lr.Duration,
+						Status = status
+					});
+
+					// UsedLeaves should count only Approved leave requests
+					if (string.Equals(status, STATUS_APPROVED, StringComparison.OrdinalIgnoreCase))
+						usedLeaves += lr.Duration;
+					
+				}
+
+				// EmployeeLeave.LeaveBalance is treated as the current available balance.
+				// So AvailableLeaves should come directly from SUM(EmployeeLeave.LeaveBalance).
+				var availableLeaves = await _leaveRepository.GetTotalLeaveAllocationForEmployeeAsync(employeeId.Value);
+
+				return new LeaveHistorySummaryResponse
+				{
+					Success = true,
+					Message = LeaveMessages.LeaveHistoryFetchedSuccessfully,
+					EmployeeId = employeeId.Value,
+					AvailableLeaves = availableLeaves,
+					UsedLeaves = usedLeaves,
+					Year = year,
+					LeaveHistory = items
+				};
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "GetLeaveHistorySummaryAsync failed for user {UserId}", userId);
+				return new LeaveHistorySummaryResponse
+				{
+					Success = false,
+					Message = GeneralMessages.SomethingWentWrongContactAdmin,
+					EmployeeId = 0,
+					AvailableLeaves = 0,
+					Year = DateTime.Now.Year,
+					LeaveHistory = null
+				};
+			}
+		}
+
+		// =====================================================
+		// HELPERS
+		// =====================================================
+		private async Task<LeaveRequestResponse> UpdateStatus(int id, int statusId, string statusText, int userId)
+		{
+			var updated = await _leaveRepository.UpdateLeaveRequestStatusAsync(id, statusId, statusText, userId);
+			return updated ? Success("Status updated successfully", new { Id = id }) : Fail("Failed to update status");
+		}
+
+		private int? MapMobileStatusToDbStatus(string? status)
+		{
+			if (string.IsNullOrWhiteSpace(status)) return null;
+
+			return status.ToLower() switch
+			{
+				"submit" => STATUS_ID_SUBMIT,
+				"approved" => STATUS_ID_APPROVED,
+				"rejected" => STATUS_ID_REJECTED,
+				"cancelled" => STATUS_ID_CANCELLED,
+				"withdraw" => STATUS_ID_WITHDRAW,
+				"pending" => STATUS_ID_PENDING,
+				"pending for approval" => STATUS_ID_PENDING_FOR_APPROVAL,
+				"pendingforapproval" => STATUS_ID_PENDING_FOR_APPROVAL,
+				"cancellation approved" => STATUS_ID_CANCELLATION_APPROVED,
+				"cancellationapproved" => STATUS_ID_CANCELLATION_APPROVED,
+				"cancellation rejected" => STATUS_ID_CANCELLATION_REJECTED,
+				"cancellationrejected" => STATUS_ID_CANCELLATION_REJECTED,
+
+				_ => null
+			};
+		}
+
+		private LeaveRequestResponse Fail(string message) =>
+			new LeaveRequestResponse { Success = false, Message = message };
+
+		private LeaveRequestResponse Success(string message, object? data = null) =>
+			new LeaveRequestResponse { Success = true, Message = message, Data = data, TotalRecords = 1 };
+	}
 }

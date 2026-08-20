@@ -1,6 +1,7 @@
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using MobileWebApi.Constants;
+using MobileWebApi.Helper;
 
 namespace MobileWebApi.Services
 {
@@ -43,11 +44,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.User.ErrorRetrievingUser, userId);
+                _logger.LogException(ExceptionCodes.User.GetUserById, nameof(GetUserByIdAsync), ex, userId);
                 return new UserServiceResponse
                 {
                     Success = false,
-                    Message = string.Format(UserMessages.ErrorRetrievingUser, ex.Message),
+                    Message = string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.User.GetUserById),
                     Data = null
                 };
             }
@@ -78,11 +79,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.User.ErrorRetrievingUserByLogin, login);
+                _logger.LogException(ExceptionCodes.User.GetUserByLogin, nameof(GetUserByUsernameOrMobileAsync), ex);
                 return new UserServiceResponse
                 {
                     Success = false,
-                    Message = string.Format(UserMessages.ErrorRetrievingUser, ex.Message),
+                    Message = string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.User.GetUserByLogin),
                     Data = null
                 };
             }
@@ -106,11 +107,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.User.ErrorRetrievingUsers, organisationId);
+                _logger.LogException(ExceptionCodes.User.GetAllUsers, nameof(GetAllUsersAsync), ex);
                 return new UserListResponse
                 {
                     Success = false,
-                    Message = string.Format(UserMessages.ErrorRetrievingUser, ex.Message),
+                    Message = string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.User.GetAllUsers),
                     Data = null,
                     TotalRecords = 0
                 };
@@ -173,11 +174,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.User.ErrorCreatingUser);
+                _logger.LogException(ExceptionCodes.User.CreateUser, nameof(CreateUserAsync), ex);
                 return new UserServiceResponse
                 {
                     Success = false,
-                    Message = string.Format(UserMessages.ErrorCreatingUser, ex.Message),
+                    Message = string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.User.CreateUser),
                     Data = null
                 };
             }
@@ -221,11 +222,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.User.ErrorUpdatingUser, request.UserId);
+                _logger.LogException(ExceptionCodes.User.UpdateUser, nameof(UpdateUserAsync), ex, request.UserId);
                 return new UserServiceResponse
                 {
                     Success = false,
-                    Message = string.Format(UserMessages.ErrorUpdatingUser, ex.Message),
+                    Message = string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.User.UpdateUser),
                     Data = null
                 };
             }
@@ -268,11 +269,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.User.ErrorDeletingUser, userId);
+                _logger.LogException(ExceptionCodes.User.DeleteUser, nameof(DeleteUserAsync), ex, userId);
                 return new UserServiceResponse
                 {
                     Success = false,
-                    Message = string.Format(UserMessages.ErrorDeletingUser, ex.Message),
+                    Message = string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.User.DeleteUser),
                     Data = null
                 };
             }
@@ -328,11 +329,11 @@ namespace MobileWebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.User.ErrorDeactivatingUser, userId);
+                _logger.LogException(ExceptionCodes.User.DeactivateUser, nameof(DeactivateUserAsync), ex, userId);
                 return new UserServiceResponse
                 {
                     Success = false,
-                    Message = string.Format(UserMessages.ErrorDeactivatingUser, ex.Message),
+                    Message = string.Format(GeneralMessages.SomethingWentWrongWithCode, ExceptionCodes.User.DeactivateUser),
                     Data = null
                 };
             }

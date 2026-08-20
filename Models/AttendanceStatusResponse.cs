@@ -31,6 +31,11 @@ namespace MobileWebApi.Models
         public string? status { get; set; }
 
         /// <summary>
+        /// Punch table primary key when a punch exists for the date
+        /// </summary>
+        public int? PunchId { get; set; }
+
+        /// <summary>
         /// Punch-in time if available
         /// </summary>
         public DateTime? punchIn { get; set; }
@@ -49,6 +54,15 @@ namespace MobileWebApi.Models
         /// Attendance date
         /// </summary>
         public DateTime date { get; set; }
+
+        public string? inSource { get; set; }
+        public string? outSource { get; set; }
+        public string? coordinateIn { get; set; }
+        public string? coordinateOut { get; set; }
+        public string? linkIn { get; set; }
+        public string? linkOut { get; set; }
+        public string? punchInImage { get; set; }
+        public string? punchOutImage { get; set; }
     }
 }
 

@@ -21,11 +21,11 @@ namespace MobileWebApi.Models
         public byte[]? FileContent { get; set; }
         public string? FileName { get; set; }
         public string? ContentType { get; set; }
-        /// <summary>
-        /// Pay slip data for client-side PDF generation (when no file is stored)
-        /// </summary>
-        public PaySlip? PaySlipData { get; set; }
-    }
+		/// <summary>
+		/// Pay slip data for client-side PDF generation (when no file is stored)
+		/// </summary>
+		public PaySlipDetail? PaySlipData { get; set; }
+	}
 
     /// <summary>
     /// Summary view of pay slip for list display
@@ -37,7 +37,7 @@ namespace MobileWebApi.Models
         public int PayrollMonth { get; set; }
         public int PayrollYear { get; set; }
         public string? PayrollMonthName { get; set; }
-        public string? FinancialYearStart { get; set; }
+        public int FinancialYearStart { get; set; }
         public decimal Gross { get; set; }
         public decimal TotalIncome { get; set; }
         public decimal TotalDeduction { get; set; }
@@ -74,7 +74,7 @@ namespace MobileWebApi.Models
         public int PayrollMonth { get; set; }
         public int PayrollYear { get; set; }
         public string? PayrollMonthName { get; set; }
-        public string? FinancialYearStart { get; set; }
+        public int FinancialYearStart { get; set; }
         
         // Salary Details
         public decimal BasicSalary { get; set; }
@@ -90,9 +90,9 @@ namespace MobileWebApi.Models
         public decimal PresentDays { get; set; }
         public decimal LossPayDays { get; set; }
         public decimal OverTimeDays { get; set; }
-        
-        // Wages Info
-        public bool IsPerDayWagesEmployee { get; set; }
+        public decimal TotalWeekOffDays {  get; set; }
+		// Wages Info
+		public bool IsPerDayWagesEmployee { get; set; }
         public decimal PerDayWages { get; set; }
         public decimal PerDayOverTimeWages { get; set; }
         public decimal OvertimeSalary { get; set; }
@@ -108,11 +108,11 @@ namespace MobileWebApi.Models
         public string? TenantName { get; set; }
         public string? Currency { get; set; }
         public string? Logo { get; set; }
-        
-        // Computed Properties for Display
-        public List<PaySlipLineItem> Earnings => GetEarningsItems();
-        public List<PaySlipLineItem> Deductions => GetDeductionsItems();
-        public PaySlipAttendanceSummary AttendanceSummary => GetAttendanceSummary();
+
+		// Computed Properties for Display
+		public List<PaySlipLineItem> Earnings { get; set; } = new();
+		public List<PaySlipLineItem> Deductions { get; set; } = new();
+		public PaySlipAttendanceSummary AttendanceSummary => GetAttendanceSummary();
 
         private List<PaySlipLineItem> GetEarningsItems()
         {
@@ -160,5 +160,26 @@ namespace MobileWebApi.Models
         public decimal PresentDays { get; set; }
         public decimal LossPayDays { get; set; }
         public decimal OverTimeDays { get; set; }
+    }
+
+    public class PaySlipYearsResponse
+    {
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+        public List<int>? Years { get; set; }
+    }
+
+    public class PaySlipMonthsResponse
+    {
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+        public int Year { get; set; }
+        public List<PaySlipMonthItem>? Months { get; set; }
+    }
+
+    public class PaySlipMonthItem
+    {
+        public int Month { get; set; }
+        public string? MonthName { get; set; }
     }
 }

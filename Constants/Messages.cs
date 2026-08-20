@@ -5,7 +5,7 @@ namespace MobileWebApi.Constants
     /// </summary>
     public static class AuthMessages
     {
-        public const string InvalidCredentials = "Invalid username or password.";
+        public const string InvalidCredentials = "Invalid username/email or password.";
         public const string TokenGenerated = "Token generated successfully.";
         public const string UsernameMissingInToken = "Username missing in token.";
         public const string OrganisationIdMissingInToken = "OrganisationId missing in token.";
@@ -36,6 +36,10 @@ namespace MobileWebApi.Constants
         public const string RefreshTokenExpired = "Refresh token has expired. Please login again.";
         public const string TokenRefreshed = "Token refreshed successfully.";
         public const string RefreshTokenRevoked = "Refresh token has been revoked successfully.";
+        public const string RefreshTokenRevokedLoginRequired = "Refresh token has been revoked. Please login again.";
+        public const string RefreshTokenAlreadyUsed = "Refresh token has already been used. Please login again.";
+        public const string InvalidAccessToken = "Invalid access token.";
+        public const string AccessTokenRequired = "Access token is required.";
     }
 
     /// <summary>
@@ -54,6 +58,7 @@ namespace MobileWebApi.Constants
         // Error messages
         public const string UserNotFound = "User not found.";
         public const string InvalidUserId = "Invalid user id.";
+        public const string UserIdRequired = "User ID is required.";
         public const string UsernameRequired = "Username is required.";
         public const string PasswordRequired = "Password is required.";
         public const string InvalidUserIdForUpdate = "Invalid User Id.";
@@ -106,6 +111,9 @@ namespace MobileWebApi.Constants
         public const string ErrorUpdatingEmployee = "Error updating employee: {0}";
         public const string ErrorDeletingEmployee = "Error deleting employee: {0}";
         public const string ErrorDeactivatingEmployee = "Error deactivating employee: {0}";
+        public const string EmployeeNotFoundForUserId = "No employee found for the specified UserId.";
+        public const string EmployeeNotFoundForGivenUser = "Employee not found for the given user.";
+        public const string PhoneOrPictureRequiredForUpdate = "At least one field (Phone or Picture) must be provided for update.";
     }
 
     /// <summary>
@@ -116,10 +124,12 @@ namespace MobileWebApi.Constants
         // Success messages
         public const string PunchInSuccessful = "Punch In Successful";
         public const string PunchOutSuccessful = "Punch Out Successful";
+        public const string ManualPunchOutReason = "Manual punch out";
         public const string AttendanceReportFetchedSuccessfully = "Attendance report fetched successfully.";
         public const string RealTimeAttendanceFetchedSuccessfully = "Real-time attendance status fetched successfully.";
         public const string CurrentlyPunchedInFetchedSuccessfully = "Currently punched in employees fetched successfully.";
         public const string EmployeeAttendanceFetchedSuccessfully = "Employee attendance fetched successfully.";
+        public const string TodayPunchLogsFetchedSuccessfully = "Today's punch logs fetched successfully.";
 
         // Error messages
         public const string PunchInAlreadyDone = "Punch In already done for today.";
@@ -142,9 +152,10 @@ namespace MobileWebApi.Constants
         public const string InvalidDateRange = "Invalid date range. From date must be before or equal to To date.";
 
         // Delete attendance messages
-        public const string AttendanceDeletedSuccessfully = "Attendance record deleted successfully.";
+        public const string AttendanceDeletedSuccessfully = "Attendance deleted successfully.";
         public const string AttendanceNotFound = "Attendance record not found.";
-        public const string FailedToDeleteAttendance = "Failed to delete attendance record.";
+        public const string FailedToDeleteAttendance = "An error occurred while deleting attendance.";
+        public const string PunchIdRequired = "Punch ID is required.";
 
         // Attendance status messages
         public const string AttendanceStatusRetrievedSuccessfully = "Attendance status retrieved successfully.";
@@ -178,6 +189,7 @@ namespace MobileWebApi.Constants
         public const string LeaveRequestRejectedSuccessfully = "Leave request rejected successfully.";
         public const string LeaveRequestCancelledSuccessfully = "Leave request cancelled successfully.";
         public const string LeaveBalanceFetchedSuccessfully = "Leave balance fetched successfully.";
+        public const string LeaveHistoryFetchedSuccessfully = "Leave history fetched successfully.";
 
         // Error messages
         public const string UserIdRequired = "User ID is required.";
@@ -193,9 +205,12 @@ namespace MobileWebApi.Constants
         public const string FailedToRejectLeaveRequest = "Failed to reject leave request.";
         public const string FailedToCancelLeaveRequest = "Failed to cancel leave request.";
         public const string LeaveServiceNotAvailable = "Leave service not available.";
+        public const string InvalidRequest = "Invalid leave request data.";
 
-        // Error templates
-        public const string LeaveRequestNotFoundWithId = "Leave request with ID {0} not found.";
+        public const string LeaveAlreadyAppliedForSelectedDate = "Leave already applied for selected date.";
+
+		// Error templates
+		public const string LeaveRequestNotFoundWithId = "Leave request with ID {0} not found.";
         public const string ErrorCreatingLeaveRequest = "Error creating leave request: {0}";
         public const string ErrorFetchingLeaveRequests = "Error fetching leave requests: {0}";
         public const string ErrorFetchingLeaveRequest = "Error fetching leave request: {0}";
@@ -203,6 +218,7 @@ namespace MobileWebApi.Constants
         public const string ErrorRejectingLeaveRequest = "Error rejecting leave request: {0}";
         public const string ErrorCancellingLeaveRequest = "Error cancelling leave request: {0}";
         public const string ErrorFetchingLeaveBalance = "Error fetching leave balance: {0}";
+        public const string LeaveRequestIdRequired = "Leave request ID is required and must be greater than 0";
     }
 
     /// <summary>
@@ -263,14 +279,23 @@ namespace MobileWebApi.Constants
         public const string PaySlipsFetchedSuccessfully = "Pay slips fetched successfully.";
         public const string PaySlipFetchedSuccessfully = "Pay slip fetched successfully.";
         public const string PaySlipDownloadedSuccessfully = "Pay slip downloaded successfully.";
+        public const string ProvidentFundFetchedSuccessfully = "Provident Fund fetched successfully.";
+        public const string MonthlySummaryFetchedSuccessfully = "Monthly summary fetched successfully.";
+        public const string LastMonthPayrollFetchedSuccessfully = "Last month payroll fetched successfully.";
+        public const string YearsFetchedSuccessfully = "Years fetched successfully.";
+        public const string MonthsFetchedSuccessfully = "Months fetched successfully.";
 
         // Error messages
         public const string UserIdRequired = "User ID is required.";
         public const string PaySlipIdRequired = "Pay slip ID is required.";
         public const string EmployeeNotFoundForUser = "Employee not found for the given user.";
+        public const string EmployeeNotFound = "Employee not found.";
         public const string PaySlipNotFound = "Pay slip not found.";
         public const string PaySlipFileNotFound = "Pay slip file not found.";
         public const string UnauthorizedAccess = "You are not authorized to access this pay slip.";
+        public const string NoPayrollDataFound = "No payroll data found.";
+        public const string NoPayrollDataFoundForLastMonth = "No payroll data found for last month.";
+        public const string PdfGenerationFailed = "PDF generation failed.";
 
         // Error templates
         public const string ErrorFetchingPaySlips = "Error fetching pay slips: {0}";
@@ -364,6 +389,15 @@ namespace MobileWebApi.Constants
     }
 
     /// <summary>
+    /// Tenant / organisation configuration messages
+    /// </summary>
+    public static class TenantMessages
+    {
+        public const string TenantConfigurationNotFound = "Tenant configuration was not found for your organization.";
+        public const string CompanyLogoRetrievedSuccessfully = "Company logo retrieved successfully.";
+    }
+
+    /// <summary>
     /// General messages used across the application
     /// </summary>
     public static class GeneralMessages
@@ -374,6 +408,8 @@ namespace MobileWebApi.Constants
         public const string InvalidRequest = "Invalid request.";
         public const string RequestBodyCannotBeNull = "Request body cannot be null.";
         public const string RequestCannotBeNull = "Request cannot be null.";
+        public const string SomethingWentWrongContactAdmin = "Something went wrong. Please contact the administration team.";
+        public const string SomethingWentWrongWithCode = "Something went wrong. Please contact the administration team. (Error Code: {0})";
     }
 
     /// <summary>
@@ -416,6 +452,8 @@ namespace MobileWebApi.Constants
         // Notification messages
         public const string LeaveRequestPendingApproval = "New Leave Request Pending Approval";
         public const string LeaveRequestRequiresApproval = "A new leave request requires your approval.";
+        public const string RegularizationRequestPendingApproval = "New Regularization Request Pending Approval";
+        public const string RegularizationRequestRequiresApproval = "A new regularization request requires your approval.";
 
         // Error templates
         public const string ErrorInitiatingWorkflow = "Error initiating approval workflow: {0}";
@@ -451,6 +489,41 @@ namespace MobileWebApi.Constants
         public const string ErrorUpdatingHoliday = "Error updating holiday: {0}";
         public const string ErrorDeletingHoliday = "Error deleting holiday: {0}";
         public const string ErrorCreatingBulkHolidays = "Error creating bulk holidays: {0}";
+        public const string OrganizationIdRequiredWithUserId = "Organization ID is required. Please provide either organization_id or user_id parameter.";
+    }
+
+    /// <summary>
+    /// Dispute related messages
+    /// </summary>
+    public static class DisputeMessages
+    {
+        public const string DisputeCategoriesFetchedSuccessfully = "Dispute categories fetched successfully.";
+        public const string EmployeeNotFoundForGivenUser = "Employee not found for the given user.";
+        public const string InvalidDisputeDate = "Invalid dispute date. Please provide a valid date (e.g., 2026-03-03).";
+        public const string DisputeDateCannotBeFuture = "Dispute date cannot be a future date.";
+        public const string DescriptionRequired = "Description is required.";
+        public const string EmployeeIdRequired = "EmployeeId is required.";
+        public const string DisputeCategoryIdRequired = "DisputeCategoryId is required.";
+        public const string InvalidRequestedPunchTimes = "RequestedPunchInTime must be less than or equal to RequestedPunchOutTime.";
+        public const string PunchOutCannotBeBeforePunchIn = "Punch-Out time cannot be before Punch-In time.";
+        public const string PunchInCannotBeAfterPunchOut = "Punch-In time cannot be after Punch-Out time.";
+        public const string PunchOutMustBeLaterThanPunchIn = "Punch-Out time must be later than Punch-In time.";
+        public const string InvalidPunchId = "PunchId is invalid or does not belong to the employee.";
+        public const string EmployeeNotFound = "Employee not found.";
+        public const string OnlyOneDisputePerCategoryDate = "A regularization request for this dispute category already exists for the selected date.";
+        public const string DisputeSubmittedSuccessfully = "Dispute submitted successfully.";
+        public const string FailedToSubmitDispute = "Failed to submit dispute.";
+        public const string NoReportingManagerAssigned = "No reporting manager is assigned to this employee. Please contact the administrator.";
+        public const string ReportingManagerUserNotFound = "Reporting manager user account was not found. Please contact the administrator.";
+        public const string DisputeNotFound = "Regularization / dispute record not found.";
+        public const string DisputeAlreadyProcessed = "This regularization request has already been processed.";
+        public const string PunchRecordNotFound = "Punch record not found for the regularization request.";
+        public const string InvalidApprovedPunchTimes = "Requested punch times are invalid: punch out must be after punch in.";
+        public const string DisputeApprovedSuccessfully = "Regularization request approved successfully.";
+        public const string DisputeRejectedSuccessfully = "Regularization request rejected successfully.";
+        public const string FailedToApproveDispute = "Failed to approve regularization request.";
+        public const string FailedToRejectDispute = "Failed to reject regularization request.";
+        public const string PunchUpdatedOnApproval = "Punch record updated after regularization approval. PunchId: {0}, Duration: {1}";
     }
 
     /// <summary>
@@ -490,6 +563,8 @@ namespace MobileWebApi.Constants
         public const string ResignationRequest = "ResignationRequest";
         public const string OvertimeRequest = "OvertimeRequest";
         public const string CancelLeave = "CancelLeave";
+        public const string RegularizationRequest = "RegularizationRequest";
+        public const string RegularizationRequestLower = "regularizationrequest";
         public const string Request = "Request";
     }
 
@@ -527,6 +602,18 @@ namespace MobileWebApi.Constants
         public const string EventApprovedMessage = "Your {0} has been approved.";
         public const string EventRejectedMessage = "Your {0} has been rejected. Reason: {1}";
         public const string EventRejectedMessageNoReason = "Your {0} has been rejected.";
+    }
+
+    /// <summary>
+    /// Attendance status text used in responses
+    /// </summary>
+    public static class AttendanceStatusMessages
+    {
+        public const string Present = "Present";
+        public const string Absent = "Absent";
+        public const string Weekend = "Weekend";
+        public const string Future = "Future";
+        public const string NotMarked = "Not Marked";
     }
 }
 

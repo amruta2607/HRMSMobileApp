@@ -5,7 +5,7 @@ namespace MobileWebApi.Models
     /// </summary>
     public class LogoutRequest
     {
-        // No request body needed for logout - only access token blacklisting is performed
+        public string RefreshToken { get; set; } = string.Empty;
     }
 }
 

@@ -50,8 +50,25 @@ namespace MobileWebApi.Models
         public int LeaveTypeId { get; set; }
         public string? LeaveTypeName { get; set; }
         public decimal TotalBalance { get; set; }
-        public decimal UsedBalance { get; set; }
+       
         public decimal RemainingBalance { get; set; }
+    }
+
+    public class LeaveHistoryResponse
+    {
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+        public int LeavesAvailed { get; set; }
+        public int Year { get; set; }
+        public List<LeaveHistoryItem>? Data { get; set; }
+    }
+
+    public class LeaveHistoryItem
+    {
+        public DateTime LeaveDate { get; set; }
+        public string? LeaveType { get; set; }
+        public string? Reason { get; set; }
+        public string? Status { get; set; }
     }
 }
 
