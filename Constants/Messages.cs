@@ -505,6 +505,9 @@ namespace MobileWebApi.Constants
         public const string EmployeeIdRequired = "EmployeeId is required.";
         public const string DisputeCategoryIdRequired = "DisputeCategoryId is required.";
         public const string InvalidRequestedPunchTimes = "RequestedPunchInTime must be less than or equal to RequestedPunchOutTime.";
+        public const string PunchOutCannotBeBeforePunchIn = "Punch-Out time cannot be before Punch-In time.";
+        public const string PunchInCannotBeAfterPunchOut = "Punch-In time cannot be after Punch-Out time.";
+        public const string PunchOutMustBeLaterThanPunchIn = "Punch-Out time must be later than Punch-In time.";
         public const string InvalidPunchId = "PunchId is invalid or does not belong to the employee.";
         public const string EmployeeNotFound = "Employee not found.";
         public const string OnlyOneDisputePerCategoryDate = "A regularization request for this dispute category already exists for the selected date.";

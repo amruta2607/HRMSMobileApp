@@ -8,7 +8,7 @@
         /// <summary>
         /// Maintenance record identifier.
         /// </summary>
-        public int Id { get; set; }
+        public int HistoryId { get; set; }
 
         /// <summary>
         /// Related asset identifier.

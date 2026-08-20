@@ -8,7 +8,7 @@ namespace MobileWebApi.Models.Responses
         /// <summary>
         /// Hand over identifier.
         /// </summary>
-        public int Id { get; set; }
+        public int HistoryId { get; set; }
 
         /// <summary>
         /// Hand over number.

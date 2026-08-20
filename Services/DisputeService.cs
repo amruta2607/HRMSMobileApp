@@ -119,13 +119,6 @@ namespace MobileWebApi.Services
 					return Fail(DisputeMessages.DisputeDateCannotBeFuture);
 				}
 
-				if (request.RequestedPunchInTime.HasValue &&
-					request.RequestedPunchOutTime.HasValue &&
-					request.RequestedPunchInTime.Value > request.RequestedPunchOutTime.Value)
-				{
-					return Fail(DisputeMessages.InvalidRequestedPunchTimes);
-				}
-
 				// Resolve EmployeeId from authenticated UserId (never accept from client)
 				var employeeId = await ResolveEmployeeIdFromUserIdAsync(userId);
 				if (!employeeId.HasValue || employeeId.Value <= 0)
@@ -164,14 +157,25 @@ namespace MobileWebApi.Services
 
 				// Optional integers default to 0 when null/not provided
 				var punchId = request.PunchId;
+				Punch? punch = null;
 
 				if (punchId > 0)
 				{
-					var punch = await _attendanceRepository.GetPunchByIdAsync(punchId, tenantId);
+					punch = await _attendanceRepository.GetPunchByIdAsync(punchId, tenantId);
 					if (punch == null || punch.EmployeeId != employeeId.Value)
 					{
 						return Fail(DisputeMessages.InvalidPunchId);
 					}
+				}
+
+				var punchTimeError = GetEffectivePunchTimeValidationError(
+					request.RequestedPunchInTime,
+					request.RequestedPunchOutTime,
+					punch?.PunchIn,
+					punch?.PunchOut);
+				if (punchTimeError != null)
+				{
+					return Fail(punchTimeError);
 				}
 
 				// Web UX_EmployeeDispute_Unique: EmployeeId + DisputeCategoryId + DisputeDate
@@ -297,6 +301,42 @@ namespace MobileWebApi.Services
 				return (false, DisputeMessages.FailedToRejectDispute);
 			}
 		}
+
+		/// <summary>
+		/// Effective Punch-In = requested in if provided, else existing Punch.PunchIn.
+		/// Effective Punch-Out = requested out if provided, else existing Punch.PunchOut.
+		/// When both effective values exist they must be strictly earlier/later (full DateTime, overnight-safe).
+		/// Skips when there is not enough Punch-In/Punch-Out information (e.g. Attendance Not Marked with no punch).
+		/// </summary>
+		private static string? GetEffectivePunchTimeValidationError(
+			DateTime? requestedPunchIn,
+			DateTime? requestedPunchOut,
+			DateTime? existingPunchIn,
+			DateTime? existingPunchOut)
+		{
+			var hasRequestedIn = HasPunchTime(requestedPunchIn);
+			var hasRequestedOut = HasPunchTime(requestedPunchOut);
+
+			var effectiveIn = hasRequestedIn ? requestedPunchIn : existingPunchIn;
+			var effectiveOut = hasRequestedOut ? requestedPunchOut : existingPunchOut;
+
+			if (!HasPunchTime(effectiveIn) || !HasPunchTime(effectiveOut))
+				return null;
+
+			if (effectiveIn!.Value < effectiveOut!.Value)
+				return null;
+
+			if (effectiveIn.Value == effectiveOut.Value)
+				return DisputeMessages.PunchOutMustBeLaterThanPunchIn;
+
+			if (hasRequestedIn && !hasRequestedOut)
+				return DisputeMessages.PunchInCannotBeAfterPunchOut;
+
+			return DisputeMessages.PunchOutCannotBeBeforePunchIn;
+		}
+
+		private static bool HasPunchTime(DateTime? value) =>
+			value.HasValue && value.Value != default;
 
 		private static DisputeSubmitResponse Fail(string message) =>
 			new()
