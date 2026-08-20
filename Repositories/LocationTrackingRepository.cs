@@ -2,6 +2,7 @@ using Dapper;
 using MobileWebApi.Data;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
+using MobileWebApi.Models.Responses;
 using MobileWebApi.Resources;
 
 namespace MobileWebApi.Repositories
@@ -92,6 +93,26 @@ namespace MobileWebApi.Repositories
                 transaction.Rollback();
                 throw;
             }
+        }
+
+        public async Task<IReadOnlyList<LocationTrackingPointRow>> GetTodayByEmployeeIdAsync(
+            int employeeId,
+            int tenantId,
+            DateTime today)
+        {
+            var query = _queryProvider.Get("GetTodayLocationTrackingByEmployeeId");
+
+            using var connection = _context.CreateConnection();
+            var rows = await connection.QueryAsync<LocationTrackingPointRow>(
+                query,
+                new
+                {
+                    EmployeeId = employeeId,
+                    TenantId = tenantId,
+                    Today = today.Date
+                });
+
+            return rows.ToList();
         }
     }
 }

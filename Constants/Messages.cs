@@ -609,6 +609,19 @@ namespace MobileWebApi.Constants
     }
 
     /// <summary>
+    /// Location tracking API messages
+    /// </summary>
+    public static class LocationTrackingMessages
+    {
+        public const string UserIdRequired = "User ID is required.";
+        public const string InvalidUserId = "User ID must be a positive integer.";
+        public const string UserNotFound = "User not found.";
+        public const string EmployeeNotFoundForUser = "No employee is associated with the specified user.";
+        public const string EmployeeDoesNotBelongToTenant = "Employee does not belong to the specified tenant.";
+        public const string TodayPathFetchedSuccessfully = "Today's location tracking path fetched successfully.";
+    }
+
+    /// <summary>
     /// Location tracking configuration API messages
     /// </summary>
     public static class LocationTrackingConfigurationMessages

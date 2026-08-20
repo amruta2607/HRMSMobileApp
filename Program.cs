@@ -93,6 +93,7 @@ builder.Services.AddScoped<IGeoTenantLocationRepository, GeoTenantLocationReposi
 builder.Services.AddScoped<IMobileTenantConfigurationRepository, MobileTenantConfigurationRepository>();
 builder.Services.AddScoped<IPunchTrackingRepository, PunchTrackingRepository>();
 builder.Services.AddScoped<ILocationTrackingRepository, LocationTrackingRepository>();
+builder.Services.AddScoped<ILocationTrackingService, LocationTrackingService>();
 builder.Services.AddScoped<ILocationTrackingConfigurationRepository, LocationTrackingConfigurationRepository>();
 builder.Services.AddScoped<ILocationTrackingConfigurationService, LocationTrackingConfigurationService>();
 builder.Services.AddScoped<IMobileModuleAccessService, MobileModuleAccessService>();

@@ -132,7 +132,7 @@ namespace MobileWebApi.Services
 					return AttendanceMessages.PunchInAlreadyDone;
 				}
 
-				// Upload image to Azure Blob, then persist blob URL in Punch.ImageUrl
+				// Upload image to Azure Blob, then persist blob URL in Punch.PunchInImage
 				string? imageUrl = null;
 				if (req.image != null && req.image.Length > 0)
 				{
@@ -270,7 +270,7 @@ namespace MobileWebApi.Services
 					punch.PunchIn,
 					punchOut);
 
-				// Upload image to Azure Blob, then persist blob URL in Punch.ImageUrl
+				// Upload image to Azure Blob, then persist blob URL in Punch.PunchOutImage
 				string? imageUrl = null;
 				if (req.image != null && req.image.Length > 0)
 				{
@@ -429,7 +429,7 @@ namespace MobileWebApi.Services
                 MobileSource,
                 coordinateIn: null,
                 linkIn: null,
-                imageUrl: imageUrl
+                punchInImage: imageUrl
             );
 
             if (punchId > 0)
@@ -498,9 +498,9 @@ namespace MobileWebApi.Services
             double? duration = CalculateDurationInMinutes(openPunch.PunchIn, punchOut);
 
             // Upload punch photo if provided.
-            string? imageUrl = null;
+            string? punchOutImage = null;
             if (req.image != null)
-                imageUrl = await _blobService.UploadAsync(req.image, employeeId);
+                punchOutImage = await _blobService.UploadAsync(req.image, employeeId);
 
             if (locationTrackingEnabled)
             {
@@ -514,7 +514,7 @@ namespace MobileWebApi.Services
                     employeeId,
                     coordinateOut: null,
                     linkOut: null,
-                    imageUrl,
+                    punchOutImage,
                     manual: true,
                     AttendanceMessages.ManualPunchOutReason);
 
@@ -526,7 +526,7 @@ namespace MobileWebApi.Services
                     MobileSource,
                     coordinateOut: null,
                     linkOut: null,
-                    imageUrl,
+					punchOutImage,
                     manual: true,
                     AttendanceMessages.ManualPunchOutReason,
                     tracking);
@@ -540,7 +540,7 @@ namespace MobileWebApi.Services
                     MobileSource,
                     coordinateOut: null,
                     linkOut: null,
-                    imageUrl: imageUrl,
+					punchOutImage: punchOutImage,
                     manual: true,
                     punchOutReason: AttendanceMessages.ManualPunchOutReason
                 );
@@ -597,7 +597,7 @@ namespace MobileWebApi.Services
             int userId,
             string? coordinateIn,
             string? linkIn,
-            string? imageUrl)
+            string? punchInImage)
         {
             return new PunchTracking
             {
@@ -612,8 +612,8 @@ namespace MobileWebApi.Services
                 InSource = MobileSource,
                 CoordinateIn = coordinateIn,
                 LinkIn = linkIn,
-                ImageUrl = imageUrl
-            };
+                PunchInImage = punchInImage
+			};
         }
 
         private PunchTracking BuildOutTracking(
@@ -626,7 +626,7 @@ namespace MobileWebApi.Services
             int userId,
             string? coordinateOut,
             string? linkOut,
-            string? imageUrl,
+            string? punchOutImage,
             bool manual,
             string? punchOutReason)
         {
@@ -644,7 +644,7 @@ namespace MobileWebApi.Services
                 OutSource = MobileSource,
                 CoordinateOut = coordinateOut,
                 LinkOut = linkOut,
-                ImageUrl = imageUrl,
+                PunchOutImage = punchOutImage,
                 Manual = manual,
                 PunchOutReason = punchOutReason
             };
@@ -1246,7 +1246,8 @@ namespace MobileWebApi.Services
                         dayAttendance.CoordinateOut = attendance.CoordinateOut;
                         dayAttendance.LinkIn = attendance.LinkIn;
                         dayAttendance.LinkOut = attendance.LinkOut;
-                        dayAttendance.ImageUrl = attendance.ImageUrl;
+                        dayAttendance.PunchInImage = attendance.PunchInImage;
+                        dayAttendance.PunchOutImage = attendance.PunchOutImage;
 
                         var hasPunchIn = attendance.PunchIn.HasValue;
                         var hasPunchOut = attendance.PunchOut.HasValue;

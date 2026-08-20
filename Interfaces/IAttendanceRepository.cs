@@ -14,7 +14,7 @@ namespace MobileWebApi.Interfaces
             string inSource,
             string? coordinateIn,
             string? linkIn,
-            string? imageUrl);
+            string? punchInImage);
         Task UpdatePunchOut(
             int punchId,
             DateTime punchOut,
@@ -22,7 +22,7 @@ namespace MobileWebApi.Interfaces
             string outSource,
             string? coordinateOut,
             string? linkOut,
-            string? imageUrl,
+            string? punchOutImage,
             bool manual,
             string? punchOutReason,
             int userId = 0);
@@ -53,7 +53,7 @@ namespace MobileWebApi.Interfaces
             string outSource,
             string? coordinateOut,
             string? linkOut,
-            string? imageUrl,
+            string? punchOutImage,
             bool manual,
             string? punchOutReason);
 
@@ -68,7 +68,7 @@ namespace MobileWebApi.Interfaces
             string inSource,
             string? coordinateIn,
             string? linkIn,
-            string? imageUrl,
+            string? punchInImage,
             int userId,
             PunchTracking tracking);
 
@@ -83,7 +83,7 @@ namespace MobileWebApi.Interfaces
             string outSource,
             string? coordinateOut,
             string? linkOut,
-            string? imageUrl,
+            string? punchOutImage,
             bool manual,
             string? punchOutReason,
             PunchTracking tracking);

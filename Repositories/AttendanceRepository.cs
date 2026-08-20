@@ -62,7 +62,7 @@ namespace MobileWebApi.Repositories
             string inSource,
             string? coordinateIn,
             string? linkIn,
-            string? imageUrl)
+            string? punchInImage)
         {
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("InsertPunchIn");
@@ -83,7 +83,7 @@ namespace MobileWebApi.Repositories
                     InSource = inSource,
                     CoordinateIn = coordinateIn,
                     LinkIn = linkIn,
-                    ImageUrl = imageUrl
+                    PunchInImage = punchInImage
                 });
 
             _logger.LogInformation(
@@ -100,7 +100,7 @@ namespace MobileWebApi.Repositories
             string outSource,
             string? coordinateOut,
             string? linkOut,
-            string? imageUrl,
+            string? punchOutImage,
             bool manual,
             string? punchOutReason,
             int userId = 0)
@@ -127,8 +127,7 @@ namespace MobileWebApi.Repositories
                     OutSource = outSource,
                     CoordinateOut = coordinateOut,
                     LinkOut = linkOut,
-                    ImageUrl = imageUrl,
-                    Manual = manual,
+                    PunchOutImage = punchOutImage,
                     PunchOutReason = punchOutReason
                 });
 
@@ -168,7 +167,7 @@ namespace MobileWebApi.Repositories
             string outSource,
             string? coordinateOut,
             string? linkOut,
-            string? imageUrl,
+            string? punchOutImage,
             bool manual,
             string? punchOutReason)
         {
@@ -179,7 +178,7 @@ namespace MobileWebApi.Repositories
                 outSource,
                 coordinateOut,
                 linkOut,
-                imageUrl,
+                punchOutImage,
                 manual,
                 punchOutReason,
                 userId);
@@ -194,7 +193,7 @@ namespace MobileWebApi.Repositories
             string inSource,
             string? coordinateIn,
             string? linkIn,
-            string? imageUrl,
+            string? punchInImage,
             int userId,
             PunchTracking tracking)
         {
@@ -213,7 +212,7 @@ namespace MobileWebApi.Repositories
                         InSource = inSource,
                         CoordinateIn = coordinateIn,
                         LinkIn = linkIn,
-                        ImageUrl = imageUrl
+                        PunchInImage = punchInImage
                     },
                     transaction);
 
@@ -228,7 +227,7 @@ namespace MobileWebApi.Repositories
                 tracking.InSource = inSource;
                 tracking.CoordinateIn = coordinateIn;
                 tracking.LinkIn = linkIn;
-                tracking.ImageUrl = imageUrl;
+                tracking.PunchInImage = punchInImage;
 
                 await _punchTrackingRepository.InsertPunchTrackingAsync(tracking, conn, transaction);
 
@@ -252,7 +251,7 @@ namespace MobileWebApi.Repositories
             string outSource,
             string? coordinateOut,
             string? linkOut,
-            string? imageUrl,
+            string? punchOutImage,
             bool manual,
             string? punchOutReason,
             PunchTracking tracking)
@@ -271,7 +270,7 @@ namespace MobileWebApi.Repositories
                 tracking.OutSource = outSource;
                 tracking.CoordinateOut = coordinateOut;
                 tracking.LinkOut = linkOut;
-                tracking.ImageUrl = imageUrl;
+                tracking.PunchOutImage = punchOutImage;
                 tracking.Manual = manual;
                 tracking.PunchOutReason = punchOutReason;
 
@@ -288,8 +287,7 @@ namespace MobileWebApi.Repositories
                         OutSource = outSource,
                         CoordinateOut = coordinateOut,
                         LinkOut = linkOut,
-                        ImageUrl = imageUrl,
-                        Manual = manual,
+                        PunchOutImage = punchOutImage,
                         PunchOutReason = punchOutReason
                     },
                     transaction);

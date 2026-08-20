@@ -84,7 +84,8 @@ namespace MobileWebApi.Repositories
                     tracking.CoordinateOut,
                     tracking.LinkIn,
                     tracking.LinkOut,
-                    tracking.ImageUrl,
+                    tracking.PunchInImage,
+                    tracking.PunchOutImage,
                     tracking.Manual,
                     tracking.PunchOutReason
                 },
@@ -177,7 +178,8 @@ namespace MobileWebApi.Repositories
                 Source = row.Source,
                 Coordinate = row.Coordinate,
                 Address = row.Address,
-                ImageUrl = row.ImageUrl,
+                PunchInImage = row.PunchInImage,
+                PunchOutImage=row.PunchOutImage,
                 Manual = row.Manual,
                 Remarks = row.Remarks
             }).ToList();

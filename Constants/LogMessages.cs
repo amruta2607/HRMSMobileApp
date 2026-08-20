@@ -310,6 +310,8 @@ namespace MobileWebApi.Constants
             public const string PunchLocationRecorded = "Recorded {Direction} punch location tracking record {RecordId} for employee {EmployeeId}, tenant {TenantId}.";
             public const string PunchLocationSkipped = "Skipped {Direction} punch location tracking for employee {EmployeeId}, tenant {TenantId}: {Reason}.";
             public const string FailedToRecordPunchLocation = "Failed to record {Direction} punch location tracking for employee {EmployeeId}, tenant {TenantId}.";
+            public const string FetchingTodayPath = "Fetching today's location tracking path for user {UserId}, employee {EmployeeId}, tenant {TenantId}, date {Date}";
+            public const string TodayPathFetched = "Fetched {PointCount} location tracking points for employee {EmployeeId} on {Date}";
         }
 
         public static class LocationTrackingIssue
