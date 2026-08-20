@@ -2,7 +2,6 @@ using Dapper;
 using MobileWebApi.Data;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
-using MobileWebApi.Models.Responses;
 using MobileWebApi.Resources;
 
 namespace MobileWebApi.Repositories

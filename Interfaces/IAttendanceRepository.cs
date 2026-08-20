@@ -43,52 +43,6 @@ namespace MobileWebApi.Interfaces
         Task InsertPunchTrackingAsync(PunchTracking tracking);
 
         /// <summary>
-        /// Gets today's punch record for an employee with tenant filter.
-        /// </summary>
-        Task<Punch?> GetTodayPunchAsync(int employeeId, int tenantId, DateTime punchDate);
-
-        /// <summary>
-        /// Gets the last punch tracking record for the current day.
-        /// </summary>
-        Task<PunchTracking?> GetLastPunchTrackingAsync(int employeeId, int tenantId, DateTime punchDate);
-
-        /// <summary>
-        /// Inserts a punch tracking record.
-        /// </summary>
-        Task InsertPunchTrackingAsync(PunchTracking tracking);
-
-        /// <summary>
-        /// Inserts a punch-in and tracking record in a single transaction.
-        /// </summary>
-        Task<int> InsertPunchInWithTrackingAsync(
-            int employeeId,
-            int tenantId,
-            DateTime punchIn,
-            DateTime punchDate,
-            string inSource,
-            string? coordinateIn,
-            string? linkIn,
-            string? punchInImage,
-            int userId,
-            PunchTracking tracking);
-
-        /// <summary>
-        /// Inserts tracking and updates punch-out in a single transaction.
-        /// </summary>
-        Task UpdatePunchOutWithTrackingAsync(
-            int punchId,
-            DateTime punchOut,
-            double? duration,
-            int userId,
-            string outSource,
-            string? coordinateOut,
-            string? linkOut,
-            string? punchOutImage,
-            bool manual,
-            string? punchOutReason,
-            PunchTracking tracking);
-
-        /// <summary>
         /// Updates punch-out on the Punch table (latest out time).
         /// </summary>
         Task UpdatePunchOutAsync(
@@ -99,7 +53,7 @@ namespace MobileWebApi.Interfaces
             string outSource,
             string? coordinateOut,
             string? linkOut,
-            string? punchOutImage,
+            string? punchOutImage,   
             bool manual,
             string? punchOutReason);
 

@@ -128,6 +128,7 @@ namespace MobileWebApi.Repositories
                     CoordinateOut = coordinateOut,
                     LinkOut = linkOut,
                     PunchOutImage = punchOutImage,
+                    Manual = manual,
                     PunchOutReason = punchOutReason
                 });
 
@@ -228,6 +229,7 @@ namespace MobileWebApi.Repositories
                 tracking.CoordinateIn = coordinateIn;
                 tracking.LinkIn = linkIn;
                 tracking.PunchInImage = punchInImage;
+                tracking.PunchOutImage = null;
 
                 await _punchTrackingRepository.InsertPunchTrackingAsync(tracking, conn, transaction);
 
@@ -265,11 +267,13 @@ namespace MobileWebApi.Repositories
                 tracking.Direction = "OUT";
                 tracking.PunchOut = punchOut;
                 tracking.PunchIn = null;
-                tracking.Duration = duration;
+                // Keep tracking.Duration as the current session duration set by the caller.
+                // duration is the Punch-table total (sum of all OUT session durations).
                 tracking.InsertUserId = userId;
                 tracking.OutSource = outSource;
                 tracking.CoordinateOut = coordinateOut;
                 tracking.LinkOut = linkOut;
+                tracking.PunchInImage = null;
                 tracking.PunchOutImage = punchOutImage;
                 tracking.Manual = manual;
                 tracking.PunchOutReason = punchOutReason;
@@ -288,6 +292,7 @@ namespace MobileWebApi.Repositories
                         CoordinateOut = coordinateOut,
                         LinkOut = linkOut,
                         PunchOutImage = punchOutImage,
+                        Manual = manual,
                         PunchOutReason = punchOutReason
                     },
                     transaction);

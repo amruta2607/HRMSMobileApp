@@ -436,20 +436,6 @@ namespace MobileWebApi.Constants
         {
             public const string GetList = "TMPL-001";
         }
-
-        // Location tracking (LocationTrackingController)
-        public static class LocationTracking
-        {
-            public const string RecordLocation = "LOCT-001";
-            public const string RecordLocationBatch = "LOCT-002";
-            public const string AddIssue = "LOCT-004";
-        }
-
-        // Location tracking configuration (MobileLocationTrackingConfigurationController)
-        public static class LocationTrackingConfiguration
-        {
-            public const string GetConfiguration = "LOCT-003";
-        }
     }
 }
 

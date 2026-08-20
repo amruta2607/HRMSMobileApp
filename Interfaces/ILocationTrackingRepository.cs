@@ -1,5 +1,4 @@
 using MobileWebApi.Models;
-using MobileWebApi.Models.Responses;
 
 namespace MobileWebApi.Interfaces
 {
@@ -21,7 +20,8 @@ namespace MobileWebApi.Interfaces
             int insertUserId);
 
         /// <summary>
-        /// Returns today's LocationTracking rows for the employee/tenant, ordered chronologically.
+        /// Returns today's location tracking points for an employee within a tenant,
+        /// ordered chronologically from first to last.
         /// </summary>
         Task<IReadOnlyList<LocationTrackingPointRow>> GetTodayByEmployeeIdAsync(
             int employeeId,

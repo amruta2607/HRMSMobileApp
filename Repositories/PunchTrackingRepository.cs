@@ -74,8 +74,8 @@ namespace MobileWebApi.Repositories
                     tracking.PunchId,
                     PunchDate = tracking.PunchDate.Date,
                     tracking.Direction,
-                    PunchIn = tracking.PunchIn,
-                    PunchOut = tracking.PunchOut,
+                    PunchIn = ToSqlTime(tracking.PunchIn),
+                    PunchOut = ToSqlTime(tracking.PunchOut),
                     Duration = ToSqlTimeDuration(tracking.Duration),
                     tracking.InsertUserId,
                     tracking.InSource,
@@ -124,16 +124,22 @@ namespace MobileWebApi.Repositories
             using var connection = _context.CreateConnection();
             var query = _queryProvider.Get("GetLastUnmatchedPunchIn");
 
-            return await connection.QueryFirstOrDefaultAsync<PunchTracking>(query, new { PunchId = punchId });
+            return await connection.QueryFirstOrDefaultAsync<PunchTracking>(query, new
+            {
+                PunchId = punchId
+            });
         }
 
         /// <inheritdoc />
-        public async Task<double> GetCompletedPunchTrackingDurationSumAsync(int punchId)
+        public async Task<double> GetCompletedOutDurationSumMinutesAsync(int punchId)
         {
             using var connection = _context.CreateConnection();
             var query = _queryProvider.Get("GetCompletedPunchTrackingDurationSum");
 
-            return await connection.ExecuteScalarAsync<double>(query, new { PunchId = punchId });
+            return await connection.ExecuteScalarAsync<double>(query, new
+            {
+                PunchId = punchId
+            });
         }
 
         /// <inheritdoc />
