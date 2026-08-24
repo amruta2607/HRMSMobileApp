@@ -113,5 +113,25 @@ namespace MobileWebApi.Repositories
 
             return rows.ToList();
         }
+
+        public async Task<IReadOnlyList<LocationTrackingPointRow>> GetByEmployeeIdAndDateAsync(
+            int employeeId,
+            int tenantId,
+            DateTime date)
+        {
+            var query = _queryProvider.Get("GetLocationTrackingByEmployeeIdAndDate");
+
+            using var connection = _context.CreateConnection();
+            var rows = await connection.QueryAsync<LocationTrackingPointRow>(
+                query,
+                new
+                {
+                    EmployeeId = employeeId,
+                    TenantId = tenantId,
+                    Date = date.Date
+                });
+
+            return rows.ToList();
+        }
     }
 }

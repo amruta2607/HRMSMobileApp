@@ -392,6 +392,87 @@ namespace MobileWebApi.Services
             return (true, LocationTrackingMessages.TodayPathFetchedSuccessfully, response);
         }
 
+        public async Task<(bool Success, string Message, ByDateLocationTrackingResponse? Data)> GetPathByDateAsync(
+            int userId,
+            DateTime date,
+            int organisationId)
+        {
+            if (userId <= 0)
+            {
+                return (false, LocationTrackingMessages.UserIdRequired, null);
+            }
+
+            if (date == default)
+            {
+                return (false, LocationTrackingMessages.DateRequired, null);
+            }
+
+            var trackingDate = date.Date;
+
+            var user = await _userRepository.GetUserByIdAsync(userId);
+            if (user == null)
+            {
+                _logger.LogWarning(LogMessages.LocationTracking.UserNotFound, userId);
+                return (false, LocationTrackingMessages.UserNotFound, null);
+            }
+
+            // Tenant safety: requested user must belong to the caller's organisation.
+            if (user.OrganisationId != organisationId)
+            {
+                _logger.LogWarning(
+                    "User organisation mismatch while fetching location path by date. UserId={UserId}, UserOrg={UserOrg}, RequestOrg={RequestOrg}",
+                    userId,
+                    user.OrganisationId,
+                    organisationId);
+                return (false, LocationTrackingMessages.EmployeeDoesNotBelongToTenant, null);
+            }
+
+            var employee = await _employeeRepository.GetEmployeebyUserIdAsync(userId);
+            if (employee == null || employee.Id <= 0)
+            {
+                _logger.LogWarning(LogMessages.LocationTracking.EmployeeNotFoundForUser, userId);
+                return (false, LocationTrackingMessages.EmployeeNotAssociatedWithUser, null);
+            }
+
+            if (employee.OrganisationId != organisationId)
+            {
+                return (false, LocationTrackingMessages.EmployeeDoesNotBelongToTenant, null);
+            }
+
+            _logger.LogInformation(
+                LogMessages.LocationTracking.FetchingPathByDate,
+                userId,
+                employee.Id,
+                organisationId,
+                trackingDate);
+
+            var rows = await _locationTrackingRepository.GetByEmployeeIdAndDateAsync(
+                employee.Id,
+                organisationId,
+                trackingDate);
+
+            var locations = rows
+                .Select(MapToByDatePointDto)
+                .ToList();
+
+            _logger.LogInformation(
+                LogMessages.LocationTracking.PathByDateFetched,
+                locations.Count,
+                employee.Id,
+                organisationId,
+                trackingDate);
+
+            var response = new ByDateLocationTrackingResponse
+            {
+                Success = true,
+                Date = trackingDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                UserId = userId,
+                Locations = locations
+            };
+
+            return (true, LocationTrackingMessages.PathByDateFetchedSuccessfully, response);
+        }
+
         private static TodayLocationTrackingPointDto MapToPointDto(LocationTrackingPointRow row)
         {
             var pointDate = row.Date.Date;
@@ -400,6 +481,24 @@ namespace MobileWebApi.Services
             return new TodayLocationTrackingPointDto
             {
                 Id = row.Id,
+                Latitude = row.Latitude,
+                Longitude = row.Longitude,
+                Date = pointDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                Time = pointTime.ToString("HH:mm:ss", CultureInfo.InvariantCulture),
+                LocationFrom = row.LocationFrom
+            };
+        }
+
+        private static ByDateLocationTrackingPointDto MapToByDatePointDto(LocationTrackingPointRow row)
+        {
+            var pointDate = row.Date.Date;
+            var pointTime = row.Time;
+
+            return new ByDateLocationTrackingPointDto
+            {
+                Id = row.Id,
+                EmployeeId = row.EmployeeId,
+                TenantId = row.TenantId,
                 Latitude = row.Latitude,
                 Longitude = row.Longitude,
                 Date = pointDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),

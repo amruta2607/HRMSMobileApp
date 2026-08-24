@@ -13,5 +13,14 @@ namespace MobileWebApi.Interfaces
 		Task<(bool Success, string Message, TodayLocationTrackingResponse? Data)> GetTodayPathAsync(
             int userId,
             int organisationId);
+
+		/// <summary>
+		/// Returns location tracking records for the employee linked to <paramref name="userId"/>
+		/// on the specified <paramref name="date"/>.
+		/// </summary>
+		Task<(bool Success, string Message, ByDateLocationTrackingResponse? Data)> GetPathByDateAsync(
+            int userId,
+            DateTime date,
+            int organisationId);
     }
 }

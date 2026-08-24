@@ -318,6 +318,7 @@ namespace MobileWebApi.Constants
             public const string RecordLocationBatch = "LOCT-002";
             public const string AddIssue = "LOCT-004";
             public const string GetTodayPath = "LOCT-005";
+            public const string GetPathByDate = "LOCT-006";
         }
 
         // Location tracking configuration (MobileLocationTrackingConfigurationController)

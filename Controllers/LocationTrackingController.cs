@@ -358,5 +358,126 @@ namespace MobileWebApi.Controllers
                     });
             }
         }
+
+        /// <summary>
+        /// Returns complete location tracking records for the employee linked to the given UserId on the specified date.
+        /// GET: /apipunch/location-tracking/by-date?UserId=8&amp;Date=2026-08-24
+        /// </summary>
+        [HttpGet("/apipunch/location-tracking/by-date")]
+        public async Task<IActionResult> GetPathByDate([FromQuery] ByDateLocationTrackingRequest request)
+        {
+            try
+            {
+                var currentUserId = CurrentUserId;
+                if (!currentUserId.HasValue || currentUserId.Value <= 0)
+                {
+                    return Unauthorized(new
+                    {
+                        success = false,
+                        message = AuthMessages.InvalidAuthenticationToken
+                    });
+                }
+
+                request ??= new ByDateLocationTrackingRequest();
+
+                if (request.UserId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = LocationTrackingMessages.UserIdRequired
+                    });
+                }
+
+                if (!TryGetRequestedTrackingDate(request, out var trackingDate, out var dateError))
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = dateError
+                    });
+                }
+
+                // Regular users may only request their own path; HR/TenantAdmin may request others in-tenant.
+                if (!HasElevatedAccess && request.UserId != currentUserId.Value)
+                {
+                    Logger.LogWarning(
+                        LogMessages.TenantAccess.UserAccessViolation,
+                        currentUserId.Value,
+                        request.UserId);
+                    return UserAccessDenied();
+                }
+
+                var (success, message, data) = await _locationTrackingService.GetPathByDateAsync(
+                    request.UserId,
+                    trackingDate,
+                    CurrentOrganisationId);
+
+                if (!success)
+                {
+                    if (message == LocationTrackingMessages.UserNotFound
+                        || message == LocationTrackingMessages.EmployeeNotAssociatedWithUser
+                        || message == LocationTrackingMessages.EmployeeNotFound)
+                    {
+                        return NotFound(new { success = false, message });
+                    }
+
+                    return BadRequest(new { success = false, message });
+                }
+
+                return Ok(data);
+            }
+            catch (TenantAccessException)
+            {
+                return TenantAccessDenied();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(
+                    ExceptionCodes.LocationTracking.GetPathByDate,
+                    nameof(GetPathByDate),
+                    ex,
+                    CurrentUserId);
+
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        success = false,
+                        message = GeneralMessages.SomethingWentWrongContactAdmin
+                    });
+            }
+        }
+
+        private bool TryGetRequestedTrackingDate(
+            ByDateLocationTrackingRequest request,
+            out DateTime trackingDate,
+            out string errorMessage)
+        {
+            trackingDate = default;
+            errorMessage = LocationTrackingMessages.DateRequired;
+
+            var dateSupplied = Request.Query.ContainsKey("Date") || Request.Query.ContainsKey("date");
+            if (!dateSupplied)
+            {
+                return false;
+            }
+
+            if (ModelState.TryGetValue(nameof(ByDateLocationTrackingRequest.Date), out var dateState)
+                && dateState.Errors.Count > 0)
+            {
+                errorMessage = LocationTrackingMessages.InvalidDate;
+                return false;
+            }
+
+            if (!request.Date.HasValue || request.Date.Value == default)
+            {
+                errorMessage = LocationTrackingMessages.InvalidDate;
+                return false;
+            }
+
+            trackingDate = request.Date.Value.Date;
+            return true;
+        }
     }
 }

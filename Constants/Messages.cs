@@ -634,6 +634,9 @@ namespace MobileWebApi.Constants
         public const string BatchAllRecordsInvalid = "All location records in the batch are invalid.";
         public const string FailedToRecordLocationBatch = "Failed to record location batch.";
         public const string TodayPathFetchedSuccessfully = "Today's location tracking path fetched successfully.";
+        public const string DateRequired = "Date parameter is required.";
+        public const string InvalidDate = "Date is invalid.";
+        public const string PathByDateFetchedSuccessfully = "Location tracking path fetched successfully.";
     }
 
     /// <summary>

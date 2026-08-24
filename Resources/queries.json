@@ -312,6 +312,8 @@
 
     "GetTodayLocationTrackingByEmployeeId": "SELECT Id, EmployeeId, Latitude, Longitude, [Date], [Time], LocationFrom FROM LocationTracking WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND [Date] = @Today ORDER BY [Date] ASC, [Time] ASC",
 
+    "GetLocationTrackingByEmployeeIdAndDate": "SELECT Id, EmployeeId, TenantId, Latitude, Longitude, [Date], [Time], InsertUserId, InsertDate, UpdateUserId, UpdateDate, LocationFrom FROM LocationTracking WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND [Date] = @Date ORDER BY [Time] ASC",
+
     "GetLocationTrackingConfigurationById": "SELECT Id, TenantId, GPSPollingInterval, MinimumDisplacement, GPSAccuracyThreshold, DuplicateLocationRadius, AutoPunchOutTimeout, OfflineStorageLimit, AutoDataCleanupDays, RetryInterval, ServerSyncBatchSize, GeofenceRadius, EnableFromAnywhere, BlockPunchOnHoliday, EnableLocationGapValidation, EnableBatteryOptimizationCheck, BatteryOptimizationMode, AutoPunchOutOnGPSTurnOff, AutoPunchOutOnLocationServicesOff, AutoPunchOutOnAppKilled, AutoPunchOutOnPowerSavingMode, AutoPunchOutOnAirplaneMode, LocationTimeoutDuration FROM LocationTrackingConfiguration WHERE Id = @Id",
 
     "InsertLocationTrackingIssue": "INSERT INTO LocationTrackingIssue (UserId, IssueType, IssueDescription, [Timestamp], LastKnownLatitude, LastKnownLongitude, DeviceId, TenantId, InsertUserId, InsertDate, UpdateUserId, UpdateDate) VALUES (@UserId, @IssueType, @IssueDescription, @Timestamp, @LastKnownLatitude, @LastKnownLongitude, @DeviceId, @TenantId, @InsertUserId, @InsertDate, @UpdateUserId, @UpdateDate); SELECT CAST(SCOPE_IDENTITY() AS INT)",

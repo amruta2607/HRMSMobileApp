@@ -27,5 +27,14 @@ namespace MobileWebApi.Interfaces
             int employeeId,
             int tenantId,
             DateTime today);
+
+        /// <summary>
+        /// Returns location tracking points for an employee within a tenant on the specified date,
+        /// ordered chronologically from first to last.
+        /// </summary>
+        Task<IReadOnlyList<LocationTrackingPointRow>> GetByEmployeeIdAndDateAsync(
+            int employeeId,
+            int tenantId,
+            DateTime date);
     }
 }
