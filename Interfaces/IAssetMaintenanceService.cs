@@ -1,4 +1,4 @@
-using MobileWebApi.Models.Requests;
+﻿using MobileWebApi.Models.Requests;
 using MobileWebApi.Models.Responses;
 
 namespace MobileWebApi.Interfaces

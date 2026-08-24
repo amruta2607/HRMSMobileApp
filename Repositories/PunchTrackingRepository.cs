@@ -74,8 +74,8 @@ namespace MobileWebApi.Repositories
                     tracking.PunchId,
                     PunchDate = tracking.PunchDate.Date,
                     tracking.Direction,
-                    PunchIn = tracking.PunchIn,
-                    PunchOut = tracking.PunchOut,
+                    PunchIn = ToSqlTime(tracking.PunchIn),
+                    PunchOut = ToSqlTime(tracking.PunchOut),
                     Duration = ToSqlTimeDuration(tracking.Duration),
                     tracking.InsertUserId,
                     tracking.InSource,
@@ -84,12 +84,19 @@ namespace MobileWebApi.Repositories
                     tracking.CoordinateOut,
                     tracking.LinkIn,
                     tracking.LinkOut,
-                    tracking.ImageUrl,
+                    tracking.PunchInImage,
+                    tracking.PunchOutImage,
                     tracking.Manual,
                     tracking.PunchOutReason
                 },
                 transaction);
         }
+
+        /// <summary>
+        /// Maps punch clock time to SQL time column.
+        /// </summary>
+        private static TimeSpan? ToSqlTime(DateTime? dateTime) =>
+            dateTime?.TimeOfDay;
 
         /// <summary>
         /// Maps duration in minutes to SQL time column.
@@ -117,16 +124,22 @@ namespace MobileWebApi.Repositories
             using var connection = _context.CreateConnection();
             var query = _queryProvider.Get("GetLastUnmatchedPunchIn");
 
-            return await connection.QueryFirstOrDefaultAsync<PunchTracking>(query, new { PunchId = punchId });
+            return await connection.QueryFirstOrDefaultAsync<PunchTracking>(query, new
+            {
+                PunchId = punchId
+            });
         }
 
         /// <inheritdoc />
-        public async Task<double> GetCompletedPunchTrackingDurationSumAsync(int punchId)
+        public async Task<double> GetCompletedOutDurationSumMinutesAsync(int punchId)
         {
             using var connection = _context.CreateConnection();
             var query = _queryProvider.Get("GetCompletedPunchTrackingDurationSum");
 
-            return await connection.ExecuteScalarAsync<double>(query, new { PunchId = punchId });
+            return await connection.ExecuteScalarAsync<double>(query, new
+            {
+                PunchId = punchId
+            });
         }
 
         /// <inheritdoc />
@@ -189,7 +202,8 @@ namespace MobileWebApi.Repositories
                 Source = row.Source,
                 Coordinate = row.Coordinate,
                 Address = row.Address,
-                ImageUrl = row.ImageUrl,
+                PunchInImage = row.PunchInImage,
+                PunchOutImage=row.PunchOutImage,
                 Manual = row.Manual,
                 Remarks = row.Remarks
             }).ToList();

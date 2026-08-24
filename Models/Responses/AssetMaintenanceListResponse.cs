@@ -1,4 +1,4 @@
-namespace MobileWebApi.Models.Responses
+﻿namespace MobileWebApi.Models.Responses
 {
     /// <summary>
     /// Paged asset maintenance list response for the current tenant.

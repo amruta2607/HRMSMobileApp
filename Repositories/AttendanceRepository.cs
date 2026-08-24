@@ -101,18 +101,21 @@ namespace MobileWebApi.Repositories
             string? coordinateOut,
             string? linkOut,
             string? punchOutImage,
-            int userId = 0,
-            string? punchOutReason = null)
+            bool manual,
+            string? punchOutReason,
+            int userId = 0)
         {
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("UpdatePunchOut");
 
             _logger.LogInformation(
-                "UpdatePunchOut before database save - PunchId: {PunchId}, PunchOut: {PunchOut} (Kind: {PunchOutKind}), Duration: {Duration}",
+                "UpdatePunchOut before database save - PunchId: {PunchId}, PunchOut: {PunchOut} (Kind: {PunchOutKind}), Duration: {Duration}, Manual: {Manual}, PunchOutReason: {PunchOutReason}",
                 punchId,
                 punchOut,
                 punchOut.Kind,
-                duration);
+                duration,
+                manual,
+                punchOutReason);
 
             await conn.ExecuteAsync(query,
                 new
@@ -125,6 +128,7 @@ namespace MobileWebApi.Repositories
                     CoordinateOut = coordinateOut,
                     LinkOut = linkOut,
                     PunchOutImage = punchOutImage,
+                    Manual = manual,
                     PunchOutReason = punchOutReason
                 });
 
@@ -153,6 +157,32 @@ namespace MobileWebApi.Repositories
         public async Task InsertPunchTrackingAsync(PunchTracking tracking)
         {
             await _punchTrackingRepository.InsertPunchTrackingAsync(tracking);
+        }
+
+        /// <inheritdoc />
+        public async Task UpdatePunchOutAsync(
+            int punchId,
+            DateTime punchOut,
+            double? duration,
+            int userId,
+            string outSource,
+            string? coordinateOut,
+            string? linkOut,
+            string? punchOutImage,
+            bool manual,
+            string? punchOutReason)
+        {
+            await UpdatePunchOut(
+                punchId,
+                punchOut,
+                duration,
+                outSource,
+                coordinateOut,
+                linkOut,
+                punchOutImage,
+                manual,
+                punchOutReason,
+                userId);
         }
 
         /// <inheritdoc />
@@ -198,7 +228,8 @@ namespace MobileWebApi.Repositories
                 tracking.InSource = inSource;
                 tracking.CoordinateIn = coordinateIn;
                 tracking.LinkIn = linkIn;
-                tracking.ImageUrl = punchInImage;
+                tracking.PunchInImage = punchInImage;
+                tracking.PunchOutImage = null;
 
                 await _punchTrackingRepository.InsertPunchTrackingAsync(tracking, conn, transaction);
 
@@ -236,11 +267,14 @@ namespace MobileWebApi.Repositories
                 tracking.Direction = "OUT";
                 tracking.PunchOut = punchOut;
                 tracking.PunchIn = null;
+                // Keep tracking.Duration as the current session duration set by the caller.
+                // duration is the Punch-table total (sum of all OUT session durations).
                 tracking.InsertUserId = userId;
                 tracking.OutSource = outSource;
                 tracking.CoordinateOut = coordinateOut;
                 tracking.LinkOut = linkOut;
-                tracking.ImageUrl = punchOutImage;
+                tracking.PunchInImage = null;
+                tracking.PunchOutImage = punchOutImage;
                 tracking.Manual = manual;
                 tracking.PunchOutReason = punchOutReason;
 
@@ -258,6 +292,7 @@ namespace MobileWebApi.Repositories
                         CoordinateOut = coordinateOut,
                         LinkOut = linkOut,
                         PunchOutImage = punchOutImage,
+                        Manual = manual,
                         PunchOutReason = punchOutReason
                     },
                     transaction);
@@ -270,30 +305,6 @@ namespace MobileWebApi.Repositories
                 _logger.LogError(ex, "Failed to update punch-out with tracking for PunchId {PunchId}", punchId);
                 throw;
             }
-        }
-
-        /// <inheritdoc />
-        public async Task UpdatePunchOutAsync(
-            int punchId,
-            DateTime punchOut,
-            double? duration,
-            int userId,
-            string outSource,
-            string? coordinateOut,
-            string? linkOut,
-            string? punchOutImage,
-            string? punchOutReason = null)
-        {
-            await UpdatePunchOut(
-                punchId,
-                punchOut,
-                duration,
-                outSource,
-                coordinateOut,
-                linkOut,
-                punchOutImage,
-                userId,
-                punchOutReason);
         }
 
         public async Task<List<DateTime>> GetHolidayDatesAsync(int tenantId, DateTime fromDate, DateTime toDate)
@@ -507,14 +518,16 @@ namespace MobileWebApi.Repositories
         }
 
         /// <summary>
-        /// Deletes the Punch record.
+        /// Delete a punch record
         /// </summary>
         public async Task<bool> DeletePunchAsync(int id, int tenantId)
         {
             using var conn = _context.CreateConnection();
             string query = _queryProvider.Get("DeletePunch");
 
-            var rowsAffected = await conn.ExecuteAsync(query, new { Id = id, TenantId = tenantId });
+            var rowsAffected = await conn.ExecuteAsync(query,
+                new { Id = id, TenantId = tenantId });
+
             return rowsAffected > 0;
         }
 

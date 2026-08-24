@@ -13,83 +13,329 @@ namespace MobileWebApi.Controllers
     [Route("api/locationtracking")]
     public class LocationTrackingController : TenantBaseController
     {
-        private readonly ILocationTrackingService _locationTrackingService;
-        private readonly ILocationTrackingIssueService _locationTrackingIssueService;
+		private readonly ILocationTrackingService _locationTrackingService;
+		private readonly ILocationTrackingIssueService _locationTrackingIssueService;
 
-        public LocationTrackingController(
-            ILocationTrackingService locationTrackingService,
-            ILocationTrackingIssueService locationTrackingIssueService,
-            ITenantContext tenantContext,
-            ILogger<LocationTrackingController> logger)
-            : base(tenantContext, logger)
-        {
-            _locationTrackingService = locationTrackingService;
-            _locationTrackingIssueService = locationTrackingIssueService;
-        }
+		public LocationTrackingController(
+			ILocationTrackingService locationTrackingService,
+			ILocationTrackingIssueService locationTrackingIssueService,
+			ITenantContext tenantContext,
+			ILogger<LocationTrackingController> logger)
+			: base(tenantContext, logger)
+		{
+			_locationTrackingService = locationTrackingService;
+			_locationTrackingIssueService = locationTrackingIssueService;
+		}
 
-        /// <summary>
-        /// Receives GPS coordinates from the mobile app and stores them in LocationTracking.
-        /// POST: api/locationtracking
-        /// </summary>
-        [HttpPost("/apipunch/location-tracking/add-location-tracking/")]
-        public async Task<IActionResult> RecordLocation([FromBody] LocationTrackingRequest request)
+
+		/// <summary>
+		/// Receives GPS coordinates from the mobile app and stores them in LocationTracking.
+		/// POST: api/locationtracking
+		/// </summary>
+		[HttpPost("/apipunch/location-tracking/add-location-tracking/")]
+			public async Task<IActionResult> RecordLocation([FromBody] LocationTrackingRequest request)
+			{
+				try
+				{
+					if (request == null)
+					{
+						return BadRequest(new LocationTrackingResponse
+						{
+							Success = false,
+							Message = GeneralMessages.RequestBodyCannotBeNull
+						});
+					}
+
+					var currentUserId = CurrentUserId;
+					if (!currentUserId.HasValue || currentUserId.Value <= 0)
+					{
+						return Unauthorized(new LocationTrackingResponse
+						{
+							Success = false,
+							Message = AuthMessages.InvalidAuthenticationToken
+						});
+					}
+
+					if (request.user_id <= 0)
+					{
+						return BadRequest(new LocationTrackingResponse
+						{
+							Success = false,
+							Message = LocationTrackingMessages.UserIdRequired
+						});
+					}
+
+					if (request.user_id != currentUserId.Value)
+					{
+						Logger.LogWarning(
+							LogMessages.TenantAccess.UserAccessViolation,
+							currentUserId.Value,
+							request.user_id);
+						return UserAccessDenied();
+					}
+
+					var result = await _locationTrackingService.RecordLocationAsync(
+						request,
+						currentUserId.Value,
+						CurrentOrganisationId);
+
+					if (!result.Success)
+					{
+						if (result.Message == LocationTrackingMessages.EmployeeNotFound
+							|| result.Message == LocationTrackingMessages.TenantNotFound)
+						{
+							return NotFound(result);
+						}
+
+						return BadRequest(result);
+					}
+
+					return Ok(result);
+				}
+				catch (TenantAccessException)
+				{
+					return TenantAccessDenied();
+				}
+				catch (Exception ex)
+				{
+					Logger.LogException(
+						ExceptionCodes.LocationTracking.RecordLocation,
+						nameof(RecordLocation),
+						ex,
+						CurrentUserId);
+
+					return StatusCode(
+						StatusCodes.Status500InternalServerError,
+						new LocationTrackingResponse
+						{
+							Success = false,
+							Message = GeneralMessages.SomethingWentWrongContactAdmin
+						});
+				}
+			}
+
+			/// <summary>
+			/// Receives multiple GPS coordinates from the mobile app for offline sync.
+			/// POST: api/locationtracking/batch
+			/// </summary>
+			[HttpPost("/apipunch/location-tracking/add-batch-location/")]
+			public async Task<IActionResult> RecordLocationBatch([FromBody] LocationTrackingBatchRequest request)
+			{
+				try
+				{
+					if (request == null)
+					{
+						return BadRequest(new LocationTrackingBatchResponse
+						{
+							Success = false,
+							Message = GeneralMessages.RequestBodyCannotBeNull
+						});
+					}
+
+					var currentUserId = CurrentUserId;
+					if (!currentUserId.HasValue || currentUserId.Value <= 0)
+					{
+						return Unauthorized(new LocationTrackingBatchResponse
+						{
+							Success = false,
+							Message = AuthMessages.InvalidAuthenticationToken
+						});
+					}
+
+					if (request.user_id <= 0)
+					{
+						return BadRequest(new LocationTrackingBatchResponse
+						{
+							Success = false,
+							Message = LocationTrackingMessages.UserIdRequired
+						});
+					}
+
+					if (request.user_id != currentUserId.Value)
+					{
+						Logger.LogWarning(
+							LogMessages.TenantAccess.UserAccessViolation,
+							currentUserId.Value,
+							request.user_id);
+						return UserAccessDenied();
+					}
+
+					var result = await _locationTrackingService.RecordLocationBatchAsync(
+						request,
+						currentUserId.Value,
+						CurrentOrganisationId);
+
+					if (!result.Success)
+					{
+						if (result.Message == LocationTrackingMessages.EmployeeNotFound
+							|| result.Message == LocationTrackingMessages.TenantNotFound)
+						{
+							return NotFound(result);
+						}
+
+						return BadRequest(result);
+					}
+
+					return Ok(result);
+				}
+				catch (TenantAccessException)
+				{
+					return TenantAccessDenied();
+				}
+				catch (Exception ex)
+				{
+					Logger.LogException(
+						ExceptionCodes.LocationTracking.RecordLocationBatch,
+						nameof(RecordLocationBatch),
+						ex,
+						CurrentUserId);
+
+					return StatusCode(
+						StatusCodes.Status500InternalServerError,
+						new LocationTrackingBatchResponse
+						{
+							Success = false,
+							Message = GeneralMessages.SomethingWentWrongContactAdmin
+						});
+				}
+			}
+
+			/// <summary>
+			/// Logs a location tracking violation reported by the mobile application.
+			/// POST: /apipunch/location-tracking/add-issue
+			/// </summary>
+			[HttpPost("/apipunch/location-tracking/add-issue")]
+			public async Task<IActionResult> AddLocationTrackingIssue([FromBody] LocationTrackingIssueRequest request)
+			{
+				try
+				{
+					Logger.LogInformation(
+						LogMessages.LocationTrackingIssue.ApiRequestReceived,
+						CurrentUserId);
+
+					if (request == null)
+					{
+						return BadRequest(new LocationTrackingResponse
+						{
+							Success = false,
+							Message = GeneralMessages.RequestBodyCannotBeNull
+						});
+					}
+
+					var currentUserId = CurrentUserId;
+					if (!currentUserId.HasValue || currentUserId.Value <= 0)
+					{
+						return Unauthorized(new LocationTrackingResponse
+						{
+							Success = false,
+							Message = AuthMessages.InvalidAuthenticationToken
+						});
+					}
+
+					Logger.LogInformation(
+						LogMessages.LocationTrackingIssue.AuthenticatedUser,
+						currentUserId.Value,
+						CurrentUsername);
+
+					if (request.user_id != currentUserId.Value)
+					{
+						Logger.LogWarning(
+							LogMessages.TenantAccess.UserAccessViolation,
+							currentUserId.Value,
+							request.user_id);
+						return UserAccessDenied();
+					}
+
+					var result = await _locationTrackingIssueService.AddLocationTrackingIssueAsync(
+						request,
+						currentUserId.Value,
+						CurrentOrganisationId);
+
+					if (!result.Success)
+					{
+						return BadRequest(result);
+					}
+
+					return Ok(result);
+				}
+				catch (TenantAccessException)
+				{
+					return TenantAccessDenied();
+				}
+				catch (Exception ex)
+				{
+					Logger.LogException(
+						ExceptionCodes.LocationTracking.AddIssue,
+						nameof(AddLocationTrackingIssue),
+						ex,
+						CurrentUserId);
+
+					return StatusCode(
+						StatusCodes.Status500InternalServerError,
+						new LocationTrackingResponse
+						{
+							Success = false,
+							Message = GeneralMessages.UnexpectedError
+						});
+				}
+			}
+			/// <summary>
+			/// Returns today's complete location tracking path for the employee linked to the given UserId.
+			/// GET: /apipunch/location-tracking/today?UserId=8
+			/// </summary>
+        [HttpGet("/apipunch/location-tracking/today")]
+        public async Task<IActionResult> GetTodayPath([FromQuery] TodayLocationTrackingRequest request)
         {
             try
             {
-                if (request == null)
-                {
-                    return BadRequest(new LocationTrackingResponse
-                    {
-                        Success = false,
-                        Message = GeneralMessages.RequestBodyCannotBeNull
-                    });
-                }
-
                 var currentUserId = CurrentUserId;
                 if (!currentUserId.HasValue || currentUserId.Value <= 0)
                 {
-                    return Unauthorized(new LocationTrackingResponse
+                    return Unauthorized(new
                     {
-                        Success = false,
-                        Message = AuthMessages.InvalidAuthenticationToken
+                        success = false,
+                        message = AuthMessages.InvalidAuthenticationToken
                     });
                 }
 
-                if (request.user_id <= 0)
+                request ??= new TodayLocationTrackingRequest();
+
+                if (request.UserId <= 0)
                 {
-                    return BadRequest(new LocationTrackingResponse
+                    return BadRequest(new
                     {
-                        Success = false,
-                        Message = LocationTrackingMessages.UserIdRequired
+                        success = false,
+                        message = LocationTrackingMessages.UserIdRequired
                     });
                 }
 
-                if (request.user_id != currentUserId.Value)
+                // Regular users may only request their own path; HR/TenantAdmin may request others in-tenant.
+                if (!HasElevatedAccess && request.UserId != currentUserId.Value)
                 {
                     Logger.LogWarning(
                         LogMessages.TenantAccess.UserAccessViolation,
                         currentUserId.Value,
-                        request.user_id);
+                        request.UserId);
                     return UserAccessDenied();
                 }
 
-                var result = await _locationTrackingService.RecordLocationAsync(
-                    request,
-                    currentUserId.Value,
+                var (success, message, data) = await _locationTrackingService.GetTodayPathAsync(
+                    request.UserId,
                     CurrentOrganisationId);
 
-                if (!result.Success)
+                if (!success)
                 {
-                    if (result.Message == LocationTrackingMessages.EmployeeNotFound
-                        || result.Message == LocationTrackingMessages.TenantNotFound)
+                    if (message == LocationTrackingMessages.UserNotFound
+                        || message == LocationTrackingMessages.EmployeeNotAssociatedWithUser
+                        || message == LocationTrackingMessages.EmployeeNotFound)
                     {
-                        return NotFound(result);
+                        return NotFound(new { success = false, message });
                     }
 
-                    return BadRequest(result);
+                    return BadRequest(new { success = false, message });
                 }
 
-                return Ok(result);
+                return Ok(data);
             }
             catch (TenantAccessException)
             {
@@ -98,84 +344,88 @@ namespace MobileWebApi.Controllers
             catch (Exception ex)
             {
                 Logger.LogException(
-                    ExceptionCodes.LocationTracking.RecordLocation,
-                    nameof(RecordLocation),
+                    ExceptionCodes.LocationTracking.GetTodayPath,
+                    nameof(GetTodayPath),
                     ex,
                     CurrentUserId);
 
                 return StatusCode(
                     StatusCodes.Status500InternalServerError,
-                    new LocationTrackingResponse
+                    new
                     {
-                        Success = false,
-                        Message = GeneralMessages.SomethingWentWrongContactAdmin
+                        success = false,
+                        message = GeneralMessages.SomethingWentWrongContactAdmin
                     });
             }
         }
 
         /// <summary>
-        /// Receives multiple GPS coordinates from the mobile app for offline sync.
-        /// POST: api/locationtracking/batch
+        /// Returns complete location tracking records for the employee linked to the given UserId on the specified date.
+        /// GET: /apipunch/location-tracking/by-date?UserId=8&amp;Date=2026-08-24
         /// </summary>
-        [HttpPost("/apipunch/location-tracking/add-batch-location/")]
-        public async Task<IActionResult> RecordLocationBatch([FromBody] LocationTrackingBatchRequest request)
+        [HttpGet("/apipunch/location-tracking/by-date")]
+        public async Task<IActionResult> GetPathByDate([FromQuery] ByDateLocationTrackingRequest request)
         {
             try
             {
-                if (request == null)
-                {
-                    return BadRequest(new LocationTrackingBatchResponse
-                    {
-                        Success = false,
-                        Message = GeneralMessages.RequestBodyCannotBeNull
-                    });
-                }
-
                 var currentUserId = CurrentUserId;
                 if (!currentUserId.HasValue || currentUserId.Value <= 0)
                 {
-                    return Unauthorized(new LocationTrackingBatchResponse
+                    return Unauthorized(new
                     {
-                        Success = false,
-                        Message = AuthMessages.InvalidAuthenticationToken
+                        success = false,
+                        message = AuthMessages.InvalidAuthenticationToken
                     });
                 }
 
-                if (request.user_id <= 0)
+                request ??= new ByDateLocationTrackingRequest();
+
+                if (request.UserId <= 0)
                 {
-                    return BadRequest(new LocationTrackingBatchResponse
+                    return BadRequest(new
                     {
-                        Success = false,
-                        Message = LocationTrackingMessages.UserIdRequired
+                        success = false,
+                        message = LocationTrackingMessages.UserIdRequired
                     });
                 }
 
-                if (request.user_id != currentUserId.Value)
+                if (!TryGetRequestedTrackingDate(request, out var trackingDate, out var dateError))
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = dateError
+                    });
+                }
+
+                // Regular users may only request their own path; HR/TenantAdmin may request others in-tenant.
+                if (!HasElevatedAccess && request.UserId != currentUserId.Value)
                 {
                     Logger.LogWarning(
                         LogMessages.TenantAccess.UserAccessViolation,
                         currentUserId.Value,
-                        request.user_id);
+                        request.UserId);
                     return UserAccessDenied();
                 }
 
-                var result = await _locationTrackingService.RecordLocationBatchAsync(
-                    request,
-                    currentUserId.Value,
+                var (success, message, data) = await _locationTrackingService.GetPathByDateAsync(
+                    request.UserId,
+                    trackingDate,
                     CurrentOrganisationId);
 
-                if (!result.Success)
+                if (!success)
                 {
-                    if (result.Message == LocationTrackingMessages.EmployeeNotFound
-                        || result.Message == LocationTrackingMessages.TenantNotFound)
+                    if (message == LocationTrackingMessages.UserNotFound
+                        || message == LocationTrackingMessages.EmployeeNotAssociatedWithUser
+                        || message == LocationTrackingMessages.EmployeeNotFound)
                     {
-                        return NotFound(result);
+                        return NotFound(new { success = false, message });
                     }
 
-                    return BadRequest(result);
+                    return BadRequest(new { success = false, message });
                 }
 
-                return Ok(result);
+                return Ok(data);
             }
             catch (TenantAccessException)
             {
@@ -184,99 +434,50 @@ namespace MobileWebApi.Controllers
             catch (Exception ex)
             {
                 Logger.LogException(
-                    ExceptionCodes.LocationTracking.RecordLocationBatch,
-                    nameof(RecordLocationBatch),
+                    ExceptionCodes.LocationTracking.GetPathByDate,
+                    nameof(GetPathByDate),
                     ex,
                     CurrentUserId);
 
                 return StatusCode(
                     StatusCodes.Status500InternalServerError,
-                    new LocationTrackingBatchResponse
+                    new
                     {
-                        Success = false,
-                        Message = GeneralMessages.SomethingWentWrongContactAdmin
+                        success = false,
+                        message = GeneralMessages.SomethingWentWrongContactAdmin
                     });
             }
         }
 
-        /// <summary>
-        /// Logs a location tracking violation reported by the mobile application.
-        /// POST: /apipunch/location-tracking/add-issue
-        /// </summary>
-        [HttpPost("/apipunch/location-tracking/add-issue")]
-        public async Task<IActionResult> AddLocationTrackingIssue([FromBody] LocationTrackingIssueRequest request)
+        private bool TryGetRequestedTrackingDate(
+            ByDateLocationTrackingRequest request,
+            out DateTime trackingDate,
+            out string errorMessage)
         {
-            try
+            trackingDate = default;
+            errorMessage = LocationTrackingMessages.DateRequired;
+
+            var dateSupplied = Request.Query.ContainsKey("Date") || Request.Query.ContainsKey("date");
+            if (!dateSupplied)
             {
-                Logger.LogInformation(
-                    LogMessages.LocationTrackingIssue.ApiRequestReceived,
-                    CurrentUserId);
-
-                if (request == null)
-                {
-                    return BadRequest(new LocationTrackingResponse
-                    {
-                        Success = false,
-                        Message = GeneralMessages.RequestBodyCannotBeNull
-                    });
-                }
-
-                var currentUserId = CurrentUserId;
-                if (!currentUserId.HasValue || currentUserId.Value <= 0)
-                {
-                    return Unauthorized(new LocationTrackingResponse
-                    {
-                        Success = false,
-                        Message = AuthMessages.InvalidAuthenticationToken
-                    });
-                }
-
-                Logger.LogInformation(
-                    LogMessages.LocationTrackingIssue.AuthenticatedUser,
-                    currentUserId.Value,
-                    CurrentUsername);
-
-                if (request.user_id != currentUserId.Value)
-                {
-                    Logger.LogWarning(
-                        LogMessages.TenantAccess.UserAccessViolation,
-                        currentUserId.Value,
-                        request.user_id);
-                    return UserAccessDenied();
-                }
-
-                var result = await _locationTrackingIssueService.AddLocationTrackingIssueAsync(
-                    request,
-                    currentUserId.Value,
-                    CurrentOrganisationId);
-
-                if (!result.Success)
-                {
-                    return BadRequest(result);
-                }
-
-                return Ok(result);
+                return false;
             }
-            catch (TenantAccessException)
+
+            if (ModelState.TryGetValue(nameof(ByDateLocationTrackingRequest.Date), out var dateState)
+                && dateState.Errors.Count > 0)
             {
-                return TenantAccessDenied();
+                errorMessage = LocationTrackingMessages.InvalidDate;
+                return false;
             }
-            catch (Exception ex)
-            {
-                Logger.LogException(
-                    ExceptionCodes.LocationTracking.AddIssue,
-                    nameof(AddLocationTrackingIssue),
-                    ex,
-                    CurrentUserId);
 
-                return StatusCode(
-                    StatusCodes.Status500InternalServerError,
-                    new LocationTrackingResponse
-                    {
-                        Success = false,
-                        Message = GeneralMessages.UnexpectedError
-                    });
+            if (!request.Date.HasValue || request.Date.Value == default)
+            {
+                errorMessage = LocationTrackingMessages.InvalidDate;
+                return false;
             }
+
+            trackingDate = request.Date.Value.Date;
+            return true;
         }
     }
 }

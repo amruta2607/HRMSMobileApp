@@ -1,4 +1,4 @@
-using Dapper;
+﻿using Dapper;
 using MobileWebApi.Constants;
 using MobileWebApi.Data;
 using MobileWebApi.Helper;
@@ -470,18 +470,18 @@ namespace MobileWebApi.Repositories
             return $"[{column}] {direction}, [Id] DESC";
         }
 
-        private static AssetMaintenanceDto MapToDto(AssetMaintenanceRow row) => new()
-        {
-            Id = row.Id,
-            AssetId = row.AssetId,
-            Cost = row.Cost,
-            Attachment = AttachmentJsonHelper.Deserialize(row.Attachment),
-            Date = row.Date,
-            ResponsiblePerson = row.ResponsiblePerson,
-            AssetNumber = row.AssetNumber,
-            AssetName = row.AssetName,
-            AssetDescription = row.AssetDescription
-        };
+		private static AssetMaintenanceDto MapToDto(AssetMaintenanceRow row) => new()
+		{
+			Id = row.Id,
+			AssetId = row.AssetId,
+			Cost = row.Cost,
+			Attachment = AttachmentJsonHelper.Deserialize(row.Attachment),
+			Date = row.Date,
+			ResponsiblePerson = row.ResponsiblePerson,
+			AssetNumber = row.AssetNumber,
+			AssetName = row.AssetName,
+			AssetDescription = row.AssetDescription
+		};
 
         private sealed class AssetMaintenanceDeleteRow
         {
@@ -489,21 +489,21 @@ namespace MobileWebApi.Repositories
             public int AssetId { get; set; }
         }
 
-        /// <summary>
-        /// Raw database projection where Attachment is the stored JSON string,
-        /// mapped to <see cref="AssetMaintenanceDto"/> via <see cref="MapToDto"/>.
-        /// </summary>
-        private sealed class AssetMaintenanceRow
-        {
-            public int Id { get; set; }
-            public int AssetId { get; set; }
-            public decimal? Cost { get; set; }
-            public string? Attachment { get; set; }
-            public DateTime? Date { get; set; }
-            public string? ResponsiblePerson { get; set; }
-            public string? AssetNumber { get; set; }
-            public string? AssetName { get; set; }
-            public string? AssetDescription { get; set; }
-        }
-    }
+		/// <summary>
+		/// Raw database projection where Attachment is the stored JSON string,
+		/// mapped to <see cref="AssetMaintenanceDto"/> via <see cref="MapToDto"/>.
+		/// </summary>
+		private sealed class AssetMaintenanceRow
+		{
+			public int Id { get; set; }
+			public int AssetId { get; set; }
+			public decimal? Cost { get; set; }
+			public string? Attachment { get; set; }
+			public DateTime? Date { get; set; }
+			public string? ResponsiblePerson { get; set; }
+			public string? AssetNumber { get; set; }
+			public string? AssetName { get; set; }
+			public string? AssetDescription { get; set; }
+		}
+	}
 }

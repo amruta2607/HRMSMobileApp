@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MobileWebApi.Constants;
+using MobileWebApi.Helper;
 using MobileWebApi.Interfaces;
 using MobileWebApi.Models;
 using MobileWebApi.Services;
@@ -15,24 +16,23 @@ namespace MobileWebApi.Controllers
     [Authorize]
     public class DashboardController : TenantBaseController
     {
-        private readonly IMobileDashboardService _mobileDashboardService;
+        private readonly IDashboardService _dashboardService;
 
         public DashboardController(
-            IMobileDashboardService mobileDashboardService,
+            IDashboardService dashboardService,
             ITenantContext tenantContext,
             ILogger<DashboardController> logger)
             : base(tenantContext, logger)
         {
-            _mobileDashboardService = mobileDashboardService
-                ?? throw new ArgumentNullException(nameof(mobileDashboardService));
+            _dashboardService = dashboardService ?? throw new ArgumentNullException(nameof(dashboardService));
         }
 
         /// <summary>
-        /// Returns active employees in the current tenant whose birthday is today or within the next 4 days
-        /// (visible from 4 days before the birthday through the birthday date).
+        /// Returns active employees in the current tenant whose birthday falls today through today + 4 days.
+        /// The original birth year is ignored; December/January year boundaries are included.
         /// </summary>
         [HttpGet("birthdays")]
-        [ProducesResponseType(typeof(IEnumerable<BirthdayDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(IEnumerable<DashboardBirthdayDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -41,7 +41,7 @@ namespace MobileWebApi.Controllers
             try
             {
                 var tenantId = CurrentOrganisationId;
-                var result = await _mobileDashboardService.GetBirthdaysAsync(tenantId);
+                var result = await _dashboardService.GetUpcomingBirthdaysAsync(tenantId);
                 return Ok(result);
             }
             catch (TenantAccessException)
@@ -50,7 +50,12 @@ namespace MobileWebApi.Controllers
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, LogMessages.MobileDashboard.ErrorFetchingBirthdays);
+                Logger.LogException(
+                    ExceptionCodes.Dashboard.GetBirthdays,
+                    nameof(GetBirthdays),
+                    ex,
+                    CurrentUserId);
+
                 return StatusCode(StatusCodes.Status500InternalServerError, new
                 {
                     message = GeneralMessages.UnexpectedError
@@ -59,11 +64,11 @@ namespace MobileWebApi.Controllers
         }
 
         /// <summary>
-        /// Returns active employees in the current tenant whose work anniversary is today or within the next 4 days
-        /// (visible from 4 days before the anniversary through the anniversary date).
+        /// Returns active employees in the current tenant whose work anniversary falls today through today + 4 days.
+        /// The original joining year is ignored; service years are calculated as of the anniversary date.
         /// </summary>
         [HttpGet("work-anniversaries")]
-        [ProducesResponseType(typeof(IEnumerable<WorkAnniversaryDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(IEnumerable<DashboardWorkAnniversaryDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -72,7 +77,7 @@ namespace MobileWebApi.Controllers
             try
             {
                 var tenantId = CurrentOrganisationId;
-                var result = await _mobileDashboardService.GetWorkAnniversariesAsync(tenantId);
+                var result = await _dashboardService.GetUpcomingWorkAnniversariesAsync(tenantId);
                 return Ok(result);
             }
             catch (TenantAccessException)
@@ -81,7 +86,12 @@ namespace MobileWebApi.Controllers
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, LogMessages.MobileDashboard.ErrorFetchingWorkAnniversaries);
+                Logger.LogException(
+                    ExceptionCodes.Dashboard.GetWorkAnniversaries,
+                    nameof(GetWorkAnniversaries),
+                    ex,
+                    CurrentUserId);
+
                 return StatusCode(StatusCodes.Status500InternalServerError, new
                 {
                     message = GeneralMessages.UnexpectedError
@@ -90,11 +100,10 @@ namespace MobileWebApi.Controllers
         }
 
         /// <summary>
-        /// Returns awards in the current tenant whose award date is today or within the next 4 days
-        /// (visible from 4 days before the award date through the award date).
+        /// Returns awards in the current tenant whose award date falls today through today + 4 days.
         /// </summary>
         [HttpGet("awards")]
-        [ProducesResponseType(typeof(IEnumerable<AwardDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(IEnumerable<DashboardAwardDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -103,7 +112,7 @@ namespace MobileWebApi.Controllers
             try
             {
                 var tenantId = CurrentOrganisationId;
-                var result = await _mobileDashboardService.GetAwardsAsync(tenantId);
+                var result = await _dashboardService.GetUpcomingAwardsAsync(tenantId);
                 return Ok(result);
             }
             catch (TenantAccessException)
@@ -112,7 +121,12 @@ namespace MobileWebApi.Controllers
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, LogMessages.MobileDashboard.ErrorFetchingAwards);
+                Logger.LogException(
+                    ExceptionCodes.Dashboard.GetAwards,
+                    nameof(GetAwards),
+                    ex,
+                    CurrentUserId);
+
                 return StatusCode(StatusCodes.Status500InternalServerError, new
                 {
                     message = GeneralMessages.UnexpectedError

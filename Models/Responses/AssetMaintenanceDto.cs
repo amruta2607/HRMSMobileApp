@@ -1,4 +1,4 @@
-namespace MobileWebApi.Models.Responses
+﻿namespace MobileWebApi.Models.Responses
 {
     /// <summary>
     /// Represents a single asset maintenance record for the current tenant.

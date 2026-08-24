@@ -23,8 +23,9 @@ namespace MobileWebApi.Interfaces
             string? coordinateOut,
             string? linkOut,
             string? punchOutImage,
-            int userId = 0,
-            string? punchOutReason = null);
+            bool manual,
+            string? punchOutReason,
+            int userId = 0);
 
         /// <summary>
         /// Gets today's punch record for an employee with tenant filter.
@@ -40,6 +41,21 @@ namespace MobileWebApi.Interfaces
         /// Inserts a punch tracking record.
         /// </summary>
         Task InsertPunchTrackingAsync(PunchTracking tracking);
+
+        /// <summary>
+        /// Updates punch-out on the Punch table (latest out time).
+        /// </summary>
+        Task UpdatePunchOutAsync(
+            int punchId,
+            DateTime punchOut,
+            double? duration,
+            int userId,
+            string outSource,
+            string? coordinateOut,
+            string? linkOut,
+            string? punchOutImage,   
+            bool manual,
+            string? punchOutReason);
 
         /// <summary>
         /// Inserts a punch-in and tracking record in a single transaction.
@@ -71,21 +87,6 @@ namespace MobileWebApi.Interfaces
             bool manual,
             string? punchOutReason,
             PunchTracking tracking);
-
-        /// <summary>
-        /// Updates punch-out on the Punch table (latest out time).
-        /// </summary>
-        Task UpdatePunchOutAsync(
-            int punchId,
-            DateTime punchOut,
-            double? duration,
-            int userId,
-            string outSource,
-            string? coordinateOut,
-            string? linkOut,
-            string? punchOutImage,
-            string? punchOutReason = null);
-
         Task<List<DateTime>> GetHolidayDatesAsync(int tenantId, DateTime fromDate, DateTime toDate);
         Task<List<(DateTime FromDate, DateTime ToDate)>> GetApprovedLeaveDateRangesAsync(int employeeId, DateTime fromDate, DateTime toDate);
         
@@ -109,14 +110,7 @@ namespace MobileWebApi.Interfaces
         Task<IEnumerable<AttendanceReport>> GetAttendanceReportsByOrganisationAsync(int organisationId, DateTime dateFrom, DateTime dateTo);
         
         // Delete Attendance
-        /// <summary>
-        /// Gets punch by id for the given tenant.
-        /// </summary>
         Task<Punch?> GetPunchByIdAsync(int id, int tenantId);
-
-        /// <summary>
-        /// Deletes the Punch record.
-        /// </summary>
         Task<bool> DeletePunchAsync(int id, int tenantId);
 
         // Today punch logs (DeviceLog + Punch table)

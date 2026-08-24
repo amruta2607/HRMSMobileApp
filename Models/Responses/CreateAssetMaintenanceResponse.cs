@@ -1,4 +1,4 @@
-namespace MobileWebApi.Models.Responses
+﻿namespace MobileWebApi.Models.Responses
 {
     /// <summary>
     /// Response returned after successfully creating an asset maintenance record.

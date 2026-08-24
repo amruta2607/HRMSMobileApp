@@ -18,5 +18,23 @@ namespace MobileWebApi.Interfaces
             int tenantId,
             IReadOnlyList<LocationTrackingInsertRecord> records,
             int insertUserId);
+
+        /// <summary>
+        /// Returns today's location tracking points for an employee within a tenant,
+        /// ordered chronologically from first to last.
+        /// </summary>
+        Task<IReadOnlyList<LocationTrackingPointRow>> GetTodayByEmployeeIdAsync(
+            int employeeId,
+            int tenantId,
+            DateTime today);
+
+        /// <summary>
+        /// Returns location tracking points for an employee within a tenant on the specified date,
+        /// ordered chronologically from first to last.
+        /// </summary>
+        Task<IReadOnlyList<LocationTrackingPointRow>> GetByEmployeeIdAndDateAsync(
+            int employeeId,
+            int tenantId,
+            DateTime date);
     }
 }

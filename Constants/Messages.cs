@@ -134,12 +134,12 @@ namespace MobileWebApi.Constants
 
         // Error messages
         public const string PunchInAlreadyDone = "Punch In already done for today.";
-        public const string PunchInFailed = "Punch In Failed";
-        public const string CannotPunchOutWithoutPunchIn = "Cannot Punch Out — Punch In not done.";
-        public const string PunchOutAlreadyDone = "Punch Out already done.";
         public const string AlreadyPunchedIn = "Already punched in.";
         public const string AlreadyPunchedOut = "Already punched out.";
         public const string PleasePunchInFirst = "Please Punch In first.";
+        public const string PunchInFailed = "Punch In Failed";
+        public const string CannotPunchOutWithoutPunchIn = "Cannot Punch Out — Punch In not done.";
+        public const string PunchOutAlreadyDone = "Punch Out already done.";
         public const string CalendarDateRequiredForDaily = "CalendarDate is required for daily attendance report.";
         public const string DateRangeRequiredForMonthly = "DateFrom and DateTo are required for monthly attendance report.";
         public const string EmployeeIdRequired = "Employee ID is required.";
@@ -509,6 +509,9 @@ namespace MobileWebApi.Constants
         public const string EmployeeIdRequired = "EmployeeId is required.";
         public const string DisputeCategoryIdRequired = "DisputeCategoryId is required.";
         public const string InvalidRequestedPunchTimes = "RequestedPunchInTime must be less than or equal to RequestedPunchOutTime.";
+        public const string PunchOutCannotBeBeforePunchIn = "Punch-Out time cannot be before Punch-In time.";
+        public const string PunchInCannotBeAfterPunchOut = "Punch-In time cannot be after Punch-Out time.";
+        public const string PunchOutMustBeLaterThanPunchIn = "Punch-Out time must be later than Punch-In time.";
         public const string InvalidPunchId = "PunchId is invalid or does not belong to the employee.";
         public const string EmployeeNotFound = "Employee not found.";
         public const string OnlyOneDisputePerCategoryDate = "A regularization request for this dispute category already exists for the selected date.";
@@ -612,12 +615,14 @@ namespace MobileWebApi.Constants
     {
         public const string LocationRecordedSuccessfully = "Location recorded successfully.";
         public const string UserIdRequired = "User ID is required.";
+        public const string UserNotFound = "User not found.";
         public const string LatitudeRequired = "Latitude is required.";
         public const string LongitudeRequired = "Longitude is required.";
         public const string InvalidLatitude = "Latitude must be between -90 and 90.";
         public const string InvalidLongitude = "Longitude must be between -180 and 180.";
         public const string TrackingDateTimeRequired = "Tracking date and time is required.";
         public const string EmployeeNotFound = "Employee not found.";
+        public const string EmployeeNotAssociatedWithUser = "No employee is associated with the specified user.";
         public const string TenantNotFound = "Tenant not found.";
         public const string EmployeeDoesNotBelongToTenant = "Employee does not belong to the specified tenant.";
         public const string EmployeeNotPunchedIn = "Employee is not currently punched in.";
@@ -628,6 +633,10 @@ namespace MobileWebApi.Constants
         public const string BatchPartiallyProcessed = "Location batch processed with some invalid records skipped.";
         public const string BatchAllRecordsInvalid = "All location records in the batch are invalid.";
         public const string FailedToRecordLocationBatch = "Failed to record location batch.";
+        public const string TodayPathFetchedSuccessfully = "Today's location tracking path fetched successfully.";
+        public const string DateRequired = "Date parameter is required.";
+        public const string InvalidDate = "Date is invalid.";
+        public const string PathByDateFetchedSuccessfully = "Location tracking path fetched successfully.";
     }
 
     /// <summary>

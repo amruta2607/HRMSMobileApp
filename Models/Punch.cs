@@ -10,7 +10,6 @@ namespace MobileWebApi.Models
         public double? Duration { get; set; }
         public string? PunchInImage { get; set; }
         public string? PunchOutImage { get; set; }
-        public string? PunchOutReason { get; set; }
         public DateTime InsertDate { get; set; }
         public int InsertUserId { get; set; }
         public DateTime? UpdateDate { get; set; }
@@ -27,5 +26,7 @@ namespace MobileWebApi.Models
         public string? CoordinateOut { get; set; }
         public string? LinkIn { get; set; }
         public string? LinkOut { get; set; }
+        public bool? Manual { get; set; }
+        public string? PunchOutReason { get; set; }
     }
 }

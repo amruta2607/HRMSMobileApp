@@ -34,9 +34,11 @@ namespace MobileWebApi.Swagger
 
 			return controller.Contains("Attendance", StringComparison.OrdinalIgnoreCase) ||
 			       controller.Contains("Dispute", StringComparison.OrdinalIgnoreCase) ||
-			       route.Contains("attendance", StringComparison.OrdinalIgnoreCase) ||
-			       route.Contains("punch", StringComparison.OrdinalIgnoreCase) ||
-			       route.Contains("dispute", StringComparison.OrdinalIgnoreCase);
+			       ((route.Contains("attendance", StringComparison.OrdinalIgnoreCase) ||
+			         route.Contains("punch", StringComparison.OrdinalIgnoreCase) ||
+			         route.Contains("dispute", StringComparison.OrdinalIgnoreCase)) &&
+			        !route.Contains("location-tracking", StringComparison.OrdinalIgnoreCase) &&
+			        !controller.Contains("LocationTracking", StringComparison.OrdinalIgnoreCase));
 		}
 
 		private static void ApplyParameterExamples(OpenApiOperation operation)

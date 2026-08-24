@@ -1,4 +1,4 @@
-namespace MobileWebApi.Models.Responses
+﻿namespace MobileWebApi.Models.Responses
 {
     /// <summary>
     /// Asset option for the Asset Maintenance screen.

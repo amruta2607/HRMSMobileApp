@@ -25,14 +25,14 @@ namespace MobileWebApi.Interfaces
         Task<PunchTracking?> GetLastPunchTrackingAsync(int employeeId, int tenantId, DateTime punchDate);
 
         /// <summary>
-        /// Gets the latest unmatched punch-in tracking row for a punch.
+        /// Gets the latest unmatched IN for a punch (IN after the last OUT, if any).
         /// </summary>
         Task<PunchTracking?> GetLastUnmatchedPunchInAsync(int punchId);
 
         /// <summary>
-        /// Sums completed punch-out session durations (minutes) for a punch.
+        /// Sums Duration (minutes) of all completed OUT PunchTracking rows for a punch.
         /// </summary>
-        Task<double> GetCompletedPunchTrackingDurationSumAsync(int punchId);
+        Task<double> GetCompletedOutDurationSumMinutesAsync(int punchId);
 
         /// <summary>
         /// Gets the punch tracking timeline for the authenticated employee.

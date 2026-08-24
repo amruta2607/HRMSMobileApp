@@ -5,15 +5,10 @@ namespace MobileWebApi.Models.Responses
     /// </summary>
     public class AssetDto
     {
-        // General
+        /// <summary>
+        /// Asset identifier.
+        /// </summary>
         public int Id { get; set; }
-        public string? Number { get; set; }
-        public string? AssetCode { get; set; }
-        public string? QRCodePath { get; set; }
-        public string? QRCodeText { get; set; }
-        public DateTime? QRCodeGeneratedDate { get; set; }
-        public string? AssetName { get; set; }
-        public string? Description { get; set; }
 
         // Status & lookups
         public int? AssetStatusId { get; set; }

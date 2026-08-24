@@ -38,7 +38,6 @@ namespace MobileWebApi.Models
         /// Local/server refresh-token expiry in yyyy-MM-ddTHH:mm:ss (no Z, offset, or milliseconds).
         /// </summary>
         public string? RefreshTokenExpiry { get; set; }
-
         public int ExpiresIn { get; set; }
 
         /// <summary>

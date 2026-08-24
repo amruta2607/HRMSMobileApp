@@ -1,4 +1,4 @@
-namespace MobileWebApi.Models
+﻿namespace MobileWebApi.Models
 {
     /// <summary>
     /// Represents a single stored file reference following the existing HRMS attachment format.

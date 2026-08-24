@@ -1,4 +1,4 @@
-using MobileWebApi.Constants;
+﻿using MobileWebApi.Constants;
 
 namespace MobileWebApi.Models.Requests
 {

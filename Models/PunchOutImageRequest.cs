@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 
 namespace MobileWebApi.Models
 {
@@ -11,7 +10,7 @@ namespace MobileWebApi.Models
         public int empId { get; set; }
         public DateTime punchTime { get; set; }
 
-        [FromForm(Name = "punchOutImage")]
-        public IFormFile? PunchOutImage { get; set; }
+        public IFormFile? image { get; set; }
     }
 }
+
