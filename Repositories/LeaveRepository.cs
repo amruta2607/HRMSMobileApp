@@ -40,8 +40,10 @@ namespace MobileWebApi.Repositories
                 leaveRequest.LeaveRequestStatus,
                 leaveRequest.DelegatedEmployeeId,
                 leaveRequest.OrganisationId,
-                leaveRequest.InsertUserId
-            });
+                leaveRequest.InsertUserId,
+
+				leaveRequest.HalfDayType
+			});
         }
 
         /// <summary>

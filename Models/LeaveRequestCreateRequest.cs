@@ -40,11 +40,12 @@ namespace MobileWebApi.Models
         /// Reason for leave (maps to Description)
         /// </summary>
         public string? reason { get; set; }
+		public string? HalfDayType { get; set; }
 
-        /// <summary>
-        /// Attachment file path or base64 content (optional)
-        /// </summary>
-        public string? attachment { get; set; }
+		/// <summary>
+		/// Attachment file path or base64 content (optional)
+		/// </summary>
+		public string? attachment { get; set; }
 
         /// <summary>
         /// User ID from the mobile app (will be resolved to EmployeeId)
