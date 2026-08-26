@@ -24,8 +24,9 @@ namespace MobileWebApi.Models
         /// User ID to filter leave requests for specific user
         /// </summary>
         public int? user { get; set; }
+		public string? HalfDayType { get; set; }
 
-        
-    }
+
+	}
 }
 

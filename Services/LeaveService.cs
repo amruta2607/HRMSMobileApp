@@ -127,7 +127,8 @@ namespace MobileWebApi.Services
 					LeaveRequestStatus = STATUS_ID_SUBMIT,
 					OrganisationId = request.organization,
 					InsertUserId = request.user,
-					InsertDate = DateTime.Now
+					InsertDate = DateTime.Now,
+					HalfDayType=request.HalfDayType
 				};
 
 				var newId = await _leaveRepository.CreateLeaveRequestAsync(leaveRequest);
