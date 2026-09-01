@@ -5,7 +5,7 @@ namespace MobileWebApi.Models
     /// </summary>
     public class TenantConfigurationRow
     {
-       
         public string? Logo { get; set; }
+        public bool? IsPunchAllowedOnHolidayAndWeekend { get; set; }
     }
 }

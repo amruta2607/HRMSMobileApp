@@ -10,6 +10,11 @@ namespace MobileWebApi.Interfaces
 		/// Loads TenantConfiguration row for the tenant, including company logo.
 		/// </summary>
 		Task<TenantConfigurationRow?> GetTenantConfigurationRowByTenantIdAsync(int tenantId);
+
+		/// <summary>
+		/// Loads attendance-related TenantConfiguration settings for the tenant.
+		/// </summary>
+		Task<TenantConfigurationRow?> GetAttendanceTenantConfigurationByTenantIdAsync(int tenantId);
 	}
 
 }

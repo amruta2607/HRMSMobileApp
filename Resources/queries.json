@@ -286,6 +286,7 @@
     "GetHolidaysByTenantIdAndDateRange": "SELECT Id, Name, Date, Description, TenantId FROM Holiday WHERE TenantId = @TenantId AND Date BETWEEN @FromDate AND @ToDate",
     "GetByTenantId": "SELECT TOP 1 t.IsGeoLocationEnabled, t.IsGeoFencingEnabled, g.IsActive, g.Latitude, g.Longitude, g.Radius, g.LocationAddress FROM TenantConfiguration t INNER JOIN TenantBranchGeoFencing g ON t.TenantConfigurationId = g.TenantConfigurationId WHERE t.TenantId = @TenantId AND g.BranchId = @BranchId AND g.IsActive = 1",
     "GetTenantConfigurationRowByTenantId": "SELECT TOP 1 TenantConfigurationId, TenantId, Logo FROM TenantConfiguration WHERE TenantId = @TenantId",
+    "GetAttendanceTenantConfigurationByTenantId": "SELECT TOP 1 IsPunchAllowedOnHolidayAndWeekend FROM TenantConfiguration WHERE TenantId = @TenantId",
     "GetMobileTenantConfigurationByTenantId": "SELECT mtc.Id, mtc.TenantId, mtc.IsEnableMobile, mtc.IsAttendanceEnabled, mtc.IsLeaveEnabled, mtc.IsPayrollEnabled, mtc.InsertDate, mtc.InsertUserId, mtc.UpdateDate, mtc.UpdateUserId FROM MobileTenantConfiguration mtc WHERE mtc.TenantId = @TenantId",
     "GetGeoTenantLocationByTenantId": "SELECT g.Id, g.BranchId, b.Name AS BranchName, g.Longitude, g.Latitude, g.Radius, g.IsActive, g.LocationAddress, g.TenantId AS OrganisationId FROM TenantBranchGeoFencing g INNER JOIN Branch b ON g.BranchId = b.Id WHERE g.TenantId = @TenantId AND g.BranchId = @BranchId AND g.IsActive = 1",
 
