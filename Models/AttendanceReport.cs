@@ -5,8 +5,8 @@ namespace MobileWebApi.Models
     /// </summary>
     public class AttendanceReport
     {
-        public int Id { get; set; }
-        public string? EmployeeNumber { get; set; }
+		public int? PunchId { get; set; }
+		public string? EmployeeNumber { get; set; }
         public string? EmployeeName { get; set; }
         public DateTime CalendarDate { get; set; }
         public DateTime? PunchIn { get; set; }

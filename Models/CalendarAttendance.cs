@@ -23,7 +23,8 @@ namespace MobileWebApi.Models
         public bool IsAbsent { get; set; }
         public bool IsLeave { get; set; }
         public bool IsHoliday { get; set; }
-        public DateTime? PunchIn { get; set; }
+		public int? PunchId { get; set; }
+		public DateTime? PunchIn { get; set; }
         public DateTime? PunchOut { get; set; }
         public double? WorkingHours { get; set; }
         public string? Status { get; set; } // "Present", "Absent", "Leave", "Holiday", "Week Off", "Future"
