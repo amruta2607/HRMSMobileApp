@@ -261,6 +261,10 @@
 
     "AttendanceOverview_GetDayOffs": "SELECT DISTINCT DayOffId FROM TenantConfiguredDayOffDays WHERE TenantConfigurationId IN (SELECT TenantConfigurationId FROM TenantConfiguration WHERE TenantId = @TenantId)",
 
+    "AttendanceOverview_GetEmployeeLevelAttendance": "SELECT TOP 1 WeekOffList, PartialWeekOffJson FROM EmployeeLevelAttendance WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId",
+
+    "AttendanceOverview_GetTenantPartialWeekOffDays": "SELECT p.DayOffId, p.WeekOccurrence FROM TenantConfiguredPartialWeekOffDays p INNER JOIN TenantConfiguration tc ON tc.TenantConfigurationId = p.TenantConfigurationId WHERE tc.TenantId = @TenantId",
+
     "AttendanceOverview_GetActualHours": "SELECT ISNULL(SUM(CASE WHEN PunchIn IS NOT NULL AND PunchOut IS NOT NULL AND DATEDIFF(SECOND, PunchIn, PunchOut) > 0 THEN CAST(DATEDIFF(SECOND, PunchIn, PunchOut) AS FLOAT) / 3600.0 ELSE 0 END), 0) AS TotalHours FROM Punch WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND CAST(PunchDate AS DATE) >= @FromDate AND CAST(PunchDate AS DATE) <= @ToDate AND PunchOut IS NOT NULL",
 
     "GetDisputeCategories": "SELECT Id, CategoryName, IsActive, CreatedOn FROM DisputeCategory WHERE IsActive = 1 ORDER BY CategoryName",

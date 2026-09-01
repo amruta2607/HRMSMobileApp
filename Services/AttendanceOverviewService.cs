@@ -7,6 +7,7 @@ using MobileWebApi.Resources;
 using MobileWebApi.Helper;
 using System;
 using System.Data;
+using System.Linq;
 
 namespace MobileWebApi.Services
 {
@@ -118,7 +119,7 @@ namespace MobileWebApi.Services
                 }
 
                 // 2. Calculate working days between FromDate and ToDate excluding days off
-                var workingDays = await CalculateWorkingDaysAsync(connection, request.organisationId, fromDate, toDate);
+                var workingDays = await CalculateWorkingDaysAsync(connection, employeeId.Value, request.organisationId, fromDate, toDate);
 
                 _logger.LogInformation(LogMessages.Attendance.AttendanceOverviewWorkingHoursAndDays, workingHours.Value, workingDays);
 
@@ -167,24 +168,20 @@ namespace MobileWebApi.Services
             return result;
         }
 
-        private async Task<int> CalculateWorkingDaysAsync(IDbConnection connection, int organisationId, DateTime fromDate, DateTime toDate)
+        private async Task<int> CalculateWorkingDaysAsync(
+            IDbConnection connection,
+            int employeeId,
+            int organisationId,
+            DateTime fromDate,
+            DateTime toDate)
         {
-            // Get all day off IDs for this organisation
-            // Note: DayOffId mapping may vary by system. Common patterns:
-            // Pattern 1: 1=Sunday, 2=Monday, 3=Tuesday, 4=Wednesday, 5=Thursday, 6=Friday, 7=Saturday
-            // Pattern 2: 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday
-            string getDayOffsQuery = _queryProvider.Get("AttendanceOverview_GetDayOffs");
+            var weekOffConfig = await GetWeekOffConfigurationAsync(connection, employeeId, organisationId);
 
-            var dayOffIds = await connection.QueryAsync<int>(getDayOffsQuery, new { TenantId = organisationId });
-            var dayOffSet = dayOffIds.ToHashSet();
+            _logger.LogInformation(
+                LogMessages.Attendance.AttendanceOverviewDayOffIds,
+                organisationId,
+                string.Join(", ", weekOffConfig.CompleteWeekOffDays));
 
-            _logger.LogInformation(LogMessages.Attendance.AttendanceOverviewDayOffIds, organisationId, string.Join(", ", dayOffSet));
-
-            // Calculate working days excluding day offs
-            // DayOfWeek enum: Sunday=0, Monday=1, Tuesday=2, Wednesday=3, Thursday=4, Friday=5, Saturday=6
-            // DayOffId mapping: 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday
-            // DayOffId directly matches DayOfWeek enum value (no conversion needed)
-            
             int workingDays = 0;
             int totalDays = 0;
             var currentDate = fromDate.Date;
@@ -193,19 +190,15 @@ namespace MobileWebApi.Services
             {
                 totalDays++;
                 int dayOfWeek = (int)currentDate.DayOfWeek;
-                
-                // DayOffId directly matches DayOfWeek enum value (0-6)
-                int dayOffId = dayOfWeek;
+                bool isDayOff = WeekOffHelper.IsWeeklyOff(currentDate, weekOffConfig);
 
-                // Check if this day is a day off
-                bool isDayOff = dayOffSet.Contains(dayOffId);
                 if (!isDayOff)
                 {
                     workingDays++;
                 }
 
                 _logger.LogDebug(LogMessages.Attendance.AttendanceOverviewDateDetails,
-                    currentDate.ToString("yyyy-MM-dd"), currentDate.DayOfWeek, dayOfWeek, dayOffId, isDayOff, workingDays);
+                    currentDate.ToString("yyyy-MM-dd"), currentDate.DayOfWeek, dayOfWeek, dayOfWeek, isDayOff, workingDays);
 
                 currentDate = currentDate.AddDays(1);
             }
@@ -214,6 +207,41 @@ namespace MobileWebApi.Services
                 fromDate.ToString("yyyy-MM-dd"), toDate.ToString("yyyy-MM-dd"), totalDays, workingDays, totalDays - workingDays);
 
             return workingDays;
+        }
+
+        private async Task<WeekOffConfiguration> GetWeekOffConfigurationAsync(
+            IDbConnection connection,
+            int employeeId,
+            int organisationId)
+        {
+            string employeeConfigQuery = _queryProvider.Get("AttendanceOverview_GetEmployeeLevelAttendance");
+            var employeeConfig = await connection.QuerySingleOrDefaultAsync<EmployeeLevelAttendanceWeekOffDto>(
+                employeeConfigQuery,
+                new { EmployeeId = employeeId, TenantId = organisationId });
+
+            if (employeeConfig != null)
+            {
+                var completeWeekOffDays = WeekOffHelper.ParseCompleteWeekOffs(employeeConfig.WeekOffList);
+                List<PartialWeekOffDayItem>? partialWeekOffDays = WeekOffHelper.HasPartialWeekOffJson(employeeConfig.PartialWeekOffJson)
+                    ? WeekOffHelper.ParsePartialWeekOffs(employeeConfig.PartialWeekOffJson)
+                    : null;
+
+                return WeekOffHelper.BuildConfiguration(completeWeekOffDays, partialWeekOffDays);
+            }
+
+            string getDayOffsQuery = _queryProvider.Get("AttendanceOverview_GetDayOffs");
+            var tenantDayOffIds = (await connection.QueryAsync<int>(getDayOffsQuery, new { TenantId = organisationId })).ToList();
+
+            string partialWeekOffQuery = _queryProvider.Get("AttendanceOverview_GetTenantPartialWeekOffDays");
+            var tenantPartialWeekOffDays = (await connection.QueryAsync<PartialWeekOffDayItem>(
+                partialWeekOffQuery,
+                new { TenantId = organisationId })).ToList();
+
+            List<PartialWeekOffDayItem>? partialWeekOffDaysForTenant = tenantPartialWeekOffDays.Count > 0
+                ? tenantPartialWeekOffDays
+                : null;
+
+            return WeekOffHelper.BuildConfiguration(tenantDayOffIds, partialWeekOffDaysForTenant);
         }
 
         private async Task<double> GetActualHoursAsync(IDbConnection connection, int employeeId, int organisationId, DateTime fromDate, DateTime toDate)
