@@ -112,6 +112,8 @@ namespace MobileWebApi.Constants
             public const string FetchingTodayPunchLogs = "Fetching today's punch logs for user {UserId}";
             public const string FetchingTenantWeekOffDays = "Fetching tenant week-off days for tenant {TenantId}";
             public const string ErrorFetchingTenantWeekOffDays = "Error fetching tenant week-off days for tenant {TenantId}";
+            public const string ErrorFetchingEmployeePartialWeekOff = "Error fetching employee partial week-off configuration for employee {EmployeeId}";
+            public const string InvalidEmployeePartialWeekOffJson = "Invalid or unusable PartialWeekOffJson for employee {EmployeeId}";
         }
 
         // Leave related logs
