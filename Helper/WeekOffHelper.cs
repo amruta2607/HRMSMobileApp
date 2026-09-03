@@ -59,11 +59,19 @@ namespace MobileWebApi.Helper
             if (config.CompleteWeekOffDays.Contains(dayOfWeek))
                 return true;
 
-            if (config.PartialWeekOffDays == null || config.PartialWeekOffDays.Count == 0)
+            return IsPartialWeekOff(date, config.PartialWeekOffDays);
+        }
+
+        public static bool IsPartialWeekOff(DateTime date, IEnumerable<PartialWeekOffDayItem>? partialWeekOffDays)
+        {
+            if (partialWeekOffDays == null)
                 return false;
 
+            var dayOfWeek = (int)date.DayOfWeek;
             var occurrence = GetWeekdayOccurrenceInMonth(date);
-            return config.PartialWeekOffDays.Any(p =>
+
+            return partialWeekOffDays.Any(p =>
+                p != null &&
                 NormalizeDayOfWeek(p.DayOffId) == dayOfWeek &&
                 p.WeekOccurrence == occurrence);
         }

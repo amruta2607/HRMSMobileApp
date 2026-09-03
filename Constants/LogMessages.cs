@@ -112,6 +112,8 @@ namespace MobileWebApi.Constants
             public const string FetchingTodayPunchLogs = "Fetching today's punch logs for user {UserId}";
             public const string FetchingTenantWeekOffDays = "Fetching tenant week-off days for tenant {TenantId}";
             public const string ErrorFetchingTenantWeekOffDays = "Error fetching tenant week-off days for tenant {TenantId}";
+            public const string ErrorFetchingEmployeePartialWeekOff = "Error fetching employee partial week-off configuration for employee {EmployeeId}";
+            public const string InvalidEmployeePartialWeekOffJson = "Invalid or unusable PartialWeekOffJson for employee {EmployeeId}";
         }
 
         // Leave related logs
@@ -550,6 +552,9 @@ namespace MobileWebApi.Constants
 			public const string ApplyingPunchCorrection = "Applying punch correction for dispute {DisputeId}, PunchId {PunchId}";
 			public const string PunchCorrectionApplied = "Punch correction applied for PunchId {PunchId}. PunchIn: {PunchIn}, PunchOut: {PunchOut}, Duration: {Duration}";
 			public const string PunchCorrectionSkipped = "Punch correction skipped for dispute {DisputeId}: {Reason}";
+			public const string CreatingPunchForAttendanceNotMarked = "Creating Punch for Attendance Not Marked dispute {DisputeId} on {DisputeDate}";
+			public const string PunchCreatedForAttendanceNotMarked = "Punch created for Attendance Not Marked dispute {DisputeId}. PunchId: {PunchId}, PunchIn: {PunchIn}, PunchOut: {PunchOut}, Duration: {Duration}";
+			public const string ExistingPunchUsedForAttendanceNotMarked = "Existing Punch {PunchId} found for Attendance Not Marked dispute {DisputeId}; applying correction instead of insert";
 			public const string DisputeStatusUpdated = "EmployeeDispute {DisputeId} status updated to {Status}";
 			public const string ErrorApprovingDispute = "Error approving regularization dispute {DisputeId}";
 			public const string ErrorRejectingDispute = "Error rejecting regularization dispute {DisputeId}";
@@ -625,8 +630,13 @@ namespace MobileWebApi.Constants
 
             // Upload
             public const string UploadingPunchImage = "Uploading punch image to blob '{BlobName}' for employee {EmpId}.";
-            public const string PunchImageUploadedSuccessfully = "Punch image uploaded successfully for employee {EmpId}. Url: {BlobUrl}";
+            public const string PunchImageUploadedSuccessfully = "Punch image uploaded successfully for employee {EmpId}. Blob: {BlobName}";
             public const string ErrorUploadingPunchImage = "Error uploading punch image for employee {EmpId}.";
+
+            // SAS (read-only temporary URLs for private punch images)
+            public const string SasInvalidBlobReference = "Unable to resolve blob name from stored punch image reference for SAS generation.";
+            public const string SasCannotGenerate = "Blob client cannot generate SAS for blob '{BlobName}'.";
+            public const string SasGenerationFailed = "Failed to generate read SAS for a punch image. Returning stored URL unchanged.";
 
             // Cleanup job
             public const string CleanupServiceDisabled = "BlobCleanupService is disabled due to missing/invalid AzureBlob configuration.";

@@ -15,6 +15,9 @@ namespace MobileWebApi.Helper
         public static bool EqualsName(string? categoryName, string expected) =>
             string.Equals((categoryName ?? string.Empty).Trim(), expected, StringComparison.OrdinalIgnoreCase);
 
+        public static bool IsAttendanceNotMarked(string? categoryName) =>
+            EqualsName(categoryName, AttendanceNotMarked);
+
         public static bool UpdatesPunchIn(string? categoryName) =>
             EqualsName(categoryName, WrongCheckInTime) || EqualsName(categoryName, AttendanceNotMarked);
 

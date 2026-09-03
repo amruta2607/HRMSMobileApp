@@ -58,6 +58,7 @@ namespace MobileWebApi.Interfaces
         // Calendar-based Attendance
         Task<IEnumerable<AttendanceReport>> GetAttendanceByCalendarAsync(int employeeId, int month, int year);
         Task<Employee?> GetEmployeeByIdAsync(int employeeId);
+        Task<EmployeeLevelAttendanceWeekOffDto?> GetEmployeeLevelAttendanceWeekOffAsync(int employeeId, int tenantId);
         
         // Organization-based Attendance Reports
         Task<IEnumerable<AttendanceReport>> GetAttendanceReportsByOrganisationAsync(int organisationId, DateTime dateFrom, DateTime dateTo);

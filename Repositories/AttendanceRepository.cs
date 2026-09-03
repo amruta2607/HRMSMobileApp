@@ -334,6 +334,18 @@ namespace MobileWebApi.Repositories
         }
 
         /// <summary>
+        /// Get employee-level week-off configuration (WeekOffList and PartialWeekOffJson).
+        /// </summary>
+        public async Task<EmployeeLevelAttendanceWeekOffDto?> GetEmployeeLevelAttendanceWeekOffAsync(int employeeId, int tenantId)
+        {
+            using var conn = _context.CreateConnection();
+            string query = _queryProvider.Get("AttendanceOverview_GetEmployeeLevelAttendance");
+
+            return await conn.QueryFirstOrDefaultAsync<EmployeeLevelAttendanceWeekOffDto>(query,
+                new { EmployeeId = employeeId, TenantId = tenantId });
+        }
+
+        /// <summary>
         /// Get attendance reports by organisation ID
         /// </summary>
         public async Task<IEnumerable<AttendanceReport>> GetAttendanceReportsByOrganisationAsync(int organisationId, DateTime dateFrom, DateTime dateTo)
