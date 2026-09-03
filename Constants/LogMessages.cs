@@ -630,8 +630,13 @@ namespace MobileWebApi.Constants
 
             // Upload
             public const string UploadingPunchImage = "Uploading punch image to blob '{BlobName}' for employee {EmpId}.";
-            public const string PunchImageUploadedSuccessfully = "Punch image uploaded successfully for employee {EmpId}. Url: {BlobUrl}";
+            public const string PunchImageUploadedSuccessfully = "Punch image uploaded successfully for employee {EmpId}. Blob: {BlobName}";
             public const string ErrorUploadingPunchImage = "Error uploading punch image for employee {EmpId}.";
+
+            // SAS (read-only temporary URLs for private punch images)
+            public const string SasInvalidBlobReference = "Unable to resolve blob name from stored punch image reference for SAS generation.";
+            public const string SasCannotGenerate = "Blob client cannot generate SAS for blob '{BlobName}'.";
+            public const string SasGenerationFailed = "Failed to generate read SAS for a punch image. Returning stored URL unchanged.";
 
             // Cleanup job
             public const string CleanupServiceDisabled = "BlobCleanupService is disabled due to missing/invalid AzureBlob configuration.";

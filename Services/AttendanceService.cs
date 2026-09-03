@@ -50,6 +50,42 @@ namespace MobileWebApi.Services
             }
         }
 
+        /// <summary>
+        /// Converts a stored private blob URL into a temporary read-only SAS URL for API clients.
+        /// </summary>
+        private string? ToClientPunchImageUrl(string? storedUrl)
+            => _blobService.GenerateReadSasUrl(storedUrl);
+
+        private void ApplyImageSasUrls(AttendanceReport report)
+        {
+            report.PunchInImage = ToClientPunchImageUrl(report.PunchInImage);
+            report.PunchOutImage = ToClientPunchImageUrl(report.PunchOutImage);
+        }
+
+        private void ApplyImageSasUrls(IEnumerable<AttendanceReport> reports)
+        {
+            foreach (var report in reports)
+                ApplyImageSasUrls(report);
+        }
+
+        private void ApplyImageSasUrls(IEnumerable<RealTimeAttendanceStatus> records)
+        {
+            foreach (var record in records)
+            {
+                record.PunchInImage = ToClientPunchImageUrl(record.PunchInImage);
+                record.PunchOutImage = ToClientPunchImageUrl(record.PunchOutImage);
+            }
+        }
+
+        private void ApplyImageSasUrls(IEnumerable<TodayPunchLogItem> records)
+        {
+            foreach (var record in records)
+            {
+                record.PunchInImage = ToClientPunchImageUrl(record.PunchInImage);
+                record.PunchOutImage = ToClientPunchImageUrl(record.PunchOutImage);
+            }
+        }
+
         private const string MobileSource = "Mobile";
 
         /// <summary>
@@ -432,7 +468,7 @@ namespace MobileWebApi.Services
             }
         }
 
-        private static void ApplyPunchFields(CalendarDayAttendance dayAttendance, AttendanceReport attendance)
+        private void ApplyPunchFields(CalendarDayAttendance dayAttendance, AttendanceReport attendance)
         {
             dayAttendance.PunchId = attendance.PunchId ?? (attendance.Id > 0 ? attendance.Id : null);
             dayAttendance.PunchIn = attendance.PunchIn;
@@ -444,11 +480,11 @@ namespace MobileWebApi.Services
             dayAttendance.CoordinateOut = attendance.CoordinateOut;
             dayAttendance.LinkIn = attendance.LinkIn;
             dayAttendance.LinkOut = attendance.LinkOut;
-            dayAttendance.PunchInImage = attendance.PunchInImage;
-            dayAttendance.PunchOutImage = attendance.PunchOutImage;
+            dayAttendance.PunchInImage = ToClientPunchImageUrl(attendance.PunchInImage);
+            dayAttendance.PunchOutImage = ToClientPunchImageUrl(attendance.PunchOutImage);
         }
 
-        private static void ApplyPunchFields(AttendanceSummaryDetail detail, AttendanceReport attendance)
+        private void ApplyPunchFields(AttendanceSummaryDetail detail, AttendanceReport attendance)
         {
             detail.PunchId = attendance.PunchId ?? (attendance.Id > 0 ? attendance.Id : null);
             detail.PunchIn = attendance.PunchIn;
@@ -460,8 +496,8 @@ namespace MobileWebApi.Services
             detail.CoordinateOut = attendance.CoordinateOut;
             detail.LinkIn = attendance.LinkIn;
             detail.LinkOut = attendance.LinkOut;
-            detail.PunchInImage = attendance.PunchInImage;
-            detail.PunchOutImage = attendance.PunchOutImage;
+            detail.PunchInImage = ToClientPunchImageUrl(attendance.PunchInImage);
+            detail.PunchOutImage = ToClientPunchImageUrl(attendance.PunchOutImage);
         }
 
         private double? CalculateDurationInMinutes(DateTime? punchIn, DateTime punchOut)
@@ -596,6 +632,7 @@ namespace MobileWebApi.Services
                 var attendanceData = await _repo.GetAttendanceReportAsync(repoRequest);
                 var attendanceList = attendanceData.ToList();
                 EnsurePunchIds(attendanceList);
+                ApplyImageSasUrls(attendanceList);
 
                 // Calculate totals
                 var totalWorkingHours = attendanceList
@@ -655,6 +692,7 @@ namespace MobileWebApi.Services
                 var attendanceData = await _repo.GetEmployeeAttendanceReportAsync(employeeId.Value, dateFrom, dateTo);
                 var attendanceList = attendanceData.ToList();
                 EnsurePunchIds(attendanceList);
+                ApplyImageSasUrls(attendanceList);
 
                 var totalWorkingHours = attendanceList
                     .Where(a => a.WorkingDuration.HasValue)
@@ -701,6 +739,7 @@ namespace MobileWebApi.Services
                 
                 var attendanceData = await _repo.GetRealTimeAttendanceStatusAsync(targetDate, organisationId, branchId, departmentId);
                 var attendanceList = attendanceData.ToList();
+                ApplyImageSasUrls(attendanceList);
 
                 var punchedIn = attendanceList.Count(a => a.IsPunchedIn);
                 var punchedOut = attendanceList.Count(a => a.PunchOut.HasValue);
@@ -742,6 +781,7 @@ namespace MobileWebApi.Services
                 
                 var attendanceData = await _repo.GetCurrentlyPunchedInAsync(targetDate, organisationId, branchId, departmentId);
                 var attendanceList = attendanceData.ToList();
+                ApplyImageSasUrls(attendanceList);
 
                 return new RealTimeAttendanceResponse
                 {
@@ -911,18 +951,7 @@ namespace MobileWebApi.Services
                     }
                     else if (attendanceDict.TryGetValue(currentDate, out var attendance))
                     {
-                        dayAttendance.PunchId = attendance.PunchId ?? (attendance.Id > 0 ? attendance.Id : null);
-                        dayAttendance.PunchIn = attendance.PunchIn;
-                        dayAttendance.PunchOut = attendance.PunchOut;
-                        dayAttendance.WorkingHours = attendance.WorkingDuration;
-                        dayAttendance.InSource = attendance.InSource;
-                        dayAttendance.OutSource = attendance.OutSource;
-                        dayAttendance.CoordinateIn = attendance.CoordinateIn;
-                        dayAttendance.CoordinateOut = attendance.CoordinateOut;
-                        dayAttendance.LinkIn = attendance.LinkIn;
-                        dayAttendance.LinkOut = attendance.LinkOut;
-                        dayAttendance.PunchInImage = attendance.PunchInImage;
-                        dayAttendance.PunchOutImage = attendance.PunchOutImage;
+                        ApplyPunchFields(dayAttendance, attendance);
 
                         var hasPunchIn = attendance.PunchIn.HasValue;
                         var hasPunchOut = attendance.PunchOut.HasValue;
@@ -1092,18 +1121,7 @@ namespace MobileWebApi.Services
                     }
                     else if (attendanceDict.TryGetValue(date, out var attendance))
                     {
-                        detail.PunchId = attendance.PunchId ?? (attendance.Id > 0 ? attendance.Id : null);
-                        detail.PunchIn = attendance.PunchIn;
-                        detail.PunchOut = attendance.PunchOut;
-                        detail.WorkingHours = attendance.WorkingDuration;
-                        detail.InSource = attendance.InSource;
-                        detail.OutSource = attendance.OutSource;
-                        detail.CoordinateIn = attendance.CoordinateIn;
-                        detail.CoordinateOut = attendance.CoordinateOut;
-                        detail.LinkIn = attendance.LinkIn;
-                        detail.LinkOut = attendance.LinkOut;
-                        detail.PunchInImage = attendance.PunchInImage;
-                        detail.PunchOutImage = attendance.PunchOutImage;
+                        ApplyPunchFields(detail, attendance);
                         detail.Status = "Present";
                         presentDays++;
                         
@@ -1186,6 +1204,7 @@ namespace MobileWebApi.Services
                 var attendanceData = await _repo.GetAttendanceReportsByOrganisationAsync(organisationId, dateFrom, dateTo);
                 var attendanceList = attendanceData.ToList();
                 EnsurePunchIds(attendanceList);
+                ApplyImageSasUrls(attendanceList);
 
                 // Calculate totals
                 var totalWorkingHours = attendanceList
@@ -1343,8 +1362,8 @@ namespace MobileWebApi.Services
                     statusData.coordinateOut = punch.CoordinateOut;
                     statusData.linkIn = punch.LinkIn;
                     statusData.linkOut = punch.LinkOut;
-                    statusData.punchInImage = punch.PunchInImage;
-                    statusData.punchOutImage = punch.PunchOutImage;
+                    statusData.punchInImage = ToClientPunchImageUrl(punch.PunchInImage);
+                    statusData.punchOutImage = ToClientPunchImageUrl(punch.PunchOutImage);
                     statusData.punchIn = punch.PunchIn;
                     statusData.punchOut = punch.PunchOut;
                     statusData.duration = punch.Duration;
@@ -1422,6 +1441,7 @@ namespace MobileWebApi.Services
                     .Concat(punchLogs)
                     .OrderBy(l => l.LogDateTime)
                     .ToList();
+                ApplyImageSasUrls(logList);
 
                 return new TodayPunchLogsResponse
                 {
