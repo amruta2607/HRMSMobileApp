@@ -519,6 +519,8 @@ namespace MobileWebApi.Constants
         public const string DisputeAlreadyProcessed = "This regularization request has already been processed.";
         public const string PunchRecordNotFound = "Punch record not found for the regularization request.";
         public const string InvalidApprovedPunchTimes = "Requested punch times are invalid: punch out must be after punch in.";
+        public const string PunchInRequiredForAttendanceNotMarked = "Requested Punch-In time is required to create attendance for Attendance Not Marked.";
+        public const string FailedToCreatePunchForDispute = "Failed to create punch record for the regularization request.";
         public const string DisputeApprovedSuccessfully = "Regularization request approved successfully.";
         public const string DisputeRejectedSuccessfully = "Regularization request rejected successfully.";
         public const string FailedToApproveDispute = "Failed to approve regularization request.";

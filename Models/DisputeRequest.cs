@@ -21,7 +21,7 @@ namespace MobileWebApi.Models
         /// <summary>
         /// Optional punch reference. Defaults to 0 when not provided.
         /// </summary>
-        public int PunchId { get; set; }
+        public int? PunchId { get; set; }
 
         /// <summary>
         /// Requested punch-in time for the disputed attendance.

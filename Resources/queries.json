@@ -275,7 +275,11 @@
 
     "UpdateEmployeeDisputeStatus": "UPDATE EmployeeDispute SET Status = @Status WHERE Id = @Id AND TenantId = @TenantId",
 
+    "UpdateEmployeeDisputePunchId": "UPDATE EmployeeDispute SET PunchId = @PunchId WHERE Id = @Id AND TenantId = @TenantId",
+
     "UpdatePunchForRegularization": "UPDATE Punch SET PunchIn = @PunchIn, PunchOut = @PunchOut, Duration = @Duration, InSource = CASE WHEN @UpdatePunchIn = 1 THEN @InSource ELSE InSource END, OutSource = CASE WHEN @UpdatePunchOut = 1 THEN @OutSource ELSE OutSource END, UpdateDate = GETDATE(), UpdateUserId = @UserId WHERE Id = @PunchId AND TenantId = @TenantId",
+
+    "InsertPunchForRegularization": "INSERT INTO Punch (EmployeeId, PunchDate, PunchIn, PunchOut, Duration, TenantId, InsertDate, InsertUserId, InSource, OutSource) SELECT @EmployeeId, @PunchDate, @PunchIn, @PunchOut, @Duration, e.TenantId, GETDATE(), @InsertUserId, @InSource, @OutSource FROM Employee e WHERE e.Id = @EmployeeId AND e.TenantId = @TenantId; SELECT CAST(SCOPE_IDENTITY() AS INT);",
 
     "InsertDispute": "INSERT INTO EmployeeDispute (EmployeeId, DisputeCategoryId, DisputeDate, Description, Status, CreatedOn, TenantId, PunchId, RequestedPunchInTime, RequestedPunchOutTime) VALUES (@EmployeeId, @DisputeCategoryId, @DisputeDate, @Description, @Status, @CreatedOn, @TenantId, @PunchId, @RequestedPunchInTime, @RequestedPunchOutTime); SELECT CAST(SCOPE_IDENTITY() AS INT)",
 

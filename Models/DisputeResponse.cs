@@ -41,7 +41,7 @@ namespace MobileWebApi.Models
         public DateTime DisputeDate { get; set; }
         public string Description { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
-        public int PunchId { get; set; }
+        public int? PunchId { get; set; }
         public DateTime? RequestedPunchInTime { get; set; }
         public DateTime? RequestedPunchOutTime { get; set; }
         public DateTime CreatedOn { get; set; }

@@ -158,10 +158,12 @@ namespace MobileWebApi.Services
 				// Optional integers default to 0 when null/not provided
 				var punchId = request.PunchId;
 				Punch? punch = null;
-
-				if (punchId > 0)
+				if (punchId.HasValue && punchId.Value > 0)
 				{
-					punch = await _attendanceRepository.GetPunchByIdAsync(punchId, tenantId);
+					punch = await _attendanceRepository.GetPunchByIdAsync(
+						punchId.Value,
+						tenantId);
+
 					if (punch == null || punch.EmployeeId != employeeId.Value)
 					{
 						return Fail(DisputeMessages.InvalidPunchId);
@@ -306,7 +308,8 @@ namespace MobileWebApi.Services
 		/// Effective Punch-In = requested in if provided, else existing Punch.PunchIn.
 		/// Effective Punch-Out = requested out if provided, else existing Punch.PunchOut.
 		/// When both effective values exist they must be strictly earlier/later (full DateTime, overnight-safe).
-		/// Skips when there is not enough Punch-In/Punch-Out information (e.g. Attendance Not Marked with no punch).
+		/// For Attendance Not Marked (no existing Punch), validates requested times against each other only.
+		/// Skips when there is not enough Punch-In/Punch-Out information.
 		/// </summary>
 		private static string? GetEffectivePunchTimeValidationError(
 			DateTime? requestedPunchIn,

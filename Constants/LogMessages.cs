@@ -552,6 +552,9 @@ namespace MobileWebApi.Constants
 			public const string ApplyingPunchCorrection = "Applying punch correction for dispute {DisputeId}, PunchId {PunchId}";
 			public const string PunchCorrectionApplied = "Punch correction applied for PunchId {PunchId}. PunchIn: {PunchIn}, PunchOut: {PunchOut}, Duration: {Duration}";
 			public const string PunchCorrectionSkipped = "Punch correction skipped for dispute {DisputeId}: {Reason}";
+			public const string CreatingPunchForAttendanceNotMarked = "Creating Punch for Attendance Not Marked dispute {DisputeId} on {DisputeDate}";
+			public const string PunchCreatedForAttendanceNotMarked = "Punch created for Attendance Not Marked dispute {DisputeId}. PunchId: {PunchId}, PunchIn: {PunchIn}, PunchOut: {PunchOut}, Duration: {Duration}";
+			public const string ExistingPunchUsedForAttendanceNotMarked = "Existing Punch {PunchId} found for Attendance Not Marked dispute {DisputeId}; applying correction instead of insert";
 			public const string DisputeStatusUpdated = "EmployeeDispute {DisputeId} status updated to {Status}";
 			public const string ErrorApprovingDispute = "Error approving regularization dispute {DisputeId}";
 			public const string ErrorRejectingDispute = "Error rejecting regularization dispute {DisputeId}";

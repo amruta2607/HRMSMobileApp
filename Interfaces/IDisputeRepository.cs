@@ -11,8 +11,8 @@ namespace MobileWebApi.Interfaces
         Task<int> InsertDisputeAsync(EmployeeDispute dispute);
 
         /// <summary>
-        /// On final approval: set EmployeeDispute.Status = Approved and apply punch correction
-        /// (mirrors Web ApproveHelper.ApplyPunchCorrectionIfNeeded) in one transaction.
+        /// On final approval: apply punch correction or create Punch for Attendance Not Marked,
+        /// then set EmployeeDispute.Status = Approved in one transaction.
         /// </summary>
         Task<(bool Success, string Message)> ApproveDisputeAndApplyPunchCorrectionAsync(
             int disputeId,
