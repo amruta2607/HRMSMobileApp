@@ -1005,7 +1005,7 @@ namespace MobileWebApi.Controllers
                 Longitude = isGeoFencingEnabled ? tenantConfig?.Longitude : null,
                 Radius = isGeoFencingEnabled ? tenantConfig?.Radius : null,
                 LocationAddress = isGeoFencingEnabled ? tenantConfig?.LocationAddress : null,
-                IsActive = tenantConfig?.IsActive ?? false,
+                IsActive = user.IsActive,
                 ModuleAccess = moduleAccess,
                 WorkRoles = workRoles != null
                     ? workRoles.ToList()
