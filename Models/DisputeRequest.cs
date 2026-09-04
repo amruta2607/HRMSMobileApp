@@ -19,7 +19,7 @@ namespace MobileWebApi.Models
         public string Description { get; set; } = string.Empty;
 
         /// <summary>
-        /// Optional punch reference. Defaults to 0 when not provided.
+        /// Optional punch reference. Null is allowed for Attendance Not Marked (CategoryId 4).
         /// </summary>
         public int? PunchId { get; set; }
 

@@ -12,6 +12,7 @@ namespace MobileWebApi.Repositories
     public class DisputeRepository : IDisputeRepository
     {
         private const string ManualSource = "Manual";
+        private const int AttendanceNotMarkedCategoryId = 4;
 
         private readonly DapperContext _context;
         private readonly ILogger<DisputeRepository> _logger;
@@ -274,22 +275,35 @@ namespace MobileWebApi.Repositories
                 return (true, DisputeMessages.DisputeApprovedSuccessfully);
             }
 
-            // Attendance Not Marked with no PunchId: create (or reuse same-date) Punch
-            if (dispute.PunchId <= 0)
-            {
-                if (AttendanceDisputeCategories.IsAttendanceNotMarked(categoryName))
-                {
-                    return await CreateOrCorrectPunchForAttendanceNotMarkedAsync(
-                        conn, tx, dispute, tenantId, updateUserId, categoryName, hasRequestedIn, hasRequestedOut);
-                }
+            _logger.LogInformation(
+                "Dispute approval: DisputeId={DisputeId}, EmployeeId={EmployeeId}, " +
+                "CategoryId={CategoryId}, CategoryName={CategoryName}, PunchId={PunchId}",
+                dispute.Id,
+                dispute.EmployeeId,
+                dispute.DisputeCategoryId,
+                categoryName,
+                dispute.PunchId);
 
+            // Attendance Not Marked (CategoryId 4): create or correct Punch even when PunchId is NULL.
+            // Must run before GetPunchById — nullable PunchId must not yield PunchRecordNotFound.
+            if (dispute.DisputeCategoryId == AttendanceNotMarkedCategoryId)
+            {
+                // Prefer CategoryId over name; ensure flags resolve if name lookup failed
+                categoryName ??= AttendanceDisputeCategories.AttendanceNotMarked;
+                return await CreateOrCorrectPunchForAttendanceNotMarkedAsync(
+                    conn, tx, dispute, tenantId, updateUserId, categoryName, hasRequestedIn, hasRequestedOut);
+            }
+
+            // Other categories require an existing Punch reference
+            if (!dispute.PunchId.HasValue || dispute.PunchId.Value <= 0)
+            {
                 _logger.LogInformation(LogMessages.Dispute.PunchCorrectionSkipped, dispute.Id, "PunchId is missing or zero");
                 return (true, DisputeMessages.DisputeApprovedSuccessfully);
             }
 
             var punch = await conn.QueryFirstOrDefaultAsync<Punch>(
                 _queryProvider.Get("GetPunchById"),
-                new { Id = dispute.PunchId, TenantId = tenantId },
+                new { Id = dispute.PunchId.Value, TenantId = tenantId },
                 tx);
 
             if (punch == null)
@@ -298,7 +312,7 @@ namespace MobileWebApi.Repositories
             if (punch.EmployeeId != dispute.EmployeeId)
                 return (false, DisputeMessages.InvalidPunchId);
 
-            _logger.LogInformation(LogMessages.Dispute.ApplyingPunchCorrection, dispute.Id, dispute.PunchId);
+            _logger.LogInformation(LogMessages.Dispute.ApplyingPunchCorrection, dispute.Id, dispute.PunchId.Value);
 
             var (updatePunchIn, updatePunchOut) = ResolvePunchUpdateFlags(categoryName, hasRequestedIn, hasRequestedOut);
 
@@ -325,7 +339,7 @@ namespace MobileWebApi.Repositories
                 _queryProvider.Get("UpdatePunchForRegularization"),
                 new
                 {
-                    PunchId = dispute.PunchId,
+                    PunchId = dispute.PunchId.Value,
                     TenantId = tenantId,
                     PunchIn = punchIn,
                     PunchOut = punchOut,
@@ -340,7 +354,7 @@ namespace MobileWebApi.Repositories
 
             _logger.LogInformation(
                 LogMessages.Dispute.PunchCorrectionApplied,
-                dispute.PunchId,
+                dispute.PunchId.Value,
                 punchIn,
                 punchOut,
                 duration);
