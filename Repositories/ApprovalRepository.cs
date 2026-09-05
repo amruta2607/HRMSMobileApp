@@ -218,7 +218,7 @@ namespace MobileWebApi.Repositories
         #region Approver Operations
 
         public async Task<IEnumerable<ApproverInfo>> GetApproversForStageAsync(
-        int stageId, int? workRoleId, string explicitUserIds, int tenantId)
+            int stageId, int? workRoleId, string explicitUserIds, int tenantId)
         {
             try
             {
@@ -226,7 +226,7 @@ namespace MobileWebApi.Repositories
 
                 var approvers = new List<ApproverInfo>();
 
-                // 1️⃣ Get approvers by Work Role
+                // Get approvers by Work Role
                 if (workRoleId.HasValue && workRoleId > 0)
                 {
                     string roleQuery = _queryProvider.Get("GetApproversByWorkRole");
@@ -240,10 +240,9 @@ namespace MobileWebApi.Repositories
                     approvers.AddRange(roleApprovers);
                 }
 
-                // 2️⃣ Get explicit approvers from CSV list
+                // Get explicit approvers from CSV list
                 if (!string.IsNullOrWhiteSpace(explicitUserIds))
                 {
-                    // Convert "229,230,231" → List<int> {229,230,231}
                     var userIdList = explicitUserIds
                         .Split(',', StringSplitOptions.RemoveEmptyEntries)
                         .Select(id => int.Parse(id.Trim()))
@@ -260,7 +259,6 @@ namespace MobileWebApi.Repositories
                     approvers.AddRange(explicitApprovers);
                 }
 
-                // 3️⃣ Remove duplicates by UserId
                 return approvers.DistinctBy(x => x.UserId);
             }
             catch (Exception ex)
@@ -268,6 +266,26 @@ namespace MobileWebApi.Repositories
                 _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetApproversForStageAsync));
                 throw new Exception(
                     $"{ExceptionCodes.Repository.ApprovalGetApproversForStageDatabaseError}: Failed to fetch approvers for stage",
+                    ex);
+            }
+        }
+
+        public async Task<ApproverInfo?> GetSupervisorByEmployeeIdAsync(int employeeId, int tenantId)
+        {
+            try
+            {
+                using var conn = _context.CreateConnection();
+                string query = _queryProvider.Get("GetSupervisorByEmployeeId");
+
+                return await conn.QueryFirstOrDefaultAsync<ApproverInfo>(
+                    query,
+                    new { EmployeeId = employeeId, TenantId = tenantId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Database error occurred in {Method}", nameof(GetSupervisorByEmployeeIdAsync));
+                throw new Exception(
+                    $"{ExceptionCodes.Repository.ApprovalGetUserIdByEmployeeIdDatabaseError}: Failed to fetch supervisor by employee id",
                     ex);
             }
         }

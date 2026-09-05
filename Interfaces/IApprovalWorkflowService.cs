@@ -18,10 +18,11 @@ namespace MobileWebApi.Interfaces
         
         /// <summary>
         /// Insert the initial approval stage for an event and notify approvers via the Alert framework.
-        /// When <paramref name="assignedApproverUserId"/> is provided, that user is the sole first-level approver
-        /// (manager-based routing). Otherwise approvers are resolved from the stage WorkRole / ExplicitUserIds.
+        /// When <paramref name="assignedApproverUserId"/> is provided (Regularization), that user is the sole first-level approver.
+        /// For LeaveRequest, <paramref name="requesterEmployeeId"/> (LeaveRequest.EmployeeId) resolves the reporting manager via SupervisorId.
+        /// Otherwise approvers are resolved from the stage WorkRole / ExplicitUserIds.
         /// </summary>
         Task InsertInitialApprovalStageAsync(
-            int eventId, int eventTypeId, int userId, int tenantId, string eventName, int? assignedApproverUserId = null);
+            int eventId, int eventTypeId, int userId, int tenantId, string eventName, int? assignedApproverUserId = null, int? requesterEmployeeId = null);
     }
 }

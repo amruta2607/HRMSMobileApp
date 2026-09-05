@@ -107,6 +107,25 @@ namespace MobileWebApi.Repositories
         }
 
         /// <summary>
+        /// Checks whether the employee already has an active leave request overlapping the date range for the tenant.
+        /// Active = LeaveRequestStatus in Submit (1), Approved (2), Pending (6), Pending For Approval (7).
+        /// Rejected, Withdrawn, and Cancelled requests do not block a new application.
+        /// </summary>
+        public async Task<bool> HasLeaveRequestForDateAsync(int employeeId, DateTime fromDate, DateTime toDate, int tenantId)
+        {
+            using var conn = _context.CreateConnection();
+            string query = _queryProvider.Get("CheckOverlappingLeave");
+
+            return await conn.ExecuteScalarAsync<bool>(query, new
+            {
+                EmployeeId = employeeId,
+                FromDate = fromDate,
+                ToDate = toDate,
+                TenantId = tenantId
+            });
+        }
+
+        /// <summary>
         /// Get leave balance by employee ID
         /// </summary>
         public async Task<IEnumerable<LeaveBalance>> GetLeaveBalanceByEmployeeIdAsync(int employeeId)

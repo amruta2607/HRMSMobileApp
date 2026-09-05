@@ -207,7 +207,7 @@ namespace MobileWebApi.Constants
         public const string LeaveServiceNotAvailable = "Leave service not available.";
         public const string InvalidRequest = "Invalid leave request data.";
 
-        public const string LeaveAlreadyAppliedForSelectedDate = "Leave already applied for selected date.";
+        public const string LeaveAlreadyAppliedForSelectedDate = "You have already applied for leave for this date.";
 
 		// Error templates
 		public const string LeaveRequestNotFoundWithId = "Leave request with ID {0} not found.";

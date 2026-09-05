@@ -19,6 +19,10 @@ namespace MobileWebApi.Interfaces
         
         // Approver operations
         Task<IEnumerable<ApproverInfo>> GetApproversForStageAsync(int stageId, int? workRoleId, string explicitUserIds, int tenantId);
+        /// <summary>
+        /// Resolves the active reporting manager (Employee.SupervisorId → SystemUserId) for LeaveRequest routing.
+        /// </summary>
+        Task<ApproverInfo?> GetSupervisorByEmployeeIdAsync(int employeeId, int tenantId);
         Task<int> GetUserIdByEmployeeIdAsync(int employeeId, int tenantId);
         Task<IEnumerable<string>> GetEmployeeNamesByUserIdsAsync(IEnumerable<int> userIds, int tenantId);
         

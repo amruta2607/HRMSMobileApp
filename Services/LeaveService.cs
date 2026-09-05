@@ -106,9 +106,24 @@ namespace MobileWebApi.Services
 					return Fail(string.Format(LeaveMessages.InsufficientLeaveBalance, availableBalance, duration));
 
 				// -----------------------------
+				// Prevent duplicate leave for the same date(s)
+				// Uses LeaveRequest.EmployeeId + FromDate/ToDate (calendar date) + TenantId
+				// Blocks only active statuses (Submit/Approved/Pending/PendingForApproval)
+				// -----------------------------
+				var tenantId = request.organization ?? 0;
+				var alreadyExists = await _leaveRepository.HasLeaveRequestForDateAsync(
+					employeeId.Value,
+					request.startdate,
+					request.enddate,
+					tenantId);
+
+				if (alreadyExists)
+					return Fail(LeaveMessages.LeaveAlreadyAppliedForSelectedDate);
+
+				// -----------------------------
 				// Generate leave request number
 				// -----------------------------
-				var requestNumber = await _leaveRepository.GenerateLeaveRequestNumberAsync(request.organization ?? 0);
+				var requestNumber = await _leaveRepository.GenerateLeaveRequestNumberAsync(tenantId);
 
 				// -----------------------------
 				// Create leave request

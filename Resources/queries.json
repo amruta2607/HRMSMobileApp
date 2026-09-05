@@ -202,6 +202,8 @@
 
     "GetApproversByUserIds": "SELECT u.UserId, u.Email, e.Name, e.Id AS EmployeeId FROM Users u LEFT JOIN Employee e ON u.UserId = e.SystemUserId WHERE u.UserId IN (@UserIds) AND u.TenantId = @TenantId AND u.IsActive = 1",
 
+    "GetSupervisorByEmployeeId": "SELECT sup.SystemUserId AS UserId, COALESCE(u.Email, sup.Email) AS Email, sup.Name, sup.Id AS EmployeeId FROM Employee emp INNER JOIN Employee sup ON emp.SupervisorId = sup.Id AND sup.TenantId = emp.TenantId LEFT JOIN Users u ON u.UserId = sup.SystemUserId AND u.TenantId = @TenantId WHERE emp.Id = @EmployeeId AND emp.TenantId = @TenantId AND emp.SupervisorId IS NOT NULL AND sup.IsEmployeeActive = 1 AND sup.SystemUserId IS NOT NULL",
+
     "GetUserIdByEmployeeId": "SELECT SystemUserId FROM Employee WHERE Id = @EmployeeId AND TenantId = @TenantId",
 
     "GetEmployeeNamesByUserIds": "SELECT e.Name FROM Employee e INNER JOIN Users u ON e.SystemUserId = u.UserId WHERE u.UserId IN (@UserIds) AND e.TenantId = @TenantId",
@@ -294,7 +296,7 @@
     "GetMobileTenantConfigurationByTenantId": "SELECT mtc.Id, mtc.TenantId, mtc.IsEnableMobile, mtc.IsAttendanceEnabled, mtc.IsLeaveEnabled, mtc.IsPayrollEnabled, mtc.InsertDate, mtc.InsertUserId, mtc.UpdateDate, mtc.UpdateUserId FROM MobileTenantConfiguration mtc WHERE mtc.TenantId = @TenantId",
     "GetGeoTenantLocationByTenantId": "SELECT g.Id, g.BranchId, b.Name AS BranchName, g.Longitude, g.Latitude, g.Radius, g.IsActive, g.LocationAddress, g.TenantId AS OrganisationId FROM TenantBranchGeoFencing g INNER JOIN Branch b ON g.BranchId = b.Id WHERE g.TenantId = @TenantId AND g.BranchId = @BranchId AND g.IsActive = 1",
 
-    "CheckOverlappingLeave": "SELECT CASE WHEN EXISTS ( SELECT 1 FROM LeaveRequest WHERE EmployeeId = @EmployeeId AND LeaveRequestStatus IN (1, 2,6,7) AND ( @FromDate BETWEEN FromDate AND ToDate OR @ToDate BETWEEN FromDate AND ToDate OR FromDate BETWEEN @FromDate AND @ToDate ) ) THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END",
+    "CheckOverlappingLeave": "SELECT CAST(CASE WHEN EXISTS (SELECT 1 FROM LeaveRequest WHERE EmployeeId = @EmployeeId AND TenantId = @TenantId AND LeaveRequestStatus IN (1, 2, 6, 7) AND CAST(@FromDate AS DATE) <= CAST(ToDate AS DATE) AND CAST(@ToDate AS DATE) >= CAST(FromDate AS DATE)) THEN 1 ELSE 0 END AS BIT) AS HasLeaveRequest",
     "GetLastLeaveRequestNumber": "SELECT TOP 1 Number FROM LeaveRequest WHERE TenantId = @TenantId AND Number LIKE CONCAT('LVR/', @Today, '%') ORDER BY Number DESC",
 
     "GetLeaveHistory": "SELECT lr.FromDate AS LeaveDate, lt.DisplayName AS LeaveType, lr.Description AS Reason, lr.LeaveRequestStatus FROM LeaveRequest lr LEFT JOIN LeaveTypes lt ON lr.LeaveTypeId = lt.Id WHERE lr.EmployeeId = @EmployeeId AND YEAR(lr.FromDate) = @Year ORDER BY lr.FromDate DESC",

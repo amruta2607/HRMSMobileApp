@@ -391,6 +391,9 @@ namespace MobileWebApi.Constants
 			public const string ApprovalStageNotActive = "Approval stage {StageId} is not active";
 			public const string NoApproversFound = "No approvers found for stage {StageId}";
 			public const string RoutingToReportingManager = "Assigning approval for event {EventId} to reporting manager UserId {ManagerUserId}";
+			public const string NoReportingManagerFound = "No reporting manager found for RequesterEmployeeId {RequesterEmployeeId}, TenantId {TenantId}";
+			public const string LeaveRequestApprovalRouting =
+				"LeaveRequest approval routing: EventId={EventId}, RequesterEmployeeId={RequesterEmployeeId}, StageId={StageId}, WorkRoleId={WorkRoleId}, ApproverCount={ApproverCount}, Approvers={Approvers}";
 			public const string InitialApprovalStageInserted = "Initial approval stage inserted. EventId: {EventId}, StageId: {StageId}, Approvers: {ApproverCount}";
 			public const string ErrorInsertingApprovalStage = "Error inserting initial approval stage for event {EventId}";
 

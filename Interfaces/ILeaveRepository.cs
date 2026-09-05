@@ -10,6 +10,11 @@ namespace MobileWebApi.Interfaces
         Task<IEnumerable<LeaveRequest>> GetLeaveRequestsAsync(int? organisationId, int? employeeId, int? leaveTypeId);
         Task<IEnumerable<LeaveRequest>> GetLeaveRequestsByEmployeeIdAsync(int employeeId);
         Task<bool> UpdateLeaveRequestStatusAsync(int id, int statusId, string statusText, int updateUserId);
+        /// <summary>
+        /// Returns true when the employee already has an active leave request overlapping the given date range
+        /// (statuses Submit/Approved/Pending/PendingForApproval), scoped by tenant. Compares calendar dates only.
+        /// </summary>
+        Task<bool> HasLeaveRequestForDateAsync(int employeeId, DateTime fromDate, DateTime toDate, int tenantId);
         
         // Leave Balance operations
         Task<IEnumerable<LeaveBalance>> GetLeaveBalanceByEmployeeIdAsync(int employeeId);

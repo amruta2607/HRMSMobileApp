@@ -74,7 +74,13 @@ namespace MobileWebApi.Services
                 _logger.LogInformation(LogMessages.ApprovalWorkflow.EventInsertedSuccessfully, eventId);
 
                 // Insert initial approval stage and notify approvers
-                await InsertInitialApprovalStageAsync(eventId, eventTypeId, userId, tenantId, EventConstants.LeaveEvent);
+                await InsertInitialApprovalStageAsync(
+                    eventId,
+                    eventTypeId,
+                    userId,
+                    tenantId,
+                    EventConstants.LeaveEvent,
+                    requesterEmployeeId: leaveRequest.EmployeeId);
 
                 return (true, ApprovalWorkflowMessages.WorkflowInitiatedSuccessfully, eventId);
             }
@@ -146,13 +152,22 @@ namespace MobileWebApi.Services
 
         /// <summary>
         /// Insert the initial approval stage for an event and create Screen/Email notifications via existing Alert framework.
-        /// When <paramref name="assignedApproverUserId"/> is set, that user is the sole first-level approver.
+        /// When <paramref name="assignedApproverUserId"/> is set (Regularization), that user is the sole first-level approver.
+        /// For LeaveRequest, <paramref name="requesterEmployeeId"/> (LeaveRequest.EmployeeId) resolves the reporting manager via SupervisorId.
         /// </summary>
         public async Task InsertInitialApprovalStageAsync(
-            int eventId, int eventTypeId, int userId, int tenantId, string eventName, int? assignedApproverUserId = null)
+            int eventId,
+            int eventTypeId,
+            int userId,
+            int tenantId,
+            string eventName,
+            int? assignedApproverUserId = null,
+            int? requesterEmployeeId = null)
         {
             try
             {
+                var isLeaveEvent = string.Equals(eventName, EventConstants.LeaveEvent, StringComparison.OrdinalIgnoreCase);
+
                 // Get first approval level name (e.g., "Level1")
                 var levelName = await _approvalRepository.GetFirstLevelNameAsync(eventTypeId, tenantId);
                 if (string.IsNullOrEmpty(levelName))
@@ -161,7 +176,7 @@ namespace MobileWebApi.Services
                     return;
                 }
 
-                // Get approval stage details
+                // Get approval stage details (WorkRoleId is dynamic from ApprovalStage config)
                 var stage = await _approvalRepository.GetApprovalStageByLevelNameAsync(eventTypeId, levelName, tenantId);
                 if (stage == null)
                 {
@@ -177,7 +192,10 @@ namespace MobileWebApi.Services
                     return;
                 }
 
-                // Resolve approvers: manager override (regularization) or stage WorkRole / ExplicitUserIds
+                // Resolve approvers:
+                // - Regularization: explicit assignedApproverUserId (unchanged)
+                // - LeaveRequest: Employee.SupervisorId → SystemUserId only (Web-app aligned; ignore WorkRole users / explicitUserIds)
+                // - Other: stage WorkRole / ExplicitUserIds
                 IEnumerable<ApproverInfo> approvers;
                 if (assignedApproverUserId.HasValue && assignedApproverUserId.Value > 0)
                 {
@@ -186,6 +204,30 @@ namespace MobileWebApi.Services
                         workRoleId: null,
                         explicitUserIds: assignedApproverUserId.Value.ToString(),
                         tenantId);
+                }
+                else if (isLeaveEvent)
+                {
+                    var leaveApprovers = new List<ApproverInfo>();
+                    if (requesterEmployeeId.HasValue && requesterEmployeeId.Value > 0)
+                    {
+                        var supervisor = await _approvalRepository.GetSupervisorByEmployeeIdAsync(
+                            requesterEmployeeId.Value,
+                            tenantId);
+
+                        if (supervisor != null && supervisor.UserId > 0)
+                        {
+                            leaveApprovers.Add(supervisor);
+                        }
+                        else
+                        {
+                            _logger.LogWarning(
+                                LogMessages.ApprovalWorkflow.NoReportingManagerFound,
+                                requesterEmployeeId,
+                                tenantId);
+                        }
+                    }
+
+                    approvers = leaveApprovers;
                 }
                 else
                 {
@@ -196,7 +238,26 @@ namespace MobileWebApi.Services
                         tenantId);
                 }
 
-                var approverList = approvers.ToList();
+                var approverList = approvers
+                    .Where(x => x.UserId > 0)
+                    .GroupBy(x => x.UserId)
+                    .Select(x => x.First())
+                    .ToList();
+
+                if (isLeaveEvent)
+                {
+                    _logger.LogInformation(
+                        LogMessages.ApprovalWorkflow.LeaveRequestApprovalRouting,
+                        eventId,
+                        requesterEmployeeId,
+                        stage.Id,
+                        stage.WorkRoleId,
+                        approverList.Count,
+                        string.Join(", ",
+                            approverList.Select(x =>
+                                $"UserId={x.UserId}, EmployeeId={x.EmployeeId}, Name={x.Name}")));
+                }
+
                 if (!approverList.Any())
                 {
                     _logger.LogWarning(LogMessages.ApprovalWorkflow.NoApproversFound, stage.Id);
@@ -215,7 +276,6 @@ namespace MobileWebApi.Services
                 var requestingEmployee = await _approvalRepository.GetEmployeeByUserIdAsync(userId);
                 var eventDetails = await _approvalRepository.GetEventDetailsAsync(eventId, tenantId);
 
-                var isLeaveEvent = string.Equals(eventName, EventConstants.LeaveEvent, StringComparison.OrdinalIgnoreCase);
                 string fallbackTitle = isLeaveEvent
                     ? ApprovalWorkflowMessages.LeaveRequestPendingApproval
                     : ApprovalWorkflowMessages.RegularizationRequestPendingApproval;
